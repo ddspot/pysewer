@@ -21,6 +21,7 @@ preprocessing:
 
 optimization:
   inhabitants_dwelling: 2
+  inhabitants_dwelling_attribute_name: ""
   daily_wastewater_person: 0.15
   peak_factor: 4.0
   min_slope: -0.01

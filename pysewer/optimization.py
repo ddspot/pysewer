@@ -415,6 +415,7 @@ def calculate_hydraulic_parameters(
 def estimate_peakflow(
     G: nx.Graph,
     inhabitants_dwelling: Optional[int] = None,
+    inhabitants_dwelling_attribute_name: Optional[str] = None,
     daily_wastewater_person: Optional[float] = None,
     peak_factor: Optional[float] = None,
 ):
@@ -426,7 +427,9 @@ def estimate_peakflow(
     G : networkx.Graph
         The graph to estimate peakflow for.
     inhabitants_dwelling : int
-        The number of inhabitants per dwelling.
+        The number of inhabitants per dwelling to use if inhabitants_dwelling_attribute_name is empty.
+    inhabitants_dwelling_attribute_name : str
+        The attribute name with the number of inhabitants per dwelling.
     daily_wastewater_person : float
         The daily wastewater generated per person in m³.
     peak_factor : float, optional
@@ -440,6 +443,11 @@ def estimate_peakflow(
     logger.info("\n=== Dry Weather Flow  Estimation ===")
 
     config = get_config()
+    inhabitants_dwelling_attribute_name = (
+        config.optimization.inhabitants_dwelling_attribute_name
+        if inhabitants_dwelling_attribute_name is None
+        else inhabitants_dwelling_attribute_name
+    )
     inhabitants_dwelling = (
         config.optimization.inhabitants_dwelling
         if inhabitants_dwelling is None
@@ -462,10 +470,14 @@ def estimate_peakflow(
         for building in upstream_buildings:
             building_data = G.nodes[building]
             # Try to get population in this priority:
-            # 1. block_population (total population for the block)
-            # 2. number_of_dwellings * inhabitants_dwelling
-            # 3. fallback to single dwelling with inhabitants_dwelling
-            if "block_population" in building_data:
+            # 1. custom inhabitants_dwelling_attribute_name (total population for the block)
+            # 2. block_population (total population for the block)
+            # 3. number_of_dwellings * inhabitants_dwelling
+            # 4. fallback to single dwelling with inhabitants_dwelling
+            if inhabitants_dwelling_attribute_name != "":
+                logger.info(f"  Using custom attribute name '{inhabitants_dwelling_attribute_name}'")
+                block_pop = float(building_data[inhabitants_dwelling_attribute_name])
+            elif "block_population" in building_data:
                 logger.info("  Using block_population")
                 block_pop = float(building_data["block_population"])
             elif "number_of_dwellings" in building_data:
