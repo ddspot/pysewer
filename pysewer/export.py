@@ -14,6 +14,7 @@ import json
 from typing import List, Tuple, Optional
 
 import fiona
+from fiona.collection import CRS
 import geopandas as gpd
 
 from .config.manager import get_config
@@ -69,7 +70,7 @@ def generate_schema(gdf: gpd.GeoDataFrame):
     return schema
 
 
-def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]=None)
+def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]=None, crs: Optional[CRS]=None):
     """
     Write a GeoDataFrame to a GeoPackage (GPKG) file using Fiona, converting lists of tuples to JSON strings.
 
@@ -81,6 +82,8 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]
         The file path to the GPKG file.
     layer: str (optional)
         The layer name inside the GPKG file. If no layer name is specified the file name is used.
+    crs: CRS (optional)
+        The layer CRS
 
     Returns
     -------
