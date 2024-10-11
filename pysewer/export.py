@@ -26,6 +26,8 @@ def map_dtype_to_fiona(dtype):
         return "int"
     elif "float" in dtype:
         return "float"
+    elif "bool" in dtype:
+        return "bool"
     else:
         return "str"
 
@@ -38,6 +40,9 @@ def is_list_of_tuples(column):
         for item in column
     )
 
+def is_list(column):
+    """Check if a pandas Series contains lists."""
+    return all(isinstance(item, list) for item in column)
 
 def tuple_list_to_json(tuple_list):
     """Serialize a list of tuples to a JSON string."""
@@ -96,7 +101,7 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]
     # Convert only columns with list of tuples to JSON strings
     for col in gdf.columns:
         if gdf[col].dtype == "object":
-            if is_list_of_tuples(gdf[col]):
+            if is_list_of_tuples(gdf[col]) or is_list(gdf[col]):
                 gdf[col] = gdf[col].apply(tuple_list_to_json)
 
     # Define the schema based on the GeoDataFrame
