@@ -311,6 +311,12 @@ def calculate_hydraulic_parameters(
                         ),
                     }
                 }
+                node_attrs = {
+                    upstream: {
+                        "total_static_head": round(td_profile[1][1] - td_profile[0][1] + max(0, max_inflow_tds - config.optimization.tmin),  2)
+                    }
+                }
+                nx.set_node_attributes(G, node_attrs)
 
             else:
                 # check if edge needs a lifting station based on max inflow td
@@ -323,13 +329,16 @@ def calculate_hydraulic_parameters(
                     _, out_trench_depth, td_profile = needs_pump(
                         profile=profile, inflow_trench_depth=min_trench_depth
                     )
-                # append downstream inflow td value
+                # append downstream inflow td value and upstream total static head
                 node_attrs = {
                     downstream: {
                         "inflow_trench_depths": G.nodes()[downstream][
                             "inflow_trench_depths"
                         ]
                         + [out_trench_depth]
+                    },
+                    upstream: {
+                        "total_static_head": round(max_inflow_tds - config.optimization.tmin, 2)
                     }
                 }
                 nx.set_node_attributes(G, node_attrs)
