@@ -715,9 +715,9 @@ def needs_pump(
                 [
                     (
                         0,
-                        tmin,
+                        y[0] - tmin,
                     ),
-                    (x[-1], tmin),
+                    (x[-1], y[-1] - tmin),
                 ],
             )
         ## case 2: min slope point is within Trench depth range: set trench depth to calculated height
