@@ -11,7 +11,7 @@ The option saving the data as a parquet file is added.
 """
 
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import fiona
 import geopandas as gpd
@@ -69,7 +69,7 @@ def generate_schema(gdf: gpd.GeoDataFrame):
     return schema
 
 
-def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
+def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]=None)
     """
     Write a GeoDataFrame to a GeoPackage (GPKG) file using Fiona, converting lists of tuples to JSON strings.
 
@@ -79,6 +79,8 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
         The GeoDataFrame to be written to the GPKG file.
     filepath : str
         The file path to the GPKG file.
+    layer: str (optional)
+        The layer name inside the GPKG file. If no layer name is specified the file name is used.
 
     Returns
     -------
@@ -98,7 +100,7 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
     schema = generate_schema(gdf)
 
     # Open a new GPKG file in write mode
-    with fiona.open(filepath, mode="w", driver="GPKG", schema=schema) as dst:
+    with fiona.open(filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs=crs) as dst:
         for _, row in gdf.iterrows():
             feature = {
                 "geometry": row["geometry"].__geo_interface__,
