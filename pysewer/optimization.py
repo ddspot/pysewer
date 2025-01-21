@@ -307,7 +307,7 @@ def calculate_hydraulic_parameters(
                     edge: {
                         "trench_depth_profile": td_profile,
                         "mean_td": np.mean(
-                            [topo[1] - td[1] for td, topo in zip(td_profile, profile)]
+                            [topo[1] - td[1] for td, topo in zip(td_profile, [profile[0] + profile[-1]])]
                         ),
                     }
                 }
