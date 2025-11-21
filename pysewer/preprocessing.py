@@ -3,7 +3,6 @@
 
 import warnings
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Hashable, List, Optional, Union
 
 import geopandas as gpd
@@ -16,6 +15,7 @@ from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, P
 from shapely.ops import linemerge, nearest_points
 from sklearn.cluster import AgglomerativeClustering
 
+from .config.manager import get_config
 from .config.settings import load_config
 from .helper import (
     ckdnearest,
@@ -74,28 +74,18 @@ class DEM:
         if self.file_path:
             self.raster = rio.open(self.file_path)
             self.no_dem = False
-            # check and remove nodata values in the dem if present
-            nodata_removed = self.remove_nodata(fill_value=0)
-            if nodata_removed:
-                print(
-                    "Warning: The DEM has been filled to remove nodata values. This alters the original DEM."
-                )
-            else:
-                print("No nodata values found in the DEM.")
+            self.remove_nodata(
+                fill_value=0
+            )  # Call remove_nodata with a default fill_value
 
     def remove_nodata(self, fill_value: float = 0):
         """
-        Removes or replaces nodata values in the DEM raster if present.
+        Removes or replaces nodata values in the DEM raster.
 
         Parameters
         ----------
         fill_value : float, optional
             The value to replace nodata values with. Default is 0.
-
-        Returns
-        -------
-        bool
-            True if nodata values were removed, False otherwise.
 
         Raises
         ------
@@ -109,7 +99,7 @@ class DEM:
             data = src.read(1)
             nodata = src.nodata
 
-            if nodata is not None and np.any(data == nodata):
+            if nodata is not None:
                 data[data == nodata] = fill_value
 
                 kwargs = src.meta.copy()
@@ -122,11 +112,8 @@ class DEM:
                 with rio.open(self.file_path, "w", **kwargs) as dst:
                     dst.write(data, 1)
 
-                # Reload the raster
-                self.raster = rio.open(self.file_path)
-                return True
-
-        return False
+        # Reload the raster
+        self.raster = rio.open(self.file_path)
 
     def get_elevation(self, point: shapely.geometry.Point):
         """
@@ -257,37 +244,27 @@ class Roads:
         Initializes a Roads object with road data from either a shapefile or a geopandas dataframe.
     """
 
-    def __init__(self, input_data: Union[str, Path, gpd.GeoDataFrame]):
+    def __init__(self, input_data: Union[str, gpd.GeoDataFrame]):
         """
         Initializes a Roads object with road data from either a shapefile or a geopandas dataframe.
         Parameters
         ----------
-        input_data : str, Path, or geopandas.GeoDataFrame
+        input_data : str or geopandas.GeoDataFrame
             Path to shapefile or geopandas dataframe containing road data.
         """
-        if isinstance(input_data, (str, Path)):
+        if isinstance(input_data, str):
             self.gdf = gpd.read_file(input_data)
-        elif isinstance(input_data, gpd.GeoDataFrame):
-            self.gdf = input_data
         else:
-            raise TypeError("input_data must be a string, Path, or GeoDataFrame")
+            self.gdf = input_data
 
-        # Remove rows with None geometries
+        # drop any rows with missing geometry data
         self.gdf = self.gdf.dropna(subset=["geometry"])
 
-        # Remove third dimension and handle potential errors
-        def safe_remove_third_dimension(geom):
-            try:
-                return remove_third_dimension(geom)
-            except Exception as e:
-                print(f"Error processing geometry: {e}")
-                return None
+        # drop any rows with geometry being None
+        self.gdf = self.gdf[self.gdf["geometry"].notnull()]
 
-        self.gdf["geometry"] = self.gdf["geometry"].apply(safe_remove_third_dimension)
-
-        # Remove any rows where geometry became None after processing
-        self.gdf = self.gdf.dropna(subset=["geometry"])
-
+        # remove the third dimension from the geometry if present
+        self.gdf["geometry"] = [remove_third_dimension(g) for g in self.gdf["geometry"]]
         self.merged_roads = self.gdf.unary_union
 
     def get_nearest_point(self, point):
@@ -370,20 +347,16 @@ class Buildings:
 
     """
 
-    def __init__(
-        self, input_data: Union[str, Path, gpd.GeoDataFrame], roads_obj: Roads
-    ):
+    def __init__(self, input_data: Union[str, gpd.GeoDataFrame], roads_obj: Roads):
         """
         Initialize a Buildings object with building data from either a shapefile or a geopandas dataframe.
         """
         # Digest and clean input Data
-        # Allow input to be either path to shp file, Path object, or gdf
-        if isinstance(input_data, (str, Path)):
+        # Allow input to be either path to shp file or gdf
+        if type(input_data) == str:
             self.gdf = gpd.read_file(input_data)
-        elif isinstance(input_data, gpd.GeoDataFrame):
-            self.gdf = input_data
         else:
-            raise TypeError("input_data must be a string, Path, or GeoDataFrame")
+            self.gdf = input_data
 
         # drop any rows with missing geometry data
         self.gdf = self.gdf.dropna(subset=["geometry"])
@@ -582,7 +555,7 @@ class ModelDomain:
         roads: str,
         buildings: str,
         clustering: str = DEFAULT_CONFIG.preprocessing.clustering,
-        pump_penalty: int = DEFAULT_CONFIG.preprocessing.pump_penalty,
+        pump_penalty: int = 1000,  # Default to 1000, but can be overridden
         connect_buildings: bool = DEFAULT_CONFIG.preprocessing.connect_buildings,
     ):
         """Initialize Model Domain using the input data."""
@@ -635,8 +608,8 @@ class ModelDomain:
         nx.set_node_attributes(self.connection_graph, True, "road_network")
         nx.set_node_attributes(self.connection_graph, "", "node_type")
 
-        # initialize the sewer graph
-        self.sewer_graph = nx.DiGraph(self.connection_graph)
+        # check connectivity of G
+        self.sewer_graph = nx.DiGraph()
 
         # connect buildings
         if connect_buildings:
@@ -912,7 +885,6 @@ class ModelDomain:
 
     def generate_connection_graph(self) -> nx.MultiDiGraph:
         """
-
         Generates a connection graph from the given connection data and returns it.
         This method simplifies the connection graph, removes any self loops, sets trench depth node attributes to 0,
         calculates the geometry, distance, profile, needs_pump, weight, and elevation attributes for each edge and node
@@ -923,7 +895,8 @@ class ModelDomain:
         nx.MultiDiGraph
             A directed graph representing the connections between the different points in the network.
         """
-
+        print(f"\nGenerating connection graph with pump penalty: {self.pump_penalty}")
+        config = get_config()
         simplified_graph = simplify_graph(self.connection_graph)
         self.junction_graph = simplified_graph
         connection_digraph = nx.MultiDiGraph(simplified_graph)
@@ -932,9 +905,15 @@ class ModelDomain:
             list(nx.selfloop_edges(connection_digraph))
         )
         nx.set_node_attributes(connection_digraph, 0, name="trench_depth")
+
+        # Count edges that need pumps
+        edges_needing_pumps = 0
+        total_edges = 0
+
         for u, v, a in connection_digraph.edges(data=True):
             # ensure that edge exists before accessing its attributes
             if connection_digraph.has_edge(u, v):
+                total_edges += 1
                 detailed_path = nx.shortest_path(self.connection_graph, u, v)
                 connection_digraph[u][v][0]["geometry"] = LineString(detailed_path)
                 dist = get_path_distance(detailed_path)
@@ -944,19 +923,47 @@ class ModelDomain:
                 )
                 # checking if the profile attribute exist before using it
                 if "profile" in connection_digraph[u][v][0]:
-                    connection_digraph[u][v][0]["needs_pump"], _, _ = needs_pump(
-                        connection_digraph[u][v][0]["profile"]
+                    # Check if a pump is needed
+                    (
+                        connection_digraph[u][v][0]["needs_pump"],
+                        height,
+                        trench_depth,
+                        slope,
+                    ) = needs_pump(
+                        profile=connection_digraph[u][v][0]["profile"],
+                        min_slope=config.optimization.min_slope,
+                        max_slope=config.optimization.max_slope,
+                        tmax=config.optimization.tmax,
+                        tmin=config.optimization.tmin,
+                        inflow_trench_depth=config.optimization.inflow_trench_depth,
                     )
+                    connection_digraph[u][v][0]["height"] = height
+                    connection_digraph[u][v][0]["trench_depth"] = trench_depth
+                    connection_digraph[u][v][0]["slope"] = slope
 
                     if connection_digraph[u][v][0]["needs_pump"]:
+                        edges_needing_pumps += 1
                         connection_digraph[u][v][0]["weight"] = dist * self.pump_penalty
+                        print(
+                            f"Edge {u}->{v} needs pump. Distance: {dist:.2f}m, Weight: {dist * self.pump_penalty:.2f}"
+                        )
                     else:
                         connection_digraph[u][v][0]["weight"] = dist
+                        print(
+                            f"Edge {u}->{v} gravity flow. Distance: {dist:.2f}m, Weight: {dist:.2f}"
+                        )
+
+        print(f"\nSummary:")
+        print(f"Total edges: {total_edges}")
+        print(f"Edges needing pumps: {edges_needing_pumps}")
+        print(
+            f"Percentage of edges needing pumps: {(edges_needing_pumps/total_edges)*100:.1f}%"
+        )
+
         for n in connection_digraph.nodes():
             attr = {n: {"elevation": self.dem.get_elevation(Point(n))}}
             nx.set_node_attributes(connection_digraph, attr)
         return connection_digraph
-        # add additional attributes and estimate connection costs
 
     def add_sink(self, sink_location: tuple, label: str = "wwtp"):
         """
@@ -1027,22 +1034,7 @@ class ModelDomain:
             pass
 
     def get_sinks(self):
-        """
-        Get a list of node keys for all wastewater treatment plants (wwtp) in the connection graph.
-
-        Returns
-        -------
-        list
-            A list of node keys representing wastewater treatment plants in the connection graph.
-
-        Notes
-        -----
-        This method uses the `get_node_keys` function to retrieve nodes that are
-        identified as wastewater treatment plants based on the configuration settings.
-
-        The field and value used for identifying sinks are obtained from
-        the DEFAULT_CONFIG.preprocessing settings.
-        """
+        """Returns a list of node keys for all wastewater treatment plants (wwtp) in the connection graph."""
         return get_node_keys(
             self.connection_graph,
             field=DEFAULT_CONFIG.preprocessing.field_get_sinks,
@@ -1063,22 +1055,7 @@ class ModelDomain:
         self.pump_penalty = pp
 
     def get_buildings(self):
-        """
-        Get a list of node keys for all buildings in the connection graph.
-
-        Returns
-        -------
-        list
-            A list of node keys representing buildings in the connection graph.
-
-        Notes
-        -----
-        This method uses the `get_node_keys` function to retrieve nodes that are
-        identified as buildings based on the configuration settings.
-
-        The field and value used for identifying buildings are obtained from
-        the DEFAULT_CONFIG.preprocessing settings.
-        """
+        """Returns a list of node keys for all buildings in the connection graph."""
         return get_node_keys(
             self.connection_graph,
             field=DEFAULT_CONFIG.preprocessing.field_get_buildings,
@@ -1086,57 +1063,49 @@ class ModelDomain:
         )
 
     def connect_subgraphs(self):
-        """
-        Identifies unconnected street subnetworks and connects them based on shortest distance.
-
-        This method iteratively connects disconnected components of the street network
-        by finding the closest pair of nodes between subgraphs and adding an edge between them.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        This method modifies the `connection_graph` attribute of the class instance.
-        It prints progress messages and the final number of connected components.
-
-        Raises
-        ------
-        ValueError
-            If there's an error while connecting subgraphs, the error is printed
-            and the method continues with the next iteration.
-        """
-        sub_graphs = list(nx.connected_components(self.connection_graph))
+        """Identifies unconnected street subnetworks and connects them based on shortest distance"""
+        G = self.connection_graph
+        sub_graphs = list((G.subgraph(c).copy() for c in nx.connected_components(G)))
         while len(sub_graphs) > 1:
             # select one subgraph
             sg = sub_graphs.pop()
-            G_without_sg = set()
+            G_without_sg = sub_graphs.pop()
 
             while len(sub_graphs) > 0:
-                G_without_sg.update(sub_graphs.pop())
+                G_without_sg = nx.compose(G_without_sg, sub_graphs.pop())
 
-            try:
-                # Find the closest pair of nodes between sg and G_without_sg
-                closest_pair = min(
-                    ((n1, n2) for n1 in sg for n2 in G_without_sg),
-                    key=lambda pair: Point(pair[0]).distance(Point(pair[1])),
+            # get shortest edge between sg and G_withouto_sg:
+            sg_gdf = get_node_gdf(sg).unary_union
+            G_without_sg_gdf = get_node_gdf(G_without_sg).unary_union
+
+            # # validate the sd_gdf and G_without_sg_gdf are geodataframes
+            # if not isinstance(sg_gdf, gpd.GeoDataFrame) or not isinstance(G_without_sg_gdf, gpd.GeoDataFrame):
+            #     raise ValueError("Invalid data type. Expected GeoDataFrame.")
+
+            # check if either gdf is empty or contains invalid values
+            # check if either gdf is empty or contains invalid values
+            if (
+                sg_gdf.is_empty or G_without_sg_gdf.is_empty or sg_gdf.isna().any()
+                if hasattr(sg_gdf, "isna")
+                else (
+                    False or G_without_sg_gdf.isna().any()
+                    if hasattr(G_without_sg_gdf, "isna")
+                    else False
                 )
-
-                # Add edge between the closest nodes
-                self.connection_graph.add_edge(*closest_pair, road_network=True)
-
-            except ValueError as e:
-                print(f"Error connecting subgraphs: {str(e)}")
+            ):
+                warnings.warn(
+                    "Skipped an iteration: Empty or invalid subgraph detected...Skipping this connection."
+                )
                 continue
+            connection_points = nearest_points(sg_gdf, G_without_sg_gdf)
 
+            # add edge
+            G.add_edge(
+                (connection_points[0].x, connection_points[0].y),
+                (connection_points[1].x, connection_points[1].y),
+                road_network=True,
+            )
             # get updated subgraph list
-            sub_graphs = list(nx.connected_components(self.connection_graph))
-
-        print(
-            f"Number of connected components after connecting subgraphs: {nx.number_connected_components(self.connection_graph)}"
-        )
+            sub_graphs = list(
+                (G.subgraph(c).copy() for c in nx.connected_components(G))
+            )

@@ -11,14 +11,10 @@ SPDX-License-Identifier: GPL-3.0-only -->
     - [Step 2: Create the conda environment](#step-2-create-the-conda-environment)
     - [Step 3: Install pysewer via pip](#step-3-install-pysewer-via-pip)
   - [Input Data and data representation](#input-data-and-data-representation)
-    - [Input data requirements](#input-data-requirements)
-    - [Road Network Data](#road-network-data)
-    - [Building Data](#building-data)
     - [Preprocessing](#preprocessing)
-    - [Input data preprocessing recommendations](#input-data-preprocessing-recommendations)
-    - [Preprocessing of the initial graph](#preprocessing-of-the-initial-graph)
     - [Graph Attributes](#graph-attributes)
   - [Routing Solver](#routing-solver)
+    - [Pump penalty demonstration](#pump-penalty-demonstration)
   - [Plotting](#plotting)
   - [Export](#export)
   - [Default parameters](#default-parameters)
@@ -37,15 +33,15 @@ The aim of pysewer is to provide a framework automatically generate cost-efficie
 
 It is build around an algorithm for generation of viable sewer-network layouts. The approximated sewer network is represented by sources (households/buildings), potential pathways, and one or multiple sinks. The algorithm approximates the directed steinertree (the steiner arborescence) between all sources and the sink by using an repeated shortest path heuristic (RSPH).
 
-
 ## Documentation
-The documentation can be found [here](https://despot.pages.ufz.de/pysewer).  
 
-An example of how to use pysewer for generating a sewer network layout can be found here: [example_sewer_network_generation](notebooks/example_sewer_network.ipynb).
+The documentation can be found [here](https://despot.pages.ufz.de/pysewer).
+
+An example of how to use pysewer for generating a sewer network layout can be found here: [example_sewer_network_generation](notebooks/example_sewer_network_generation.ipynb).
 
 ## Installation
 
-Currently the installation is easiest managed via Anaconda. Anaconda 3 can be downloaded [here.](https://www.anaconda.com/products/individual). The package is tested with **Python 3.10.6**. We recommend using a conda environment to manage the installation of GDAL and other dependencies given the difficulty of installing GDAL using pip. Therefore we urge to first create a new conda environment and install the required packages.  
+Currently the installation is easiest managed via Anaconda. Anaconda 3 can be downloaded [here.](https://www.anaconda.com/products/individual). The package is tested with **Python 3.10.6**. We recommend using a conda environment to manage the installation of GDAL and other dependencies given the difficulty of installing GDAL using pip. Therefore we urge to first create a new conda environment and install the required packages.
 
 **Please use conda to install GDAL, it is the easiest way to install GDAL**
 
@@ -56,9 +52,9 @@ git clone https://github.com/dbdespot/pysewer.git
 cd pysewer
 ```
 
-
 ### Step 2: Create the conda environment
-Here you create a conda environment (pysewer) and install the required packages.  We recommend directly installing GDAL, Rasterio and Fiona using conda.
+
+Here you create a conda environment (pysewer) and install the required packages. We recommend directly installing GDAL, Rasterio and Fiona using conda.
 
 Creating the conda environment:
 
@@ -75,11 +71,11 @@ conda activate pysewer
 Install the required packages:
 
 ```shell
-conda install -c conda-forge gdal 
+conda install -c conda-forge gdal
 ```
 
 All other packages are installed via pip during the installation of pysewer.
-Note that the exact versions of the packages used can be found in the [environment.yml](environment.yml) file.  
+Note that the exact versions of the packages used can be found in the [environment.yml](environment.yml) file.
 
 ### Step 3: Install pysewer via pip
 
@@ -88,84 +84,21 @@ Now that you have conda environment uo and running, lets install pysewer. To do 
 ```shell
 cd pysewer
 pip install .
-
 # for the development version
 python -m pip install -e .
-
-# OR just 
-pip install -e .
 ```
-
-> [!TIP]  
-> To install without cloning the repository use:  
-> ```pip install git+https://github.com/dbdespot/pysewer.git```  
 
 Please see the [documentation](https://despot.pages.ufz.de/pysewer) for more details.
 
 ## Input Data and data representation
 
-### Input data requirements
-
 The following input data is required:
 
-- A Digital Elevation Model (DEM) (peferred file format: GeoTiff (.tif))
-- Point Data on Building locations (peferred file format: Shapefile, GeoPackage or GeoJSON (.shp/.gpkg/.geojson)). Geopandas GeoDataFrame objects is also supported.
-- Road Network Data (peferred file format: Shapefile, GeoPackage or GeoJSON (.shp/.gpkg/.geojson)). Geopandas GeoDataFrame objects is also supported.
-- Local daily water consumption (cubic meter per person)
-
-### Road Network Data
-
-The roads data is expected to be either LineString or MultiLineString geometries with a valid CRS. The GeoDataFrame can contain additional attributes that will be preserved during the preprocessing.
-
-| Column Name      | Data Type                    | Description                                                                         |
-| ---------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
-| geometry         | LineString / MultiLineString | The geometry representing the road network.                                         |
-| road_id          | integer                      | Unique identifier for each road segment (required).                                 |
-| other_attributes | various                      | Any additional attributes related to roads (optional, preserved during processing). |
-
-**Example Roads Geodataframe**
-
-| geometry                                                    | road_id | other_attributes                        |
-| ----------------------------------------------------------- | ------- | --------------------------------------- |
-| LineString((x1, y1), …)                                     | 1       | {'name': 'Main St.', 'type': 'highway'} |
-| MultiLineString(((x2, y2), (x3, y3)), ((x4, y4), (x5, y5))) | 2       | {'name': '2nd Ave.', 'type': 'street'}  |
-
-### Building Data
-
-The buildings data can include Polygon, MultiPolygon, or Point geometries, where polygons will be converted to points (centroids). Ideally point geometries are preferred, however we added a function that converts polygons or multi-polygons to points. The GeoDataFrame should also have a valid CRS, which should match the CRS of the roads data.
-
-| Column Name      | Data Type                      | Description                                                                             |
-| ---------------- | ------------------------------ | --------------------------------------------------------------------------------------- |
-| geometry         | Point / Polygon / MultiPolygon | The geometry representing the buildings (which can be converted to points).             |
-| building_id      | integer                        | Unique identifier for each building.                                                    |
-| other_attributes | various                        | Any additional attributes related to buildings (optional, preserved during processing). |
-
-**Example Buildings Geodataframe**
-
-| geometry                                                                                     | building_id | other_attributes                           |
-| -------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------ |
-| Point(x1, y1)                                                                                | 1           | {'name': 'House A', 'type': 'residential'} |
-| Polygon(((x2, y2), (x3, y3), (x4, y4), (x5, y5)))                                            | 2           | {'name': 'House B', 'type': 'residential'} |
-| MultiPolygon(((x6, y6), (x7, y7), (x8, y8), (x9, y9)), ((x10, y10), (x11, y11), (x12, y12))) | 3           | {'name': 'House C', 'type': 'residential'} |
-
-> [!NOTE]  
-> 
-> The buildings data can include additional attributes that will be preserved during the preprocessing.  
-> 
-> To avoid issues with preprocessing, we recommend to project the data into a UTM-zone that matches the area of interest.  
-> 
-> We also recommend removing all buildings and roads that are not within the area of interest. In addition it must be ensured that all geometries are valid and object_ids that are empty or have no geometry be removed.
+- A Digital Elevation Model (DEM)
+- Point Data on Building locations
+- Road Network Data
 
 ### Preprocessing
-
-### Input data preprocessing recommendations
-
-- Ensure that the roads and buildings data are clipped to the area of interest, i.e. the settlement area.
-- Ensure that the DEM covers the area of interest. For example, if the planned WWTP is located outside of the city, then this area must be included in the DEM.
-- The DEM must be free of no-data values, i.e., all the DEM should be inspected and undergo quality check before being used.
-- Ensure that all additional sinks are within the bounds of the DEM
-
-### Preprocessing of the initial graph
 
 The main objective of sewer layout generation is to connect all buildings to a waste water treatment plant (WWTP) while keeping system cost low. The initial graph represents all potential sewer lines in our model domain.
 
@@ -210,6 +143,22 @@ The package comes with two solvers to find estimates for the underlying steiner 
 The _RSPH solver_ iteratively connects the nearest unconnected node (in terms of distance and pump penalty) to the closest connected network node. The solver can account for multiple sinks and is therefore well suited to generate decentralized network scenarios.
 
 The _RSPH Fast_ solver derives the network by combining all shortest paths to a single sink. Faster, but only allows for a single sink.
+
+### Pump penalty demonstration
+
+To validate the effect of the pump penalty logic we provide a synthetic regression in `test_scripts/demo_pump_penalty_effect.py`.  
+Running
+
+```shell
+python3 test_scripts/demo_pump_penalty_effect.py
+```
+
+creates a small toy network in which a pumped shortcut competes with a gravity detour.  
+After the penalty escalation rerun, the solver switches to the gravity route and the pump count drops from two edges to zero.
+
+![Pump penalty demo](docs/pump_penalty_demo.svg)
+
+The script also exports `docs/pump_penalty_demo.png` (when `matplotlib` is available) so the figure can be regenerated from source.
 
 ## Plotting
 
