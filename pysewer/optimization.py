@@ -351,18 +351,43 @@ def calculate_hydraulic_parameters(
             # Calculate diameter
             # adjust peak flow for combined sewer
             peak_flow = G.nodes[upstream]["peak_flow"] * combined_sewer_factor
+            violations = []
             if pressurized:
                 diam = pressurized_diameter
             else:
-                diam = select_diameter(peak_flow, diameters, roughness, slope)
+                diam, violations = select_diameter_with_constraints(
+                    peak_flow,
+                    diameters,
+                    roughness,
+                    slope,
+                    max_depth_ratio=config.optimization.max_depth_ratio,
+                    vmin=config.optimization.velocity_min,
+                    vmax=config.optimization.velocity_max,
+                )
                 if diam < max_inflow_diameters:
                     diam = max_inflow_diameters
+
+            # Hydraulic checks (depth ratio, velocity) for reporting
+            q_full = _full_flow_manning(diam, roughness, slope)
+            depth_ratio = peak_flow / q_full if q_full > 0 else 1.0
+            area_full = math.pi * (diam / 2) ** 2
+            velocity = peak_flow / area_full if area_full > 0 else 0
+            if depth_ratio > config.optimization.max_depth_ratio:
+                violations.append("depth_ratio")
+            if velocity < config.optimization.velocity_min:
+                violations.append("velocity_min")
+            if velocity > config.optimization.velocity_max:
+                violations.append("velocity_max")
+
             # Write results to graph
             edge_attrs = {
                 edge: {
                     "diameter": diam,
                     "peak_flow": peak_flow,
                     "edge_counter": edge_counter,
+                    "velocity": velocity,
+                    "d_over_D": depth_ratio,
+                    "hydraulic_violations": violations,
                 }
             }
             nx.set_edge_attributes(G, edge_attrs)
@@ -555,6 +580,49 @@ def select_diameter(
             raise ValueError("Maximum Diameter insufficient to reach target flow")
         flow = mannings_equation(selected_diameter, roughness, slope)
     return selected_diameter
+
+
+def _full_flow_manning(diameter: float, roughness: float, slope: float) -> float:
+    """
+    Manning full-flow capacity for a circular pipe.
+    """
+    if slope >= 0:
+        slope = -1e-6
+    area = math.pi * (diameter / 2) ** 2
+    perimeter = math.pi * diameter
+    rh = area / perimeter
+    velocity = (1 / roughness) * rh ** (2 / 3) * (-slope) ** 0.5
+    return area * velocity
+
+
+def select_diameter_with_constraints(
+    target_flow: float,
+    diameters: List[float],
+    roughness: float,
+    slope: float,
+    max_depth_ratio: float,
+    vmin: float,
+    vmax: float,
+):
+    """
+    Pick the smallest diameter that satisfies depth ratio and velocity bounds.
+    Returns (diameter, violations)
+    """
+    violations = []
+    for d in sorted(diameters):
+        q_full = _full_flow_manning(d, roughness, slope)
+        depth_ratio = target_flow / q_full if q_full > 0 else 1.0
+        area_full = math.pi * (d / 2) ** 2
+        velocity = target_flow / area_full if area_full > 0 else 0
+        if (
+            depth_ratio <= max_depth_ratio
+            and velocity >= vmin
+            and velocity <= vmax
+        ):
+            return d, violations
+    # If none satisfy, return largest and note violations
+    violations.append("no_diameter_meets_depth_or_velocity")
+    return max(diameters), violations
 
 
 def needs_pump(
