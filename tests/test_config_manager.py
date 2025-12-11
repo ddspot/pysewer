@@ -125,6 +125,23 @@ def test_export_uses_config_default_format(tmp_path):
     assert out_path.exists()
 
 
+def test_partial_custom_settings_merge_defaults(tmp_path):
+    """
+    load_config should fill missing keys from defaults when a custom file omits them.
+    """
+    custom = load_settings(DEFAULT_SETTINGS_PATH)
+    # remove a required key to simulate minimal override
+    custom["optimization"].pop("max_slope", None)
+    custom_path = tmp_path / "partial.yaml"
+    custom_path.write_text(json.dumps(custom))
+
+    config = load_config(custom_path=str(custom_path))
+
+    # default value from settings.yaml should be used
+    defaults = load_settings(DEFAULT_SETTINGS_PATH)
+    assert config.optimization.max_slope == defaults["optimization"]["max_slope"]
+
+
 def test_estimate_peakflow_uses_runtime_config_defaults(tmp_path):
     """
     estimate_peakflow should pull values from the current config when parameters are omitted.

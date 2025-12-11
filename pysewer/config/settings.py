@@ -185,56 +185,32 @@ def load_config(
     """
     logger = logging.getLogger(__name__)
 
+    if custom_path and custom_setting_dict:
+        raise ValueError("Provide either custom_path or custom_setting_dict, not both")
+
     # Load default settings
-    default_settings_dict = load_settings(DEFAULT_SETTINGS_PATH)
-    default_settings = dict_to_config(default_settings_dict)
+    base_settings_dict = load_settings(DEFAULT_SETTINGS_PATH)
+    merged_settings = base_settings_dict
 
-    logger.info("Default settings loaded:")
-    logger.info(f"  tmax: {default_settings.optimization.tmax}")
-    logger.info(f"  tmin: {default_settings.optimization.tmin}")
-    logger.info(f"  min_slope: {default_settings.optimization.min_slope}")
-    logger.info(f"  pump_penalty: {default_settings.preprocessing.pump_penalty}")
-
-    # If custom path is provided, load and override with those settings
+    # If custom path is provided, load and deep-merge with defaults
     if custom_path:
         logger.info(f"Loading custom settings from: {custom_path}")
         custom_settings_dict = load_settings(custom_path)
-        if "preprocessing" in custom_settings_dict:
-            default_settings.preprocessing = Preprocessing(
-                **custom_settings_dict["preprocessing"]
-            )
-        if "optimization" in custom_settings_dict:
-            default_settings.optimization = Optimization(
-                **custom_settings_dict["optimization"]
-            )
-        if "plotting" in custom_settings_dict:
-            default_settings.plotting = Plotting(**custom_settings_dict["plotting"])
-        if "export" in custom_settings_dict:
-            default_settings.export = Export(**custom_settings_dict["export"])
-
-        logger.info("Custom settings applied:")
-        logger.info(f"  tmax: {default_settings.optimization.tmax}")
-        logger.info(f"  tmin: {default_settings.optimization.tmin}")
-        logger.info(f"  min_slope: {default_settings.optimization.min_slope}")
-        logger.info(f"  pump_penalty: {default_settings.preprocessing.pump_penalty}")
-
-    # If custom settings dict is provided, override with those settings
-    if custom_setting_dict:
+        merged_settings = deep_merge(custom_settings_dict, base_settings_dict)
+    # If custom settings dict is provided, deep-merge with defaults
+    elif custom_setting_dict:
         logger.info("Applying custom settings dictionary")
-        if "preprocessing" in custom_setting_dict:
-            default_settings.preprocessing = Preprocessing(
-                **custom_setting_dict["preprocessing"]
-            )
-        if "optimization" in custom_setting_dict:
-            default_settings.optimization = Optimization(
-                **custom_setting_dict["optimization"]
-            )
-        if "plotting" in custom_setting_dict:
-            default_settings.plotting = Plotting(**custom_setting_dict["plotting"])
-        if "export" in custom_setting_dict:
-            default_settings.export = Export(**custom_setting_dict["export"])
+        merged_settings = deep_merge(custom_setting_dict, base_settings_dict)
 
-    return default_settings
+    config = dict_to_config(merged_settings)
+
+    logger.info("Settings loaded:")
+    logger.info(f"  tmax: {config.optimization.tmax}")
+    logger.info(f"  tmin: {config.optimization.tmin}")
+    logger.info(f"  min_slope: {config.optimization.min_slope}")
+    logger.info(f"  pump_penalty: {config.preprocessing.pump_penalty}")
+
+    return config
 
 
 def config_to_dict(config: Config) -> dict:
