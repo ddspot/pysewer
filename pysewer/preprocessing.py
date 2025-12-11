@@ -16,7 +16,6 @@ from shapely.ops import linemerge, nearest_points
 from sklearn.cluster import AgglomerativeClustering
 
 from .config.manager import get_config
-from .config.settings import load_config
 from .helper import (
     ckdnearest,
     get_closest_edge,
@@ -30,8 +29,6 @@ from .helper import (
 )
 from .optimization import needs_pump
 from .simplify import simplify_graph
-
-DEFAULT_CONFIG = load_config()
 
 # Ignore the specific RuntimeWarning
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -148,7 +145,7 @@ class DEM:
     def get_profile(
         self,
         line: shapely.geometry.LineString,
-        dx: int = DEFAULT_CONFIG.preprocessing.dx,
+        dx: Optional[int] = None,
     ):
         """
         Extracts elevation data from a digital elevation model (DEM) along a given path.
@@ -166,6 +163,9 @@ class DEM:
             A list of (x, elevation) tuples representing the x-coordinate and elevation data of the profile.
             The x-coordinate values start at 0 and are spaced at intervals of dx meters.
         """
+        config = get_config()
+        dx = config.preprocessing.dx if dx is None else dx
+
         x = np.arange(0, line.length, dx)
         x = np.append(x, line.length)
         interpolated_points = [line.interpolate(dist) for dist in x]
@@ -554,11 +554,22 @@ class ModelDomain:
         dem: str,
         roads: str,
         buildings: str,
-        clustering: str = DEFAULT_CONFIG.preprocessing.clustering,
-        pump_penalty: int = 1000,  # Default to 1000, but can be overridden
-        connect_buildings: bool = DEFAULT_CONFIG.preprocessing.connect_buildings,
+        clustering: Optional[str] = None,
+        pump_penalty: Optional[int] = None,
+        connect_buildings: Optional[bool] = None,
     ):
         """Initialize Model Domain using the input data."""
+        config = get_config()
+        clustering = config.preprocessing.clustering if clustering is None else clustering
+        pump_penalty = (
+            config.preprocessing.pump_penalty if pump_penalty is None else pump_penalty
+        )
+        connect_buildings = (
+            config.preprocessing.connect_buildings
+            if connect_buildings is None
+            else connect_buildings
+        )
+
         self.roads = Roads(roads)
         self.buildings = Buildings(buildings, roads_obj=self.roads)
         self.dem = DEM(dem)
@@ -682,8 +693,8 @@ class ModelDomain:
 
     def connect_buildings(
         self,
-        max_connection_length: int = DEFAULT_CONFIG.preprocessing.max_connection_length,
-        clustering: str = DEFAULT_CONFIG.preprocessing.clustering,
+        max_connection_length: Optional[int] = None,
+        clustering: Optional[str] = None,
     ):
         """
         Connects the buildings in the network by adding nodes to the graph.
@@ -710,6 +721,16 @@ class ModelDomain:
         >>> network = Network()
         >>> network.connect_buildings(max_connection_length=50, clustering="centers")
         """
+        config = get_config()
+        max_connection_length = (
+            config.preprocessing.max_connection_length
+            if max_connection_length is None
+            else max_connection_length
+        )
+        clustering = (
+            config.preprocessing.clustering if clustering is None else clustering
+        )
+
         # get building points:
         building_gdf = self.buildings.get_gdf()
 
@@ -848,7 +869,7 @@ class ModelDomain:
         new_node,
         conn_point,
         closest_edge,
-        add_private_sewer: bool = DEFAULT_CONFIG.preprocessing.add_private_sewer,
+        add_private_sewer: Optional[bool] = None,
     ):
         """
         Connects a new node to the road network by inserting a connection point on the closest edge and adjusting edges.
@@ -863,6 +884,13 @@ class ModelDomain:
         Returns:
             bool: True if the connection was successful, False otherwise.
         """
+        config = get_config()
+        add_private_sewer = (
+            config.preprocessing.add_private_sewer
+            if add_private_sewer is None
+            else add_private_sewer
+        )
+
         u = closest_edge.coords[0]
         v = closest_edge.coords[1]
         # inserts new connection point on a edge and adjusts edges
@@ -1035,10 +1063,11 @@ class ModelDomain:
 
     def get_sinks(self):
         """Returns a list of node keys for all wastewater treatment plants (wwtp) in the connection graph."""
+        config = get_config()
         return get_node_keys(
             self.connection_graph,
-            field=DEFAULT_CONFIG.preprocessing.field_get_sinks,
-            value=DEFAULT_CONFIG.preprocessing.value_get_sinks,
+            field=config.preprocessing.field_get_sinks,
+            value=config.preprocessing.value_get_sinks,
         )
 
     def set_pump_penalty(self, pp):
@@ -1056,10 +1085,11 @@ class ModelDomain:
 
     def get_buildings(self):
         """Returns a list of node keys for all buildings in the connection graph."""
+        config = get_config()
         return get_node_keys(
             self.connection_graph,
-            field=DEFAULT_CONFIG.preprocessing.field_get_buildings,
-            value=DEFAULT_CONFIG.preprocessing.value_get_buildings,
+            field=config.preprocessing.field_get_buildings,
+            value=config.preprocessing.value_get_buildings,
         )
 
     def connect_subgraphs(self):

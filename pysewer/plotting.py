@@ -12,10 +12,8 @@ import rasterio.plot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from rasterio.plot import plotting_extent
 
-from .config.settings import load_config
+from .config.manager import get_config
 from .helper import get_edge_gdf, get_node_gdf
-
-DEFAULT_CONFIG = load_config()
 
 # def get_plot_pos(G):
 #    pos = dict(G.nodes)
@@ -26,15 +24,15 @@ DEFAULT_CONFIG = load_config()
 
 def plot_model_domain(
     modelDomain,
-    plot_connection_graph: bool = DEFAULT_CONFIG.plotting.plot_connection_graph,
-    plot_junction_graph: bool = DEFAULT_CONFIG.plotting.plot_junction_graph,
-    plot_sink: bool = DEFAULT_CONFIG.plotting.plot_sink,
-    plot_sewer: bool = DEFAULT_CONFIG.plotting.plot_sewer,
-    sewer_graph: nx.Graph = DEFAULT_CONFIG.plotting.sewer_graph,
-    info_table: Optional[dict] = DEFAULT_CONFIG.plotting.info_table,
+    plot_connection_graph: Optional[bool] = None,
+    plot_junction_graph: Optional[bool] = None,
+    plot_sink: Optional[bool] = None,
+    plot_sewer: Optional[bool] = None,
+    sewer_graph: Optional[nx.Graph] = None,
+    info_table: Optional[dict] = None,
     hs_alt=30,
     hs_az=0,
-    hillshade: bool = DEFAULT_CONFIG.plotting.hillshade,
+    hillshade: Optional[bool] = None,
     fig_size: tuple = (20, 20),
 ):
     """
@@ -70,6 +68,23 @@ def plot_model_domain(
     fig, ax : matplotlib.figure.Figure, matplotlib.axes.Axes
         The figure and axes of the plot.
     """
+    config = get_config()
+    plot_connection_graph = (
+        config.plotting.plot_connection_graph
+        if plot_connection_graph is None
+        else plot_connection_graph
+    )
+    plot_junction_graph = (
+        config.plotting.plot_junction_graph
+        if plot_junction_graph is None
+        else plot_junction_graph
+    )
+    plot_sink = config.plotting.plot_sink if plot_sink is None else plot_sink
+    plot_sewer = config.plotting.plot_sewer if plot_sewer is None else plot_sewer
+    hillshade = config.plotting.hillshade if hillshade is None else hillshade
+    sewer_graph = config.plotting.sewer_graph if sewer_graph is None else sewer_graph
+    info_table = config.plotting.info_table if info_table is None else info_table
+
     fig, ax = plt.subplots(figsize=fig_size)
     bbox = get_edge_gdf(modelDomain.connection_graph).total_bounds
 

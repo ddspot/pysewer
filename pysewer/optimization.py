@@ -3,17 +3,13 @@
 
 import logging
 import math
-from typing import Hashable, List, Union
+from typing import Hashable, List, Optional, Union
 
 import networkx as nx
 import numpy as np
 
 from .config.manager import get_config
-from .config.settings import load_config
 from .helper import get_mean_slope, get_node_keys, get_upstream_nodes
-
-# load default settings
-DEFAULT_CONFIG = load_config()
 logger = logging.getLogger(__name__)
 
 NodeType = Union[str, int, Hashable, None]
@@ -197,10 +193,10 @@ def reverse_bfs(G, sink: str, include_private_sewer: bool = True):
 def calculate_hydraulic_parameters(
     G,
     sinks: list,
-    pressurized_diameter: float = DEFAULT_CONFIG.optimization.pressurized_diameter,
-    diameters: List[float] = DEFAULT_CONFIG.optimization.diameters,
-    roughness: float = DEFAULT_CONFIG.optimization.roughness,
-    include_private_sewer: bool = DEFAULT_CONFIG.preprocessing.add_private_sewer,
+    pressurized_diameter: Optional[float] = None,
+    diameters: Optional[List[float]] = None,
+    roughness: Optional[float] = None,
+    include_private_sewer: Optional[bool] = None,
     combined_sewer_factor: float = 1.0,
 ):
     """
@@ -266,17 +262,18 @@ def calculate_hydraulic_parameters(
     """
     config = get_config()
     pressurized_diameter = (
-        pressurized_diameter or config.optimization.pressurized_diameter
+        config.optimization.pressurized_diameter
+        if pressurized_diameter is None
+        else pressurized_diameter
     )
-    diameters = diameters or config.optimization.diameters
-    roughness = roughness or config.optimization.roughness
+    diameters = config.optimization.diameters if diameters is None else diameters
+    roughness = config.optimization.roughness if roughness is None else roughness
     include_private_sewer = (
-        include_private_sewer or config.preprocessing.add_private_sewer
+        config.preprocessing.add_private_sewer
+        if include_private_sewer is None
+        else include_private_sewer
     )
-    min_trench_depth = (
-        DEFAULT_CONFIG.optimization.min_trench_depth
-        or config.optimization.min_trench_depth
-    )
+    min_trench_depth = config.optimization.min_trench_depth
 
     nx.set_node_attributes(G, [0], name="inflow_trench_depths")
     nx.set_node_attributes(G, [0], name="inflow_diameters")
@@ -392,9 +389,9 @@ def calculate_hydraulic_parameters(
 
 def estimate_peakflow(
     G: nx.Graph,
-    inhabitants_dwelling: int = DEFAULT_CONFIG.optimization.inhabitants_dwelling,
-    daily_wastewater_person: float = DEFAULT_CONFIG.optimization.daily_wastewater_person,
-    peak_factor: float = DEFAULT_CONFIG.optimization.peak_factor,
+    inhabitants_dwelling: Optional[int] = None,
+    daily_wastewater_person: Optional[float] = None,
+    peak_factor: Optional[float] = None,
 ):
     """
     Estimate the peakflow in m³/s for a node n in Graph G.
@@ -419,12 +416,18 @@ def estimate_peakflow(
 
     config = get_config()
     inhabitants_dwelling = (
-        inhabitants_dwelling or config.optimization.inhabitants_dwelling
+        config.optimization.inhabitants_dwelling
+        if inhabitants_dwelling is None
+        else inhabitants_dwelling
     )
     daily_wastewater_person = (
-        daily_wastewater_person or config.optimization.daily_wastewater_person
+        config.optimization.daily_wastewater_person
+        if daily_wastewater_person is None
+        else daily_wastewater_person
     )
-    peak_factor = peak_factor or config.optimization.peak_factor
+    peak_factor = (
+        config.optimization.peak_factor if peak_factor is None else peak_factor
+    )
 
     for n in G.nodes():
         upstream_buildings = get_upstream_nodes(G, n, "node_type", "building")

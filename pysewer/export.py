@@ -16,9 +16,7 @@ from typing import List, Tuple
 import fiona
 import geopandas as gpd
 
-from .config.settings import load_config
-
-DEFAULT_CONFIG = load_config()
+from .config.manager import get_config
 
 
 def map_dtype_to_fiona(dtype):
@@ -157,7 +155,7 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
 def export_sewer_network(
     gdf: gpd.GeoDataFrame,
     filepath: str,
-    file_format: str = DEFAULT_CONFIG.export.file_format,
+    file_format: str = None,
 ):
     """
     Export a sewer network GeoDataFrame to a file.
@@ -181,6 +179,10 @@ def export_sewer_network(
     -------
     None
     """
+    config = get_config()
+    if file_format is None:
+        file_format = config.export.file_format
+
     supported_formats = ["gpkg", "shp", "parquet"]
     if file_format not in supported_formats:
         raise ValueError(f"File format {file_format} is not supported.")

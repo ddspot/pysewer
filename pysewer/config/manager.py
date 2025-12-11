@@ -27,3 +27,9 @@ def set_config(custom_path=None, custom_settings_dict=None) -> Config:
     _CONFIG = load_config(custom_path, custom_settings_dict)
     return _CONFIG
 
+
+def reset_config() -> Config:
+    """
+    Reset the global config back to the defaults from settings.yaml.
+    """
+    return set_config()
