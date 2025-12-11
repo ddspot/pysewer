@@ -952,19 +952,21 @@ class ModelDomain:
                 # checking if the profile attribute exist before using it
                 if "profile" in connection_digraph[u][v][0]:
                     # Check if a pump is needed
-                    (
-                        connection_digraph[u][v][0]["needs_pump"],
-                        height,
-                        trench_depth,
-                        slope,
-                    ) = needs_pump(
+                    needs_pump_flag, height, trench_depth = needs_pump(
                         profile=connection_digraph[u][v][0]["profile"],
                         min_slope=config.optimization.min_slope,
-                        max_slope=config.optimization.max_slope,
                         tmax=config.optimization.tmax,
                         tmin=config.optimization.tmin,
                         inflow_trench_depth=config.optimization.inflow_trench_depth,
                     )
+                    profile = connection_digraph[u][v][0]["profile"]
+                    if profile and profile[-1][0] != profile[0][0]:
+                        slope = (profile[-1][1] - profile[0][1]) / (
+                            profile[-1][0] - profile[0][0]
+                        )
+                    else:
+                        slope = 0
+                    connection_digraph[u][v][0]["needs_pump"] = needs_pump_flag
                     connection_digraph[u][v][0]["height"] = height
                     connection_digraph[u][v][0]["trench_depth"] = trench_depth
                     connection_digraph[u][v][0]["slope"] = slope
