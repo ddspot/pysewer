@@ -32,6 +32,11 @@ optimization:
   diameters: [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0]
   roughness: 0.0015
   pressurized_diameter: 0.3
+  min_cover: 1.5
+  min_pipe_length: 2.0
+  velocity_min: 0.7
+  velocity_max: 3.0
+  max_depth_ratio: 0.75
 
 plotting:
   plot_connection_graph: false
