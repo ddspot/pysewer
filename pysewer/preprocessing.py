@@ -971,6 +971,23 @@ class ModelDomain:
                     connection_digraph[u][v][0]["trench_depth"] = trench_depth
                     connection_digraph[u][v][0]["slope"] = slope
 
+                    # Constraint flags
+                    cover_profile = [
+                        topo[1] - td[1] for td, topo in zip(trench_depth, profile)
+                    ]
+                    min_cover = min(cover_profile) if cover_profile else 0
+                    violations = []
+                    if min_cover < config.optimization.min_cover:
+                        violations.append("min_cover")
+                        needs_pump_flag = True
+                        connection_digraph[u][v][0]["needs_pump"] = True
+                    if dist < config.optimization.min_pipe_length:
+                        violations.append("min_pipe_length")
+                    if abs(slope) > abs(config.optimization.max_slope):
+                        violations.append("max_slope")
+
+                    connection_digraph[u][v][0]["constraint_violations"] = violations
+
                     if connection_digraph[u][v][0]["needs_pump"]:
                         edges_needing_pumps += 1
                         connection_digraph[u][v][0]["weight"] = dist * self.pump_penalty
