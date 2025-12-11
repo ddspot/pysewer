@@ -5,10 +5,16 @@ import json
 from copy import deepcopy
 
 import pytest
+import networkx as nx
+import geopandas as gpd
+from shapely.geometry import LineString, Point
 
 import pysewer
 from pysewer.config.manager import get_config, reset_config, set_config
 from pysewer.config.settings import DEFAULT_SETTINGS_PATH, load_config, load_settings
+from pysewer.export import export_sewer_network
+from pysewer.preprocessing import DEM
+from pysewer.optimization import estimate_peakflow
 
 
 @pytest.fixture(autouse=True)
@@ -88,3 +94,53 @@ def test_set_custom_config_updates_package_default(tmp_path):
 
     assert pysewer.DEFAULT_CONFIG.preprocessing.dx == 11
     assert get_config().preprocessing.dx == 11
+
+
+def test_dem_profile_uses_runtime_config(tmp_path):
+    """
+    get_profile should honor updated config defaults without explicit parameters.
+    """
+    custom_settings = load_settings(DEFAULT_SETTINGS_PATH)
+    custom_settings["preprocessing"]["dx"] = 3
+    set_config(custom_settings_dict=deepcopy(custom_settings))
+
+    dem = DEM()  # no raster, returns 0 elevations
+    line = LineString([(0, 0), (9, 0)])
+    profile = dem.get_profile(line)
+    assert [p[0] for p in profile] == [0, 3, 6, 9]
+
+
+def test_export_uses_config_default_format(tmp_path):
+    """
+    export_sewer_network should default to the configured export format when none is provided.
+    """
+    custom_settings = load_settings(DEFAULT_SETTINGS_PATH)
+    custom_settings["export"]["file_format"] = "parquet"
+    set_config(custom_settings_dict=deepcopy(custom_settings))
+
+    gdf = gpd.GeoDataFrame({"id": [1]}, geometry=[Point(0, 0)], crs="EPSG:4326")
+    out_path = tmp_path / "network.parquet"
+    export_sewer_network(gdf, str(out_path))
+
+    assert out_path.exists()
+
+
+def test_estimate_peakflow_uses_runtime_config_defaults(tmp_path):
+    """
+    estimate_peakflow should pull values from the current config when parameters are omitted.
+    """
+    custom_settings = load_settings(DEFAULT_SETTINGS_PATH)
+    custom_settings["optimization"]["inhabitants_dwelling"] = 9
+    custom_settings["optimization"]["daily_wastewater_person"] = 0.33
+    custom_settings["optimization"]["peak_factor"] = 5.5
+    set_config(custom_settings_dict=deepcopy(custom_settings))
+
+    G = nx.DiGraph()
+    G.add_node("b1", node_type="building")
+    G.add_node("s1", node_type="sink")
+    G.add_edge("b1", "s1")
+
+    estimate_peakflow(G)
+
+    expected_peak_flow = (((9 * 0.33) / 24) * 5.5) / 3600
+    assert pytest.approx(G.nodes["b1"]["peak_flow"]) == expected_peak_flow
