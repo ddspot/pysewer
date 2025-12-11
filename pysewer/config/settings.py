@@ -52,6 +52,11 @@ class Optimization:
     diameters: List[float] = field(default_factory=list)
     roughness: float = 0.013
     pressurized_diameter: float = 0.2
+    min_cover: float = 1.5
+    min_pipe_length: float = 2.0
+    velocity_min: float = 0.7
+    velocity_max: float = 3.0
+    max_depth_ratio: float = 0.75
 
 
 @dataclass
