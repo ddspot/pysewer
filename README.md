@@ -160,6 +160,16 @@ After the penalty escalation rerun, the solver switches to the gravity route and
 
 The script also exports `docs/pump_penalty_demo.png` (when `matplotlib` is available) so the figure can be regenerated from source.
 
+### Hydraulic constraints & validation
+
+Recent updates added geometric and hydraulic checks to reduce unrealistic layouts:
+
+- **Geometry (connection graph):** cover must stay above `min_cover` (default 1.5 m); short edges are flagged if < `min_pipe_length` (default 2 m); excessively steep slopes are flagged; edges with insufficient cover are forced to `needs_pump`.
+- **Hydraulics (sizing):** gravity pipes are picked to satisfy d/D ≤ `max_depth_ratio` (default 0.75) and velocities within [`velocity_min`, `velocity_max`] (defaults 0.7–3 m/s). Violations are recorded on edges (`hydraulic_violations`), along with computed `velocity` and `d_over_D`.
+- **Inspection:** the example notebook now includes cells that summarize pump/constraint flags on the connection graph and hydraulic violations after sizing.
+
+Profile smoothing is not applied; the checks run on the sampled profile (spacing `dx`). Increase `dx` if you want a smoother profile check.
+
 ## Plotting
 
 ```python
@@ -198,6 +208,12 @@ The table below summaries the key default parameters and their meaning.
 | `inhabitants_dwelling`    | The number of inhabitants per dwelling.                                                                          | 3       |
 | `daily_wastewater_person` | The daily wastewater generated per person in m³                                                                  | 0.2     |
 | `peak_factor`             | Peak factor for wastewater                                                                                       | 2.3     |
+| `min_slope`               | Minimum allowable slope for gravity segments (negative value = downhill)                                         | -0.01   |
+| `tmax` / `tmin`           | Maximum / minimum trench depth (m)                                                                                | 6.0 / 0.25 |
+| `min_cover`               | Minimum cover depth over pipe (m)                                                                                 | 1.5     |
+| `min_pipe_length`         | Shortest segment length before flagging (m)                                                                       | 2.0     |
+| `velocity_min`/`velocity_max` | Bounds on design velocity (m/s)                                                                               | 0.7 / 3.0 |
+| `max_depth_ratio`         | Maximum d/D used when sizing gravity pipes                                                                        | 0.75    |
 | `min_slope`               | The minimum slope required for gravitational flow.                                                               | -0.1    |
 | `tmax`                    | Maximum trench depth allowed (meters)                                                                            | 8       |
 | `tmin`                    | Minimum trench depth allowed (meters)                                                                            | 0.25    |
