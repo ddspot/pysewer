@@ -141,7 +141,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/dbdespot/pysewer",
+            "url": "https://github.com/ddspot/pysewer",
             "icon": "fa-brands fa-github",
         },
         # {

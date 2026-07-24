@@ -35,7 +35,10 @@ It is build around an algorithm for generation of viable sewer-network layouts. 
 
 ## Documentation
 
-The documentation can be found [here](https://despot.pages.ufz.de/pysewer).
+The documentation can be found at [ddspot.github.io/pysewer](https://ddspot.github.io/pysewer/)
+(published from the [GitHub mirror](https://github.com/ddspot/pysewer); Helmholtz
+users can also use the [internal Pages](https://wasp.pages.hzdr.de/pysewer/),
+which requires a Helmholtz AAI login).
 
 An example of how to use pysewer for generating a sewer network layout can be found here: [example_sewer_network_generation](notebooks/example_sewer_network_generation.ipynb).
 
@@ -74,7 +77,7 @@ Alternatively, `make env-local` (see `mk/env.mk`) performs both steps, and on
 HPC/SLURM systems use `source bin/bootstrap_env.sh pysewer` which creates the
 env under `/work/$USER/conda_envs` and runs the uv step.
 
-Please see the [documentation](https://despot.pages.ufz.de/pysewer) for more details.
+Please see the [documentation](https://ddspot.github.io/pysewer/) for more details.
 
 ## Input Data and data representation
 
@@ -214,7 +217,7 @@ GNU GPLv3-modified-UFZ. See [LICENSE](LICENSE) for details.
 
 # How to contribute to pysewer?
 
-Please check out how [Contributing](CONTRIBUTING.md) for on how to contribute to pysewer. Please note that we have created a mirror repository on [Github](https://github.com/dbdespot/pysewer) to allow for easier contribution. The original repository is hosted on [Gitlab](https://codebase.helmholtz.cloud/wasp/pysewer).
+Please check out how [Contributing](CONTRIBUTING.md) for on how to contribute to pysewer. Please note that we have created a mirror repository on [Github](https://github.com/ddspot/pysewer) to allow for easier contribution. The original repository is hosted on [Gitlab](https://codebase.helmholtz.cloud/wasp/pysewer).
 
 ## Code of conduct
 
