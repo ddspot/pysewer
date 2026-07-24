@@ -44,9 +44,11 @@ uv+mamba two-layer env).
       (bare-excepts, mutable default args, zip strict=)
 - [x] earthpy dependency dropped — hillshade vendored in plotting.py
       (10-line ESRI formula), conda locks regenerated (5b1fbfc)
-- [ ] Stale branches on the new remote: combined-sewers (+3 on old main —
-      rebase or merge onto v0.2.0), sphinx-docs, base-ci-pipeline
-      (superseded by consolidated CI) — merge or delete
+- [ ] Stale branches on the new remote — all three are safe to delete
+      pending your OK (verified 2026-07-24): **combined-sewers** is fully
+      superseded (combined_sewer_factor, empty-gdf checks and geometry
+      validation are all in main already); **sphinx-docs** and
+      **base-ci-pipeline** are superseded by the consolidated CI
 - [x] install.rst rewritten for the two-layer workflow (7ebe6e0);
       remaining: api_reference codeautolink warnings
 - [x] v0.2.0 tagged and pushed (tag pipeline green); remaining: new Zenodo
