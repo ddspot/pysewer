@@ -21,10 +21,18 @@ uv+mamba two-layer env).
 
 - [x] **CI pipeline green** on codebase.helmholtz.cloud (2026-07-24,
       pipeline 795352: test + pages both pass; make→sphinx fix b207d68)
-- [ ] **Make Pages public**: the site is deployed at
-      https://wasp.pages.hzdr.de/pysewer/ but redirects to sign-in —
-      set Settings → General → Visibility → Pages → Everyone; then update
-      the README docs link (currently still https://despot.pages.ufz.de/pysewer)
+- [ ] **Public docs hosting**: codebase.helmholtz.cloud forces Helmholtz AAI
+      login for ALL Pages sites (verified 2026-07-24: every *.pages.hzdr.de
+      site, incl. HiRSE's public website project, redirects anonymous
+      visitors to sign-in — the project-level "Everyone With Access" setting
+      is correct but cannot override the instance policy).
+      https://wasp.pages.hzdr.de/pysewer/ works for logged-in Helmholtz
+      users. For anonymous public docs choose one:
+      (a) GitHub Pages on the dbdespot/pysewer mirror (Actions workflow
+          builds sphinx — pairs with the mirror-repointing task), or
+      (b) Read the Docs.
+      Stopgap: the old https://despot.pages.ufz.de/pysewer is still up and
+      public (stale content). Update the README docs link once decided.
 - [ ] Decide the fate of the old git.ufz.de/despot/pysewer repo
       (currently untouched as a safety net): archive + "moved" notice?
 - [ ] Repoint the GitHub mirror (github.com/dbdespot/pysewer) to mirror the
