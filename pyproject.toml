@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+
+[project]
+name = "pysewer"
+version = "0.2.0"
+description = "A Python package for automated routing and optimization of sewer networks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-only" }
+authors = [
+    { name = "Helmholtz Centre for Environmental Research (UFZ)" },
+]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+# Pure-Python / PyPI layer. The geospatial C-library stack (gdal, proj, geos,
+# rasterio, fiona, geopandas, shapely, pyproj) is provided by the conda layer
+# (environment.yml) and listed here only so metadata stays complete when the
+# conda env already satisfies them.
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "networkx",
+    "pyarrow",
+    "matplotlib",
+    "pyyaml",
+    "geopandas",
+    "shapely>=2.0",
+    "pyproj",
+    "rasterio",
+    "fiona>=1.9.2",
+    "earthpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "jupyterlab",
+    "ipython",
+    "ipykernel",
+]
+docs = [
+    "sphinx",
+    "myst-parser",
+    "pydata-sphinx-theme",
+    "sphinx-design",
+    "ablog",
+    "sphinx-favicon",
+    "sphinx-codeautolink",
+    "sphinx-copybutton",
+]
+
+[project.urls]
+Repository = "https://codebase.helmholtz.cloud/wasp/pysewer"
+Paper = "https://doi.org/10.21105/joss.06430"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pysewer*"]
+
+[tool.setuptools.package-data]
+"pysewer.config" = ["*.yaml"]

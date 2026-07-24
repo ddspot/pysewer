@@ -213,3 +213,12 @@ pysewer.txt
 debugging_scripts
 paper/media/media/
 docs/build/
+
+# hpc-env managed files (two-layer env workflow) — un-ignore bin/ from the
+# virtualenv template patterns above
+!bin/
+!bin/**
+Makefile.local
+
+# scratch symlink (work convention)
+work
