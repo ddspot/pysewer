@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
+import os
 import warnings
 from dataclasses import dataclass, field
 from typing import Hashable, List, Optional, Union
@@ -252,7 +253,7 @@ class Roads:
         input_data : str or geopandas.GeoDataFrame
             Path to shapefile or geopandas dataframe containing road data.
         """
-        if isinstance(input_data, str):
+        if isinstance(input_data, (str, os.PathLike)):
             self.gdf = gpd.read_file(input_data)
         else:
             self.gdf = input_data
@@ -353,7 +354,7 @@ class Buildings:
         """
         # Digest and clean input Data
         # Allow input to be either path to shp file or gdf
-        if type(input_data) == str:
+        if isinstance(input_data, (str, os.PathLike)):
             self.gdf = gpd.read_file(input_data)
         else:
             self.gdf = input_data
@@ -977,10 +978,11 @@ class ModelDomain:
                     ]
                     min_cover = min(cover_profile) if cover_profile else 0
                     violations = []
+                    # A pump does not remedy insufficient cover (deeper
+                    # trenching does, governed by tmin), so a min_cover
+                    # violation is recorded but does not force needs_pump.
                     if min_cover < config.optimization.min_cover:
                         violations.append("min_cover")
-                        needs_pump_flag = True
-                        connection_digraph[u][v][0]["needs_pump"] = True
                     if dist < config.optimization.min_pipe_length:
                         violations.append("min_pipe_length")
                     if abs(slope) > abs(config.optimization.max_slope):
