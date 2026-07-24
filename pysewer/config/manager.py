@@ -8,7 +8,7 @@ can share overrides (e.g. set via `set_custom_config`). The public helpers
 mirror the functions used elsewhere in the codebase.
 """
 
-from .settings import load_config, Config
+from .settings import Config, load_config
 
 # Store a single config instance that can be shared package-wide
 _CONFIG: Config = load_config()

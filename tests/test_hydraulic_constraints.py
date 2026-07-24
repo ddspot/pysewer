@@ -5,7 +5,10 @@ import networkx as nx
 import pytest
 
 from pysewer.config.manager import reset_config, set_config
-from pysewer.optimization import calculate_hydraulic_parameters, select_diameter_with_constraints
+from pysewer.optimization import (
+    calculate_hydraulic_parameters,
+    select_diameter_with_constraints,
+)
 
 
 @pytest.fixture(autouse=True)

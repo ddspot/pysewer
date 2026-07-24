@@ -1,16 +1,13 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
-import networkx as nx
 import geopandas as gpd
-from shapely import wkt
+import networkx as nx
 import pytest
+
 from pysewer.helper import (
-    get_node_keys,
     get_edge_keys,
-    get_path_gdf,
-    get_mean_slope,
-    ckdnearest,
+    get_node_keys,
     remove_third_dimension,
 )
 
@@ -62,7 +59,7 @@ def test_get_edge_keys(graph):
 
 
 def test_remove_third_dimension():
-    from shapely.geometry import Point, LineString, Polygon
+    from shapely.geometry import LineString, Point, Polygon
 
     p = Point(0, 0, 1)
     assert remove_third_dimension(p).wkt == "POINT (0 0)"

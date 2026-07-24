@@ -71,3 +71,12 @@ include = ["pysewer*"]
 
 [tool.setuptools.package-data]
 "pysewer.config" = ["*.yaml"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM", "RUF"]
+# bare excepts and remaining findings are tracked in TODO.md
+ignore = ["E722"]

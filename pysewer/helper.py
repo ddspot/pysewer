@@ -4,7 +4,6 @@
 import itertools
 import warnings
 from operator import itemgetter
-from typing import List
 
 import geopandas as gpd
 import networkx as nx
@@ -16,7 +15,7 @@ from shapely.geometry import *
 from shapely.geometry import LineString, Point
 
 
-def get_upstream_nodes(G: nx.DiGraph, start_node, field: str, value: str) -> List:
+def get_upstream_nodes(G: nx.DiGraph, start_node, field: str, value: str) -> list:
     """
     Returns a list of all upstream nodes in a directed graph `G` that have a node attribute `field` with value `value`,
     starting from `start_node` and traversing the graph in reverse order using a breadth-first search algorithm.
@@ -44,7 +43,7 @@ def get_upstream_nodes(G: nx.DiGraph, start_node, field: str, value: str) -> Lis
     ]
 
 
-def get_path_distance(detailed_path: List[tuple]) -> float:
+def get_path_distance(detailed_path: list[tuple]) -> float:
     """
     Calculates the total distance of a path given a list of detailed path coordinates.
 
@@ -407,7 +406,7 @@ def remove_third_dimension(geom):
 
     else:
         raise RuntimeError(
-            "Currently this type of geometry is not supported: {}".format(type(geom))
+            f"Currently this type of geometry is not supported: {type(geom)}"
         )
 
 

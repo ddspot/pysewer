@@ -3,10 +3,8 @@
 
 import datetime
 import logging
-from logging.handlers import RotatingFileHandler
 import os
-
-import pytest
+from logging.handlers import RotatingFileHandler
 
 logger = logging.getLogger(__name__)
 

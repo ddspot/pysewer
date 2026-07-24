@@ -4,7 +4,6 @@
 import os
 import warnings
 from dataclasses import dataclass, field
-from typing import Hashable, List, Optional, Union
 
 import geopandas as gpd
 import networkx as nx
@@ -13,13 +12,12 @@ import rasterio as rio
 import shapely
 from pyproj.crs import CRS
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
-from shapely.ops import linemerge, nearest_points
+from shapely.ops import nearest_points
 from sklearn.cluster import AgglomerativeClustering
 
 from .config.manager import get_config
 from .helper import (
     ckdnearest,
-    get_closest_edge,
     get_closest_edge_multiple,
     get_edge_gdf,
     get_node_gdf,
@@ -64,7 +62,7 @@ class DEM:
         Returns the coordinate system of the DEM object.
     """
 
-    file_path: Optional[str] = None
+    file_path: str | None = None
     raster: rio.DatasetReader = field(init=False, default=None)
     no_dem: bool = field(init=False, default=True)
 
@@ -139,14 +137,14 @@ class DEM:
         elevation = round(float(elevation), 2)
         if elevation == self.raster.nodata:
             raise ValueError(
-                "No Elevation Data for Coordinates {} {} ".format(point.x, point.y)
+                f"No Elevation Data for Coordinates {point.x} {point.y} "
             )
         return elevation
 
     def get_profile(
         self,
         line: shapely.geometry.LineString,
-        dx: Optional[int] = None,
+        dx: int | None = None,
     ):
         """
         Extracts elevation data from a digital elevation model (DEM) along a given path.
@@ -174,7 +172,7 @@ class DEM:
         return list(zip(x, elevation))
 
     @property
-    def get_crs(self) -> Optional[CRS]:
+    def get_crs(self) -> CRS | None:
         """Returns the coordinate system of the DEM Object"""
         if self.no_dem:
             return None
@@ -245,7 +243,7 @@ class Roads:
         Initializes a Roads object with road data from either a shapefile or a geopandas dataframe.
     """
 
-    def __init__(self, input_data: Union[str, gpd.GeoDataFrame]):
+    def __init__(self, input_data: str | gpd.GeoDataFrame):
         """
         Initializes a Roads object with road data from either a shapefile or a geopandas dataframe.
         Parameters
@@ -348,7 +346,7 @@ class Buildings:
 
     """
 
-    def __init__(self, input_data: Union[str, gpd.GeoDataFrame], roads_obj: Roads):
+    def __init__(self, input_data: str | gpd.GeoDataFrame, roads_obj: Roads):
         """
         Initialize a Buildings object with building data from either a shapefile or a geopandas dataframe.
         """
@@ -555,9 +553,9 @@ class ModelDomain:
         dem: str,
         roads: str,
         buildings: str,
-        clustering: Optional[str] = None,
-        pump_penalty: Optional[int] = None,
-        connect_buildings: Optional[bool] = None,
+        clustering: str | None = None,
+        pump_penalty: int | None = None,
+        connect_buildings: bool | None = None,
     ):
         """Initialize Model Domain using the input data."""
         config = get_config()
@@ -604,10 +602,10 @@ class ModelDomain:
 
         # connecting subgraphs if there are any
         sub_graphs = list(
-            (
+            
                 self.connection_graph.subgraph(c).copy()
                 for c in nx.connected_components(self.connection_graph)
-            )
+            
         )
         if len(sub_graphs) > 1:
             print("connecting subgraphs")
@@ -694,8 +692,8 @@ class ModelDomain:
 
     def connect_buildings(
         self,
-        max_connection_length: Optional[int] = None,
-        clustering: Optional[str] = None,
+        max_connection_length: int | None = None,
+        clustering: str | None = None,
     ):
         """
         Connects the buildings in the network by adding nodes to the graph.
@@ -870,7 +868,7 @@ class ModelDomain:
         new_node,
         conn_point,
         closest_edge,
-        add_private_sewer: Optional[bool] = None,
+        add_private_sewer: bool | None = None,
     ):
         """
         Connects a new node to the road network by inserting a connection point on the closest edge and adjusting edges.
@@ -1002,7 +1000,7 @@ class ModelDomain:
                             f"Edge {u}->{v} gravity flow. Distance: {dist:.2f}m, Weight: {dist:.2f}"
                         )
 
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"Total edges: {total_edges}")
         print(f"Edges needing pumps: {edges_needing_pumps}")
         print(
@@ -1116,7 +1114,7 @@ class ModelDomain:
     def connect_subgraphs(self):
         """Identifies unconnected street subnetworks and connects them based on shortest distance"""
         G = self.connection_graph
-        sub_graphs = list((G.subgraph(c).copy() for c in nx.connected_components(G)))
+        sub_graphs = list(G.subgraph(c).copy() for c in nx.connected_components(G))
         while len(sub_graphs) > 1:
             # select one subgraph
             sg = sub_graphs.pop()
@@ -1158,5 +1156,5 @@ class ModelDomain:
             )
             # get updated subgraph list
             sub_graphs = list(
-                (G.subgraph(c).copy() for c in nx.connected_components(G))
+                G.subgraph(c).copy() for c in nx.connected_components(G)
             )

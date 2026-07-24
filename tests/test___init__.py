@@ -1,14 +1,12 @@
 import pytest
-from pysewer import set_custom_config
+
 from pysewer.config.manager import reset_config
+
 
 def test_imports():
     # Test if all modules are imported correctly
     import pysewer
     import pysewer.__init__
-    from pysewer import set_custom_config
-    from pysewer.__init__ import set_custom_config
-    from pysewer.config.settings import load_config
 
 
 

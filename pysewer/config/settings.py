@@ -5,7 +5,6 @@ import logging
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List, Optional, Union
 
 import geopandas as gpd
 import networkx as nx
@@ -22,9 +21,9 @@ DEFAULT_SETTINGS_PATH = str(current_directory / "settings.yaml")
 class Preprocessing:
     """Preprocessing settings."""
 
-    dem_file_path: Optional[str] = None
-    roads_input_data: Optional[Union[str, gpd.GeoDataFrame]] = None
-    buildings_input_data: Optional[Union[str, gpd.GeoDataFrame]] = None
+    dem_file_path: str | None = None
+    roads_input_data: str | gpd.GeoDataFrame | None = None
+    buildings_input_data: str | gpd.GeoDataFrame | None = None
     dx: int = 10
     pump_penalty: int = 1000
     max_connection_length: int = 30
@@ -50,7 +49,7 @@ class Optimization:
     tmin: float
     inflow_trench_depth: float
     min_trench_depth: float = 0.0
-    diameters: List[float] = field(default_factory=list)
+    diameters: list[float] = field(default_factory=list)
     roughness: float = 0.013
     pressurized_diameter: float = 0.2
     min_cover: float = 0.25
@@ -68,8 +67,8 @@ class Plotting:
     plot_sewer: bool
     hillshade: bool
     colormap: str
-    sewer_graph: Optional[nx.Graph] = None
-    info_table: Optional[dict] = None
+    sewer_graph: nx.Graph | None = None
+    info_table: dict | None = None
 
 
 @dataclass
@@ -132,7 +131,7 @@ def validate_settings(settings: dict) -> None:
 
 
 def override_settings(
-    custom_path: Optional[str] = None, custom_setting_dict: Optional[dict] = None
+    custom_path: str | None = None, custom_setting_dict: dict | None = None
 ) -> dict:
     """
     Override default settings with custom settings.
@@ -180,11 +179,11 @@ def dict_to_config(settings_dict: dict) -> Config:
             export=export_config,
         )
     except TypeError as e:
-        raise ValueError(f"Invalid settings structure: {str(e)}")
+        raise ValueError(f"Invalid settings structure: {e!s}")
 
 
 def load_config(
-    custom_path: Optional[str] = None, custom_setting_dict: Optional[dict] = None
+    custom_path: str | None = None, custom_setting_dict: dict | None = None
 ) -> Config:
     """
     Load configuration with optional overrides.

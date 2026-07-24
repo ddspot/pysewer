@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
-from typing import Hashable, List, Tuple, Union
+from collections.abc import Hashable
+from typing import Union
 
 import networkx as nx
 
@@ -9,12 +10,12 @@ from .helper import get_node_keys
 
 NodeType = Union[int, str, Hashable]
 
-NodeType_t = Tuple[float, float]
+NodeType_t = tuple[float, float]
 
 
 def rsph_tree_fast(
     connection_graph: nx.Graph,
-    sink: List[NodeType_t],
+    sink: list[NodeType_t],
     from_type: str = "building",
 ) -> nx.DiGraph:
     """
@@ -63,9 +64,9 @@ def rsph_tree_fast(
 
 def rsph_tree(
     connection_graph: nx.Graph,
-    sinks: List[NodeType],
+    sinks: list[NodeType],
     from_type: str = "building",
-    skip_nodes: List[NodeType] = [],
+    skip_nodes: list[NodeType] = [],
 ) -> nx.DiGraph:
     """
     Returns the directed routed steiner tree that connects all terminal nodes to the sink using the repeated shortest path heuristic.
@@ -177,11 +178,11 @@ def rsph_tree(
 
 def find_rsph_path(
     connection_graph: nx.Graph,
-    subgraph_nodes: List[NodeType],
-    terminals: List[NodeType],
+    subgraph_nodes: list[NodeType],
+    terminals: list[NodeType],
     all_paths: dict,
     all_lengths: dict,
-) -> List[NodeType]:
+) -> list[NodeType]:
     terminal_distances = []
     closest_tree_node = []
     for terminal in terminals:

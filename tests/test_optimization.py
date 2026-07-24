@@ -3,9 +3,7 @@
 
 from pathlib import Path
 
-import networkx as nx
 import pytest
-from shapely.geometry import LineString, Point
 
 import pysewer
 

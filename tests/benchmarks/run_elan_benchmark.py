@@ -22,7 +22,6 @@ import sys
 from pathlib import Path
 
 import geopandas as gpd
-import networkx as nx
 import pandas as pd
 
 import pysewer

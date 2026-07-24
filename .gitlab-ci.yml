@@ -31,6 +31,14 @@ test:
   script:
     - python -m pytest tests/ -q
 
+lint:
+  stage: test
+  allow_failure: true
+  before_script:
+    - *setup_env
+  script:
+    - ruff check pysewer/ tests/
+
 pages:
   stage: deploy
   before_script:

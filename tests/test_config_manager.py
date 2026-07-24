@@ -4,17 +4,17 @@
 import json
 from copy import deepcopy
 
-import pytest
-import networkx as nx
 import geopandas as gpd
+import networkx as nx
+import pytest
 from shapely.geometry import LineString, Point
 
 import pysewer
 from pysewer.config.manager import get_config, reset_config, set_config
 from pysewer.config.settings import DEFAULT_SETTINGS_PATH, load_config, load_settings
 from pysewer.export import export_sewer_network
-from pysewer.preprocessing import DEM
 from pysewer.optimization import estimate_peakflow
+from pysewer.preprocessing import DEM
 
 
 @pytest.fixture(autouse=True)

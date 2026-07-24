@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
-from typing import Optional
 
 import earthpy.plot as ep  # this throws an error in the IDE, but works fine on Jupyter, uncomment when debugging
 import earthpy.spatial as es  # this throws an error in the IDE, but works fine on Jupyter, uncomment when debugging
@@ -24,15 +23,15 @@ from .helper import get_edge_gdf, get_node_gdf
 
 def plot_model_domain(
     modelDomain,
-    plot_connection_graph: Optional[bool] = None,
-    plot_junction_graph: Optional[bool] = None,
-    plot_sink: Optional[bool] = None,
-    plot_sewer: Optional[bool] = None,
-    sewer_graph: Optional[nx.Graph] = None,
-    info_table: Optional[dict] = None,
+    plot_connection_graph: bool | None = None,
+    plot_junction_graph: bool | None = None,
+    plot_sink: bool | None = None,
+    plot_sewer: bool | None = None,
+    sewer_graph: nx.Graph | None = None,
+    info_table: dict | None = None,
     hs_alt=30,
     hs_az=0,
-    hillshade: Optional[bool] = None,
+    hillshade: bool | None = None,
     fig_size: tuple = (20, 20),
 ):
     """

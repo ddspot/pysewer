@@ -3,13 +3,15 @@
 
 import logging
 import math
-from typing import Hashable, List, Optional, Union
+from collections.abc import Hashable
+from typing import Union
 
 import networkx as nx
 import numpy as np
 
 from .config.manager import get_config
 from .helper import get_mean_slope, get_node_keys, get_upstream_nodes
+
 logger = logging.getLogger(__name__)
 
 NodeType = Union[str, int, Hashable, None]
@@ -103,8 +105,7 @@ def set_diameter(G: nx.Graph, edge: tuple, diameter: float):
         The modified graph.
     """
     max_us = get_max_upstream_diameter(G, edge)
-    if diameter < max_us:
-        diameter = max_us
+    diameter = max(diameter, max_us)
     edge_attrs = {(edge[0], edge[1]): {"diameter": diameter}}
     nx.set_edge_attributes(G, edge_attrs)
     return G
@@ -193,10 +194,10 @@ def reverse_bfs(G, sink: str, include_private_sewer: bool = True):
 def calculate_hydraulic_parameters(
     G,
     sinks: list,
-    pressurized_diameter: Optional[float] = None,
-    diameters: Optional[List[float]] = None,
-    roughness: Optional[float] = None,
-    include_private_sewer: Optional[bool] = None,
+    pressurized_diameter: float | None = None,
+    diameters: list[float] | None = None,
+    roughness: float | None = None,
+    include_private_sewer: bool | None = None,
     combined_sewer_factor: float = 1.0,
 ):
     """
@@ -373,8 +374,7 @@ def calculate_hydraulic_parameters(
                     vmin=config.optimization.velocity_min,
                     vmax=config.optimization.velocity_max,
                 )
-                if diam < max_inflow_diameters:
-                    diam = max_inflow_diameters
+                diam = max(diam, max_inflow_diameters)
 
             # Hydraulic checks (depth ratio, velocity) for reporting
             q_full = _full_flow_manning(diam, roughness, slope)
@@ -431,10 +431,10 @@ def calculate_hydraulic_parameters(
 
 def estimate_peakflow(
     G: nx.Graph,
-    inhabitants_dwelling: Optional[int] = None,
-    inhabitants_dwelling_attribute_name: Optional[str] = None,
-    daily_wastewater_person: Optional[float] = None,
-    peak_factor: Optional[float] = None,
+    inhabitants_dwelling: int | None = None,
+    inhabitants_dwelling_attribute_name: str | None = None,
+    daily_wastewater_person: float | None = None,
+    peak_factor: float | None = None,
 ):
     """
     Estimate the peakflow in m³/s for a node n in Graph G.
@@ -574,7 +574,7 @@ def mannings_equation(pipe_diameter: float, roughness: float, slope: float) -> f
 
 
 def select_diameter(
-    target_flow: float, diameters: List[float], roughness: float, slope: float
+    target_flow: float, diameters: list[float], roughness: float, slope: float
 ):
     """
     Returns the minimum pipe diameter.
@@ -663,7 +663,7 @@ def _partial_flow_velocity(
 
 def select_diameter_with_constraints(
     target_flow: float,
-    diameters: List[float],
+    diameters: list[float],
     roughness: float,
     slope: float,
     max_depth_ratio: float,
