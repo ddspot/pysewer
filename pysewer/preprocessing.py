@@ -266,7 +266,7 @@ class Roads:
 
         # remove the third dimension from the geometry if present
         self.gdf["geometry"] = [remove_third_dimension(g) for g in self.gdf["geometry"]]
-        self.merged_roads = self.gdf.unary_union
+        self.merged_roads = self.gdf.union_all()
 
     def get_nearest_point(self, point):
         """
@@ -468,16 +468,17 @@ class Buildings:
         """
         ####Clustering####
         # get nearest point to street for each building
-        self.gdf["nearest_point"] = ""
-        self.gdf["distance"] = ""
-        self.gdf["cluster"] = "0"
-        for index, row in self.gdf.iterrows():
-            self.gdf.loc[index, "nearest_point"] = self.roads_obj.get_nearest_point(
-                row.geometry
-            )
-            self.gdf.loc[index, "distance"] = row.geometry.distance(
-                self.gdf.loc[index, "nearest_point"]
-            )
+        # object/float columns built in one go — element-wise .loc writes into
+        # ""-initialized columns are rejected by pandas>=3 string dtype
+        self.gdf["nearest_point"] = gpd.GeoSeries(
+            [self.roads_obj.get_nearest_point(g) for g in self.gdf.geometry],
+            index=self.gdf.index,
+        )
+        self.gdf["distance"] = [
+            g.distance(p) for g, p in zip(self.gdf.geometry, self.gdf["nearest_point"])
+        ]
+        # -1 marks "no cluster"; clustering labels are >= 0
+        self.gdf["cluster"] = -1
         c_buildings_coords = []
         for b in self.gdf.loc[
             self.gdf["distance"] > max_connection_length
@@ -508,11 +509,10 @@ class Buildings:
                     P.centroid
                 )  # sort by distance and connect from close to far away to keep flow direction
         cluster_centers = gpd.GeoDataFrame(geometry=cluster_centers)
-        cluster_centers["distance"] = ""
-        for i, row in cluster_centers.iterrows():
-            cluster_centers.loc[i, "distance"] = row.geometry.distance(
-                self.roads_obj.get_merged_roads()
-            )
+        merged_roads = self.roads_obj.get_merged_roads()
+        cluster_centers["distance"] = [
+            g.distance(merged_roads) for g in cluster_centers.geometry
+        ]
         cluster_centers.sort_values(by="distance", inplace=True)
         return cluster_centers
 
@@ -847,7 +847,7 @@ class ModelDomain:
             x, y = zip(*cluster_nodes)
             cluster_centroids_gdf = gpd.GeoDataFrame(geometry=gpd.points_from_xy(x, y))
             next_cluster_center = nearest_points(
-                cluster_centroids_gdf.unary_union, point
+                cluster_centroids_gdf.union_all(), point
             )[0]
 
             if conn_point.distance(point) < next_cluster_center.distance(point):
@@ -1126,8 +1126,8 @@ class ModelDomain:
                 G_without_sg = nx.compose(G_without_sg, sub_graphs.pop())
 
             # get shortest edge between sg and G_withouto_sg:
-            sg_gdf = get_node_gdf(sg).unary_union
-            G_without_sg_gdf = get_node_gdf(G_without_sg).unary_union
+            sg_gdf = get_node_gdf(sg).union_all()
+            G_without_sg_gdf = get_node_gdf(G_without_sg).union_all()
 
             # # validate the sd_gdf and G_without_sg_gdf are geodataframes
             # if not isinstance(sg_gdf, gpd.GeoDataFrame) or not isinstance(G_without_sg_gdf, gpd.GeoDataFrame):
