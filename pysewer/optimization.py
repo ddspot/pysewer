@@ -379,13 +379,21 @@ def calculate_hydraulic_parameters(
             # Hydraulic checks (depth ratio, velocity) for reporting
             q_full = _full_flow_manning(diam, roughness, slope)
             depth_ratio = peak_flow / q_full if q_full > 0 else 1.0
-            area_full = math.pi * (diam / 2) ** 2
-            velocity = peak_flow / area_full if area_full > 0 else 0
-            if depth_ratio > config.optimization.max_depth_ratio:
+            velocity = _partial_flow_velocity(diam, roughness, slope, peak_flow)
+            if (
+                depth_ratio > config.optimization.max_depth_ratio
+                and "depth_ratio" not in violations
+            ):
                 violations.append("depth_ratio")
-            if velocity < config.optimization.velocity_min:
+            if (
+                velocity < config.optimization.velocity_min
+                and "velocity_min" not in violations
+            ):
                 violations.append("velocity_min")
-            if velocity > config.optimization.velocity_max:
+            if (
+                velocity > config.optimization.velocity_max
+                and "velocity_max" not in violations
+            ):
                 violations.append("velocity_max")
 
             # Write results to graph
@@ -616,6 +624,43 @@ def _full_flow_manning(diameter: float, roughness: float, slope: float) -> float
     return area * velocity
 
 
+def _partial_flow_velocity(
+    diameter: float, roughness: float, slope: float, flow: float
+) -> float:
+    """
+    Flow velocity at normal depth for a given discharge in a circular pipe
+    (Manning), found by bisection on the wetted angle. Falls back to
+    continuity (flow / full area) when the pipe is surcharged.
+    """
+    if flow <= 0:
+        return 0.0
+    if slope >= 0:
+        slope = -1e-6
+    s = -slope
+    r = diameter / 2
+
+    def q_of(theta):
+        area = r * r * (theta - math.sin(theta)) / 2
+        perimeter = r * theta
+        if perimeter == 0:
+            return 0.0
+        rh = area / perimeter
+        return area * (1 / roughness) * rh ** (2 / 3) * s**0.5
+
+    if flow >= q_of(2 * math.pi):
+        return flow / (math.pi * r * r)
+    lo, hi = 1e-6, 2 * math.pi
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if q_of(mid) < flow:
+            lo = mid
+        else:
+            hi = mid
+    theta = (lo + hi) / 2
+    area = r * r * (theta - math.sin(theta)) / 2
+    return flow / area
+
+
 def select_diameter_with_constraints(
     target_flow: float,
     diameters: List[float],
@@ -626,24 +671,30 @@ def select_diameter_with_constraints(
     vmax: float,
 ):
     """
-    Pick the smallest diameter that satisfies depth ratio and velocity bounds.
-    Returns (diameter, violations)
+    Pick the smallest diameter whose full-flow capacity satisfies the maximum
+    depth ratio. Velocity bounds are evaluated at partial flow on the selected
+    pipe and recorded as violations only: sizing cannot fix a slow pipe (a
+    smaller pipe raises velocity but breaks capacity, a larger one lowers it
+    further), so velocity must not drive the size choice.
+
+    Returns (diameter, violations).
     """
     violations = []
+    chosen = None
     for d in sorted(diameters):
         q_full = _full_flow_manning(d, roughness, slope)
-        depth_ratio = target_flow / q_full if q_full > 0 else 1.0
-        area_full = math.pi * (d / 2) ** 2
-        velocity = target_flow / area_full if area_full > 0 else 0
-        if (
-            depth_ratio <= max_depth_ratio
-            and velocity >= vmin
-            and velocity <= vmax
-        ):
-            return d, violations
-    # If none satisfy, return largest and note violations
-    violations.append("no_diameter_meets_depth_or_velocity")
-    return max(diameters), violations
+        if q_full > 0 and target_flow / q_full <= max_depth_ratio:
+            chosen = d
+            break
+    if chosen is None:
+        chosen = max(diameters)
+        violations.append("no_diameter_meets_depth_ratio")
+    velocity = _partial_flow_velocity(chosen, roughness, slope, target_flow)
+    if velocity < vmin:
+        violations.append("velocity_min")
+    elif velocity > vmax:
+        violations.append("velocity_max")
+    return chosen, violations
 
 
 def needs_pump(

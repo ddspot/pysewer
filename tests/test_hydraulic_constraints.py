@@ -17,7 +17,8 @@ def restore_config():
 
 def test_select_diameter_respects_depth_and_velocity():
     """
-    Pick the smallest diameter that satisfies both d/D and velocity bounds.
+    Pick the smallest diameter whose capacity satisfies the depth ratio;
+    velocity within bounds leaves no violations.
     """
     diam, violations = select_diameter_with_constraints(
         target_flow=0.02,
@@ -29,7 +30,44 @@ def test_select_diameter_respects_depth_and_velocity():
         vmax=3.0,
     )
     assert diam == 0.2
-    assert "no_diameter_meets_depth_or_velocity" in violations
+    assert violations == []
+
+
+def test_select_diameter_capacity_shortfall_flagged():
+    """
+    If no diameter has sufficient capacity, the largest is returned with a
+    depth-ratio violation recorded.
+    """
+    diam, violations = select_diameter_with_constraints(
+        target_flow=0.02,
+        diameters=[0.1, 0.15],
+        roughness=0.013,
+        slope=-0.01,
+        max_depth_ratio=0.75,
+        vmin=0.7,
+        vmax=3.0,
+    )
+    assert diam == 0.15
+    assert "no_diameter_meets_depth_ratio" in violations
+
+
+def test_select_diameter_low_flow_flags_velocity_not_size():
+    """
+    A tiny flow must not inflate the pipe size (regression: the old logic
+    fell back to max(diameters) because no pipe could meet vmin); it selects
+    the smallest adequate pipe and records a velocity_min violation.
+    """
+    diam, violations = select_diameter_with_constraints(
+        target_flow=0.001,
+        diameters=[0.2, 0.3, 2.0],
+        roughness=0.013,
+        slope=-0.005,
+        max_depth_ratio=0.75,
+        vmin=0.7,
+        vmax=3.0,
+    )
+    assert diam == 0.2
+    assert "velocity_min" in violations
 
 
 def test_hydraulic_violations_flagged_when_no_diameter_fits():
@@ -39,6 +77,7 @@ def test_hydraulic_violations_flagged_when_no_diameter_fits():
     custom = {
         "optimization": {
             "diameters": [0.5],  # overly large pipe for the tiny flow below
+            "roughness": 0.013,  # realistic Manning n so low fill means low velocity
             "velocity_min": 1.0,
             "velocity_max": 2.0,
             "max_depth_ratio": 0.5,
