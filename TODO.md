@@ -38,23 +38,19 @@ uv+mamba two-layer env).
       Manning velocity); many rural edges will legitimately carry the flag.
       Consider a flush-interval/self-cleansing note in docs instead of
       treating it as a design failure
-- [ ] Cosmetic: `mean_td` for pressurized edges uses
-      `[profile[0] + profile[-1]]` (tuple concatenation) — result is correct
-      but the expression should be `[profile[0], profile[-1]]`
-      (pysewer/optimization.py, ELAN commit 0360d99)
-- [ ] Ruff baseline: 159 findings (94 auto-fixable) — run
-      `ruff check --fix` + manual pass, then add ruff config to
-      pyproject.toml and a lint CI job
-- [ ] Deprecation sweep: earthpy pulls pkg_resources (dead upstream?);
-      consider dropping the earthpy dependency (only used for plotting
-      hillshade?)
+- [x] `mean_td` tuple-concatenation expression fixed (5b1fbfc)
+- [x] Ruff: 159 → 28 findings (two fix passes + config in pyproject.toml +
+      non-blocking lint CI job); remaining 28 are judgment calls
+      (bare-excepts, mutable default args, zip strict=)
+- [x] earthpy dependency dropped — hillshade vendored in plotting.py
+      (10-line ESRI formula), conda locks regenerated (5b1fbfc)
 - [ ] Stale branches on the new remote: combined-sewers (+3 on old main —
       rebase or merge onto v0.2.0), sphinx-docs, base-ci-pipeline
       (superseded by consolidated CI) — merge or delete
-- [ ] docs content pass: install.rst still describes the old conda+pip
-      flow; api_reference warnings (codeautolink mismatches)
-- [ ] JOSS/Zenodo: add archive badge to README; consider tagging v0.2.0
-      and minting a new Zenodo version
+- [x] install.rst rewritten for the two-layer workflow (7ebe6e0);
+      remaining: api_reference codeautolink warnings
+- [x] v0.2.0 tagged and pushed (tag pipeline green); remaining: new Zenodo
+      version + archive badge in README if wanted
 - [ ] Benchmark follow-up with ELAN colleagues: confirm the custom settings
       used for their reference run (diameter list incl. 0.1/0.15 m,
       inhabitants=3/dwelling, tmax) and re-run the comparison with matched
