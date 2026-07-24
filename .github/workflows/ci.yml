@@ -1,31 +1,27 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Test workflow for the GitHub mirror (external contributors); the canonical
+# CI runs on codebase.helmholtz.cloud (.gitlab-ci.yml).
+
 name: Test
 
-on: [push, pull_request, workflow_call]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Conda
-        uses: conda-incubator/setup-miniconda@v3
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-          channels: conda-forge
-
-      - name: Install dependencies
-        shell: bash -l {0}
+          environment-file: environment.yml
+          cache-environment: true
+      - name: Install pysewer with dev extras
+        shell: bash -el {0}
         run: |
-          conda install -c conda-forge gdal fiona shapely pytest
-          pip install .
-
+          python -m pip install uv
+          uv pip install --python "$(which python)" -e '.[dev]'
       - name: Run tests
-        shell: bash -l {0}
-        run: pytest
+        shell: bash -el {0}
+        run: python -m pytest tests/ -q
