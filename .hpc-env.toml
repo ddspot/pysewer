@@ -1,0 +1,23 @@
+# hpc-env per-project manifest. Edit by hand or via `hpc-env init`.
+[env]
+name = "pysewer"
+python = "3.11"
+
+[hpc]
+module_load = "module purge && module load Miniforge3/25.3.1-0 && module load Mamba/25.3.1-0"
+work_root = "/work/$USER/conda_envs"
+
+[layers]
+conda = "environment.yml"
+python = "pyproject.toml"
+
+[hpc_env]
+version = "0.1.0"
+managed_files = [
+    "bin/bootstrap_env.sh",
+    "bin/lock_env.sh",
+    "bin/validate_env.sh",
+    "bin/env_doctor.sh",
+    "slurm/bootstrap_env.sh",
+    "mk/env.mk",
+]

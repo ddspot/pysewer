@@ -20,17 +20,27 @@ preprocessing:
   value_get_buildings: "building" # value for buildings
 
 optimization:
-  inhabitants_dwelling: 3
-  daily_wastewater_person: 0.2 # m³/person/day
-  peak_factor: 2.3 # peak factor for wastewater
-  min_slope: -0.01 # min slope required for gravitational flow
-  tmax: 8 # max trench depth allowed (m)
-  tmin: 0.25 # min trench depth allowed (m)
-  inflow_trench_depth: 0
-  min_trench_depth: 0
-  diameters: [0.1, 0.15, 0.2, 0.25, 0.3, 0.4] # diameters to be considered m
-  roughness: 0.013 # roughness coefficient
-  pressurized_diameter: 0.2
+  inhabitants_dwelling: 2
+  inhabitants_dwelling_attribute_name: ""
+  daily_wastewater_person: 0.15
+  peak_factor: 4.0
+  min_slope: -0.01
+  max_slope: -0.05
+  tmax: 6.0
+  tmin: 0.25
+  inflow_trench_depth: 0.25
+  min_trench_depth: 0.25
+  diameters: [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0]
+  roughness: 0.0015
+  pressurized_diameter: 0.3
+  # min_cover must not exceed tmin/inflow_trench_depth, otherwise every
+  # gravity edge is flagged with a min_cover violation. To require deeper
+  # burial, raise tmin (and inflow_trench_depth) together with min_cover.
+  min_cover: 0.25
+  min_pipe_length: 2.0
+  velocity_min: 0.7
+  velocity_max: 3.0
+  max_depth_ratio: 0.75
 
 plotting:
   plot_connection_graph: false
@@ -44,4 +54,3 @@ plotting:
 
 export:
   file_format: "gpkg"
-

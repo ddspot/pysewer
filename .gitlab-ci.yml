@@ -1,51 +1,43 @@
-image: ubuntu:latest
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Two-layer env in CI: conda layer from the lockfile (deterministic, no
+# solve), PyPI layer + editable install via uv.
+
+image: condaforge/miniforge3:latest
 
 variables:
   CONDA_PKGS_DIRS: "$CI_PROJECT_DIR/.conda_pkgs_dir"
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip_cache"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv_cache"
 
 cache:
   paths:
     - .conda_pkgs_dir
-    - .pip_cache
+    - .uv_cache
 
 stages:
-  - build
+  - test
   - deploy
 
-before_script:
-  - apt-get update && apt-get install -y wget
-  - wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-  - bash Miniforge3-Linux-x86_64.sh -b -p $HOME/miniforge3
-  - export PATH="$HOME/miniforge3/bin:$PATH"
-  - conda config --set always_yes yes --set changeps1 no
-  - conda create -n pysewer python=3.10.6
+.setup_env: &setup_env
+  - mamba create -y -n pysewer --file conda-linux-64.lock
   - source activate pysewer
-  - conda install -c conda-forge gdal fiona shapely
-  - conda install -c conda-forge make
-  - pip install --upgrade pip
-  - pip install sphinx sphinx-autobuild sphinx_rtd_theme pydata-sphinx-theme sphinx-codeautolink sphinx_design sphinx-favicon sphinxcontrib-applehelp sphinxcontrib-devhelp ablog myst-parser matplotlib sphinx-copybutton
-  - pip install .
+  - uv pip install --python "$CONDA_PREFIX/bin/python" -e '.[dev,docs]'
 
-build:
-  stage: build
+test:
+  stage: test
+  before_script:
+    - *setup_env
   script:
-    - source activate pysewer
-    - cd docs
-    - make clean html
-    - make html
-    - cd ..
-    - mv docs/build/html public
-  artifacts:
-    paths:
-      - public
+    - python -m pytest tests/ -q
 
 pages:
   stage: deploy
-  dependencies:
-    - build
+  before_script:
+    - *setup_env
   script:
-    - echo "Deploying to GitLab Pages..."
+    - make -C docs clean html
+    - mv docs/build/html public
   artifacts:
     paths:
       - public

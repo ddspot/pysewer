@@ -1,0 +1,2 @@
+-include mk/env.mk
+-include Makefile.local

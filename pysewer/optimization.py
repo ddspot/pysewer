@@ -3,16 +3,13 @@
 
 import logging
 import math
-from typing import Hashable, List, Union
+from typing import Hashable, List, Optional, Union
 
 import networkx as nx
 import numpy as np
 
-from .config.settings import load_config
+from .config.manager import get_config
 from .helper import get_mean_slope, get_node_keys, get_upstream_nodes
-
-# load default settings
-DEFAULT_CONFIG = load_config()
 logger = logging.getLogger(__name__)
 
 NodeType = Union[str, int, Hashable, None]
@@ -39,7 +36,7 @@ def place_lifting_station(G, node):
     return G
 
 
-def get_max_upstream_diameter(G, edge: tuple):
+def get_max_upstream_diameter(G: nx.DiGraph, edge: tuple):
     """
     Returns the maximum diameter of all upstream edges of the given edge in the directed graph G.
 
@@ -196,10 +193,11 @@ def reverse_bfs(G, sink: str, include_private_sewer: bool = True):
 def calculate_hydraulic_parameters(
     G,
     sinks: list,
-    pressurized_diameter: float = DEFAULT_CONFIG.optimization.pressurized_diameter,
-    diameters: List[float] = DEFAULT_CONFIG.optimization.diameters,
-    roughness: float = DEFAULT_CONFIG.optimization.roughness,
-    include_private_sewer: bool = DEFAULT_CONFIG.preprocessing.add_private_sewer,
+    pressurized_diameter: Optional[float] = None,
+    diameters: Optional[List[float]] = None,
+    roughness: Optional[float] = None,
+    include_private_sewer: Optional[bool] = None,
+    combined_sewer_factor: float = 1.0,
 ):
     """
     Calculates hydraulic parameters for a sewer network graph.
@@ -218,6 +216,19 @@ def calculate_hydraulic_parameters(
         The roughness coefficient of the pipes.
     include_private_sewer : bool, optional
         Whether to include private sewer connections in the graph, by default True.
+    combined_sewer_factor : float, optional
+        Multiplicative factor applied to the dry-weather peak wastewater flow to represent
+        additional stormwater and inflow contributions in a combined sewer system. The
+        design flow used for pipe sizing becomes:
+
+            Q_design = Q_peak_wastewater * combined_sewer_factor
+
+        where Q_peak_wastewater is computed in `estimate_peakflow` as
+
+            Q_peak_wastewater = (((P * daily_wastewater_person)/24) * peak_factor) / 3600
+
+        with P being the total upstream population. Typical values vary by catchment and
+        design standard; use calibration (see Notes) if a reference network exists.
 
     Returns
     -------
@@ -232,8 +243,38 @@ def calculate_hydraulic_parameters(
     to reduce computational load) -> place pump
     2. Terrain does not require pump but lowest inflow trench depth is too low for gravitational flow -> place lifting station
     3. Gravity flow is possible within given constraints
+
+     Calibration tip
+     --------------
+     If you need the modeled design flows or aggregate volumes to match a known/reference
+     combined system (e.g., legacy network capacity), you can iteratively adjust
+     `combined_sewer_factor`:
+
+     1. Choose an initial value (e.g., 1–10).
+     2. Run `estimate_peakflow` (dry-weather) and then this function with that factor.
+     3. Compute a comparison metric (e.g., sum of edge design flows at a key cross-section,
+         maximum trunk flow, or total storage/throughput proxy) and compare to the reference.
+     4. Update the factor using a simple proportional control, e.g.,
+         factor_new = factor_old * (ReferenceValue / ModeledValue), and iterate until within tolerance.
+
+     This approach scales the design flows uniformly and is a coarse substitute for a
+     full hydrologic rainfall–runoff model when only reference totals are available.
     """
-    min_trench_depth = DEFAULT_CONFIG.optimization.min_trench_depth
+    config = get_config()
+    pressurized_diameter = (
+        config.optimization.pressurized_diameter
+        if pressurized_diameter is None
+        else pressurized_diameter
+    )
+    diameters = config.optimization.diameters if diameters is None else diameters
+    roughness = config.optimization.roughness if roughness is None else roughness
+    include_private_sewer = (
+        config.preprocessing.add_private_sewer
+        if include_private_sewer is None
+        else include_private_sewer
+    )
+    min_trench_depth = config.optimization.min_trench_depth
+
     nx.set_node_attributes(G, [0], name="inflow_trench_depths")
     nx.set_node_attributes(G, [0], name="inflow_diameters")
     nx.set_edge_attributes(G, False, name="pressurized")
@@ -266,10 +307,16 @@ def calculate_hydraulic_parameters(
                     edge: {
                         "trench_depth_profile": td_profile,
                         "mean_td": np.mean(
-                            [topo[1] - td[1] for td, topo in zip(td_profile, profile)]
+                            [topo[1] - td[1] for td, topo in zip(td_profile, [profile[0] + profile[-1]])]
                         ),
                     }
                 }
+                node_attrs = {
+                    upstream: {
+                        "total_static_head": round(td_profile[1][1] - td_profile[0][1] + max(0, max_inflow_tds - config.optimization.tmin),  2)
+                    }
+                }
+                nx.set_node_attributes(G, node_attrs)
 
             else:
                 # check if edge needs a lifting station based on max inflow td
@@ -282,13 +329,16 @@ def calculate_hydraulic_parameters(
                     _, out_trench_depth, td_profile = needs_pump(
                         profile=profile, inflow_trench_depth=min_trench_depth
                     )
-                # append downstream inflow td value
+                # append downstream inflow td value and upstream total static head
                 node_attrs = {
                     downstream: {
                         "inflow_trench_depths": G.nodes()[downstream][
                             "inflow_trench_depths"
                         ]
                         + [out_trench_depth]
+                    },
+                    upstream: {
+                        "total_static_head": round(max_inflow_tds - config.optimization.tmin, 2)
                     }
                 }
                 nx.set_node_attributes(G, node_attrs)
@@ -307,19 +357,46 @@ def calculate_hydraulic_parameters(
             slope = get_mean_slope(
                 G, upstream, downstream, td_profile[0][1], td_profile[-1][1]
             )
-            peak_flow = G.nodes[upstream]["peak_flow"]
+            # Calculate diameter
+            # adjust peak flow for combined sewer
+            peak_flow = G.nodes[upstream]["peak_flow"] * combined_sewer_factor
+            violations = []
             if pressurized:
                 diam = pressurized_diameter
             else:
-                diam = select_diameter(peak_flow, diameters, roughness, slope)
+                diam, violations = select_diameter_with_constraints(
+                    peak_flow,
+                    diameters,
+                    roughness,
+                    slope,
+                    max_depth_ratio=config.optimization.max_depth_ratio,
+                    vmin=config.optimization.velocity_min,
+                    vmax=config.optimization.velocity_max,
+                )
                 if diam < max_inflow_diameters:
                     diam = max_inflow_diameters
+
+            # Hydraulic checks (depth ratio, velocity) for reporting
+            q_full = _full_flow_manning(diam, roughness, slope)
+            depth_ratio = peak_flow / q_full if q_full > 0 else 1.0
+            area_full = math.pi * (diam / 2) ** 2
+            velocity = peak_flow / area_full if area_full > 0 else 0
+            if depth_ratio > config.optimization.max_depth_ratio:
+                violations.append("depth_ratio")
+            if velocity < config.optimization.velocity_min:
+                violations.append("velocity_min")
+            if velocity > config.optimization.velocity_max:
+                violations.append("velocity_max")
+
             # Write results to graph
             edge_attrs = {
                 edge: {
                     "diameter": diam,
                     "peak_flow": peak_flow,
                     "edge_counter": edge_counter,
+                    "velocity": velocity,
+                    "d_over_D": depth_ratio,
+                    "hydraulic_violations": violations,
                 }
             }
             nx.set_edge_attributes(G, edge_attrs)
@@ -346,9 +423,10 @@ def calculate_hydraulic_parameters(
 
 def estimate_peakflow(
     G: nx.Graph,
-    inhabitants_dwelling: int = DEFAULT_CONFIG.optimization.inhabitants_dwelling,
-    daily_wastewater_person: float = DEFAULT_CONFIG.optimization.daily_wastewater_person,
-    peak_factor: float = DEFAULT_CONFIG.optimization.peak_factor,
+    inhabitants_dwelling: Optional[int] = None,
+    inhabitants_dwelling_attribute_name: Optional[str] = None,
+    daily_wastewater_person: Optional[float] = None,
+    peak_factor: Optional[float] = None,
 ):
     """
     Estimate the peakflow in m³/s for a node n in Graph G.
@@ -358,7 +436,9 @@ def estimate_peakflow(
     G : networkx.Graph
         The graph to estimate peakflow for.
     inhabitants_dwelling : int
-        The number of inhabitants per dwelling.
+        The number of inhabitants per dwelling to use if inhabitants_dwelling_attribute_name is empty.
+    inhabitants_dwelling_attribute_name : str
+        The attribute name with the number of inhabitants per dwelling.
     daily_wastewater_person : float
         The daily wastewater generated per person in m³.
     peak_factor : float, optional
@@ -369,13 +449,66 @@ def estimate_peakflow(
     networkx.Graph
         The graph with updated node attributes for peak flow, average daily flow, and upstream pe.
     """
+    logger.info("\n=== Dry Weather Flow  Estimation ===")
+
+    config = get_config()
+    inhabitants_dwelling_attribute_name = (
+        config.optimization.inhabitants_dwelling_attribute_name
+        if inhabitants_dwelling_attribute_name is None
+        else inhabitants_dwelling_attribute_name
+    )
+    inhabitants_dwelling = (
+        config.optimization.inhabitants_dwelling
+        if inhabitants_dwelling is None
+        else inhabitants_dwelling
+    )
+    daily_wastewater_person = (
+        config.optimization.daily_wastewater_person
+        if daily_wastewater_person is None
+        else daily_wastewater_person
+    )
+    peak_factor = (
+        config.optimization.peak_factor if peak_factor is None else peak_factor
+    )
+
     for n in G.nodes():
         upstream_buildings = get_upstream_nodes(G, n, "node_type", "building")
-        upstream_daily = (
-            len(upstream_buildings) * inhabitants_dwelling * daily_wastewater_person
-        )
-        upstream_pe = len(upstream_buildings) * inhabitants_dwelling
+        logger.info(f"  Building node {n}: upstream_buildings={upstream_buildings}")
+        total_population = 0
+        # Sum up populations from each upstream building/block
+        for building in upstream_buildings:
+            building_data = G.nodes[building]
+            # Try to get population in this priority:
+            # 1. custom inhabitants_dwelling_attribute_name (total population for the block)
+            # 2. block_population (total population for the block)
+            # 3. number_of_dwellings * inhabitants_dwelling
+            # 4. fallback to single dwelling with inhabitants_dwelling
+            if inhabitants_dwelling_attribute_name != "":
+                logger.info(f"  Using custom attribute name '{inhabitants_dwelling_attribute_name}'")
+                block_pop = float(building_data[inhabitants_dwelling_attribute_name])
+            elif "block_population" in building_data:
+                logger.info("  Using block_population")
+                block_pop = float(building_data["block_population"])
+            elif "number_of_dwellings" in building_data:
+                logger.info("  Using number_of_dwellings")
+                block_pop = (
+                    float(building_data["number_of_dwellings"]) * inhabitants_dwelling
+                )
+            else:
+                # Fallback: assume one dwelling with default inhabitants
+                block_pop = inhabitants_dwelling
+
+            total_population += block_pop
+
+        # Calculate total daily wastewater volume
+        upstream_daily = total_population * daily_wastewater_person
+        # Calculate total upstream peak flow
+        upstream_pe = total_population
         peak_flow = ((upstream_daily / 24) * peak_factor) / 3600
+        logger.info(f"  Peak flow: {peak_flow:.6f} m³/s")
+        logger.info(f"  Average daily flow: {upstream_daily:.6f} m³/s")
+        logger.info(f"  Upstream peak flow: {upstream_pe:.6f} people")
+
         atr = {
             n: {
                 "peak_flow": peak_flow,
@@ -464,18 +597,61 @@ def select_diameter(
     while flow <= target_flow:
         try:
             selected_diameter = diameters.pop(0)
-        except:
+        except Exception:
             raise ValueError("Maximum Diameter insufficient to reach target flow")
         flow = mannings_equation(selected_diameter, roughness, slope)
     return selected_diameter
 
 
+def _full_flow_manning(diameter: float, roughness: float, slope: float) -> float:
+    """
+    Manning full-flow capacity for a circular pipe.
+    """
+    if slope >= 0:
+        slope = -1e-6
+    area = math.pi * (diameter / 2) ** 2
+    perimeter = math.pi * diameter
+    rh = area / perimeter
+    velocity = (1 / roughness) * rh ** (2 / 3) * (-slope) ** 0.5
+    return area * velocity
+
+
+def select_diameter_with_constraints(
+    target_flow: float,
+    diameters: List[float],
+    roughness: float,
+    slope: float,
+    max_depth_ratio: float,
+    vmin: float,
+    vmax: float,
+):
+    """
+    Pick the smallest diameter that satisfies depth ratio and velocity bounds.
+    Returns (diameter, violations)
+    """
+    violations = []
+    for d in sorted(diameters):
+        q_full = _full_flow_manning(d, roughness, slope)
+        depth_ratio = target_flow / q_full if q_full > 0 else 1.0
+        area_full = math.pi * (d / 2) ** 2
+        velocity = target_flow / area_full if area_full > 0 else 0
+        if (
+            depth_ratio <= max_depth_ratio
+            and velocity >= vmin
+            and velocity <= vmax
+        ):
+            return d, violations
+    # If none satisfy, return largest and note violations
+    violations.append("no_diameter_meets_depth_or_velocity")
+    return max(diameters), violations
+
+
 def needs_pump(
     profile,
-    min_slope: float = DEFAULT_CONFIG.optimization.min_slope,
-    tmax: float = DEFAULT_CONFIG.optimization.tmax,
-    tmin: float = DEFAULT_CONFIG.optimization.tmin,
-    inflow_trench_depth: float = DEFAULT_CONFIG.optimization.inflow_trench_depth,
+    min_slope: float = None,
+    tmax: float = None,
+    tmin: float = None,
+    inflow_trench_depth: float = None,
 ):
     """
     Traces a profile to determine if gravitational flow can be achieved within slope and trench depth constraints.
@@ -501,26 +677,47 @@ def needs_pump(
         - The height difference between the outflow and the trench depth at the outflow point.
         - A list of (x, trench_depth) tuples representing the trench depth at each point along the profile.
     """
+    # Get current config values if not provided
+    config = get_config()
+    min_slope = min_slope or config.optimization.min_slope
+    tmax = tmax or config.optimization.tmax
+    tmin = tmin or config.optimization.tmin
+    inflow_trench_depth = inflow_trench_depth or config.optimization.inflow_trench_depth
+
     x, y = zip(*profile)
     if inflow_trench_depth == 0:
         inflow_trench_depth = tmin
+        logger.info(f"  Using tmin as inflow_trench_depth: {inflow_trench_depth}")
+
     trench_depth = [0] * len(x)
     # adjust inflow trenchdepth
     trench_depth[0] = np.array(y)[0] - inflow_trench_depth
+    logger.info(f"  Initial trench depth: {trench_depth[0]}")
+
     for i in range(len(x) - 1):
         dx = x[i + 1] - x[i]
         next_min_elevation = dx * min_slope + trench_depth[i]
+        logger.info(f"\nChecking segment {i} to {i+1}:")
+        logger.info(f"  Distance: {dx}")
+        logger.info(f"  Current elevation: {y[i]}")
+        logger.info(f"  Next elevation: {y[i+1]}")
+        logger.info(f"  Required next_min_elevation: {next_min_elevation}")
+        logger.info(f"  Max allowed depth: {y[i+1] - tmax}")
+        logger.info(f"  Min allowed depth: {y[i+1] - tmin}")
         ## Case 1: to achieve the min slope we would need to dig a trench deeper than tmax -> needs pump
         if next_min_elevation < y[i + 1] - tmax:
+            logger.info("  CASE 1: Pump needed - trench would be too deep")
+            logger.info(f"  Would need depth: {y[i+1] - next_min_elevation}")
+            logger.info(f"  Max allowed: {tmax}")
             return (
                 True,
                 0,
                 [
                     (
                         0,
-                        tmin,
+                        y[0] - tmin,
                     ),
-                    (x[-1], tmin),
+                    (x[-1], y[-1] - tmin),
                 ],
             )
         ## case 2: min slope point is within Trench depth range: set trench depth to calculated height
@@ -532,4 +729,7 @@ def needs_pump(
         ##case 3: min slope point is higher than min trenchdepth: set to tmin
         elif next_min_elevation >= y[i + 1] - tmin:
             trench_depth[i + 1] = y[i + 1] - tmin
+    logger.info("\nFinal result: No pump needed")
+    logger.info(f"  Final trench depth: {trench_depth[-1]}")
+    logger.info(f"  Final elevation difference: {y[-1] - trench_depth[-1]}")
     return (False, y[-1] - trench_depth[-1], list(zip(x, trench_depth)))

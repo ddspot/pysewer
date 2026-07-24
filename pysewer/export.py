@@ -11,14 +11,13 @@ The option saving the data as a parquet file is added.
 """
 
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import fiona
+from fiona.collection import CRS
 import geopandas as gpd
 
-from .config.settings import load_config
-
-DEFAULT_CONFIG = load_config()
+from .config.manager import get_config
 
 
 def map_dtype_to_fiona(dtype):
@@ -27,6 +26,8 @@ def map_dtype_to_fiona(dtype):
         return "int"
     elif "float" in dtype:
         return "float"
+    elif "bool" in dtype:
+        return "bool"
     else:
         return "str"
 
@@ -39,6 +40,9 @@ def is_list_of_tuples(column):
         for item in column
     )
 
+def is_list(column):
+    """Check if a pandas Series contains lists."""
+    return all(isinstance(item, list) for item in column)
 
 def tuple_list_to_json(tuple_list):
     """Serialize a list of tuples to a JSON string."""
@@ -71,7 +75,7 @@ def generate_schema(gdf: gpd.GeoDataFrame):
     return schema
 
 
-def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
+def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: Optional[str]=None, crs: Optional[CRS]=None):
     """
     Write a GeoDataFrame to a GeoPackage (GPKG) file using Fiona, converting lists of tuples to JSON strings.
 
@@ -81,6 +85,10 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
         The GeoDataFrame to be written to the GPKG file.
     filepath : str
         The file path to the GPKG file.
+    layer: str (optional)
+        The layer name inside the GPKG file. If no layer name is specified the file name is used.
+    crs: CRS (optional)
+        The layer CRS
 
     Returns
     -------
@@ -93,14 +101,14 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str):
     # Convert only columns with list of tuples to JSON strings
     for col in gdf.columns:
         if gdf[col].dtype == "object":
-            if is_list_of_tuples(gdf[col]):
+            if is_list_of_tuples(gdf[col]) or is_list(gdf[col]):
                 gdf[col] = gdf[col].apply(tuple_list_to_json)
 
     # Define the schema based on the GeoDataFrame
     schema = generate_schema(gdf)
 
     # Open a new GPKG file in write mode
-    with fiona.open(filepath, mode="w", driver="GPKG", schema=schema) as dst:
+    with fiona.open(filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs=crs) as dst:
         for _, row in gdf.iterrows():
             feature = {
                 "geometry": row["geometry"].__geo_interface__,
@@ -157,7 +165,7 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
 def export_sewer_network(
     gdf: gpd.GeoDataFrame,
     filepath: str,
-    file_format: str = DEFAULT_CONFIG.export.file_format,
+    file_format: str = None,
 ):
     """
     Export a sewer network GeoDataFrame to a file.
@@ -181,6 +189,10 @@ def export_sewer_network(
     -------
     None
     """
+    config = get_config()
+    if file_format is None:
+        file_format = config.export.file_format
+
     supported_formats = ["gpkg", "shp", "parquet"]
     if file_format not in supported_formats:
         raise ValueError(f"File format {file_format} is not supported.")

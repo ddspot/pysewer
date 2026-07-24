@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
+import logging
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -19,34 +20,44 @@ DEFAULT_SETTINGS_PATH = str(current_directory / "settings.yaml")
 
 @dataclass
 class Preprocessing:
-    dem_file_path: Optional[str]
-    roads_input_data: Optional[Union[str, gpd.GeoDataFrame]]
-    buildings_input_data: Optional[Union[str, gpd.GeoDataFrame]]
-    dx: int
-    pump_penalty: int
-    max_connection_length: int
-    clustering: str
-    connect_buildings: bool
-    add_private_sewer: bool
-    field_get_sinks: str
-    field_get_buildings: str
-    value_get_sinks: str
-    value_get_buildings: str
+    """Preprocessing settings."""
+
+    dem_file_path: Optional[str] = None
+    roads_input_data: Optional[Union[str, gpd.GeoDataFrame]] = None
+    buildings_input_data: Optional[Union[str, gpd.GeoDataFrame]] = None
+    dx: int = 10
+    pump_penalty: int = 1000
+    max_connection_length: int = 30
+    clustering: str = "none"
+    connect_buildings: bool = True
+    field_get_sinks: str = "type"
+    field_get_buildings: str = "type"
+    value_get_sinks: str = "sink"
+    value_get_buildings: str = "building"
+    add_private_sewer: bool = True
+    combined_sewer_factor: float = 1.0
 
 
 @dataclass
 class Optimization:
+    inhabitants_dwelling_attribute_name: str
     inhabitants_dwelling: int
     daily_wastewater_person: float
     peak_factor: float
     min_slope: float
+    max_slope: float
     tmax: float
     tmin: float
     inflow_trench_depth: float
-    min_trench_depth: float
-    diameters: List[float]
-    roughness: float
-    pressurized_diameter: float
+    min_trench_depth: float = 0.0
+    diameters: List[float] = field(default_factory=list)
+    roughness: float = 0.013
+    pressurized_diameter: float = 0.2
+    min_cover: float = 0.25
+    min_pipe_length: float = 2.0
+    velocity_min: float = 0.7
+    velocity_max: float = 3.0
+    max_depth_ratio: float = 0.75
 
 
 @dataclass
@@ -57,7 +68,7 @@ class Plotting:
     plot_sewer: bool
     hillshade: bool
     colormap: str
-    sewer_graph: nx.Graph = None
+    sewer_graph: Optional[nx.Graph] = None
     info_table: Optional[dict] = None
 
 
@@ -74,92 +85,143 @@ class Config:
     export: Export
 
 
-def load_settings(file_path: Optional[str] = None):
+def load_settings(file_path: str) -> dict:
+    """Load settings from a YAML file."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Settings file not found: {file_path}")
+
     with open(file_path, "r") as file:
         settings = yaml.safe_load(file)
     return settings
 
 
-def deep_merge(source, destination):
+def deep_merge(source: dict, destination: dict) -> dict:
+    """
+    Deep merge two dictionaries. Source values override destination values.
+
+    Parameters
+    ----------
+    source : dict
+        Dictionary with values to override
+    destination : dict
+        Dictionary with default values
+
+    Returns
+    -------
+    dict
+        Merged dictionary
+    """
     for key, value in source.items():
         if isinstance(value, dict):
             node = destination.setdefault(key, {})
-            deep_merge(value, node)
+            if isinstance(node, dict):
+                deep_merge(value, node)
+            else:
+                destination[key] = value
         else:
             destination[key] = value
     return destination
 
 
+def validate_settings(settings: dict) -> None:
+    """Validate the settings dictionary structure."""
+    required_sections = ["preprocessing", "optimization", "plotting", "export"]
+    for section in required_sections:
+        if section not in settings:
+            raise ValueError(f"Missing required section in settings: {section}")
+
+
 def override_settings(
     custom_path: Optional[str] = None, custom_setting_dict: Optional[dict] = None
-):
+) -> dict:
     """
-    Override the settings with a custom settings file or a custom dictionary.
-    """
+    Override default settings with custom settings.
 
-    settings = load_settings(file_path=DEFAULT_SETTINGS_PATH)
+    Parameters
+    ----------
+    custom_path : str, optional
+        Path to custom settings YAML file
+    custom_setting_dict : dict, optional
+        Dictionary with custom settings
+
+    Returns
+    -------
+    dict
+        Merged settings dictionary
+    """
+    # Load default settings
+    settings = load_settings(DEFAULT_SETTINGS_PATH)
+
+    if custom_path and custom_setting_dict:
+        raise ValueError("Provide either custom_path or custom_setting_dict, not both")
 
     if custom_path:
-        custom_settings = load_settings(file_path=custom_path)
+        custom_settings = load_settings(custom_path)
         settings = deep_merge(custom_settings, settings)
     elif custom_setting_dict:
-        settings.update(custom_setting_dict)
-        deep_merge(custom_setting_dict, settings)
-    else:
-        raise ValueError(
-            "Either custom_path or custom_setting_dict should be provided."
-        )
+        settings = deep_merge(custom_setting_dict, settings)
+
+    validate_settings(settings)
     return settings
 
 
-def override_setting_to_config(
-    custom_path: str = None, custom_setting_dict: dict = None
-):
-    # load the settings as dictionary
-    settings_dict = override_settings(
-        custom_path=custom_path, custom_setting_dict=custom_setting_dict
-    )
+def dict_to_config(settings_dict: dict) -> Config:
+    """Convert settings dictionary to Config object."""
+    try:
+        preprocessing_config = Preprocessing(**settings_dict["preprocessing"])
+        optimization_config = Optimization(**settings_dict["optimization"])
+        plotting_config = Plotting(**settings_dict["plotting"])
+        export_config = Export(**settings_dict["export"])
 
-    # convert the dictionary to a Config object
-    processing_config = Preprocessing(**settings_dict["preprocessing"])
-    optimization_config = Optimization(**settings_dict["optimization"])
-    plotting_config = Plotting(**settings_dict["plotting"])
-    export_config = Export(**settings_dict["export"])
-
-    return Config(
-        preprocessing=processing_config,
-        optimization=optimization_config,
-        plotting=plotting_config,
-        export=export_config,
-    )
-
-
-def load_config(custom_path: str = None, custom_setting_dict: dict = None) -> Config:
-    """
-    Load the default settings and override them with custom settings if needed.
-    """
-
-    default_settings = override_setting_to_config(DEFAULT_SETTINGS_PATH)
-
-    # if default settings if of class .Conifg
-    if isinstance(default_settings, Config):
-        # print("default_settings is of class Config")
-        if custom_path:
-            custom_settings = override_setting_to_config(custom_path)
-            default_settings.preprocessing = custom_settings.preprocessing
-            default_settings.optimization = custom_settings.optimization
-            default_settings.plotting = custom_settings.plotting
-            default_settings.export = custom_settings.export
-        elif custom_setting_dict:
-            default_settings.preprocessing = custom_setting_dict["preprocessing"]
-            default_settings.optimization = custom_setting_dict["optimization"]
-            default_settings.plotting = custom_setting_dict["plotting"]
-            default_settings.export = custom_setting_dict["export"]
-    else:
-        raise ValueError(
-            "Either custom_path or custom_setting_dict should be provided."
+        return Config(
+            preprocessing=preprocessing_config,
+            optimization=optimization_config,
+            plotting=plotting_config,
+            export=export_config,
         )
-    return default_settings
+    except TypeError as e:
+        raise ValueError(f"Invalid settings structure: {str(e)}")
+
+
+def load_config(
+    custom_path: Optional[str] = None, custom_setting_dict: Optional[dict] = None
+) -> Config:
+    """
+    Load configuration with optional overrides.
+    """
+    logger = logging.getLogger(__name__)
+
+    if custom_path and custom_setting_dict:
+        raise ValueError("Provide either custom_path or custom_setting_dict, not both")
+
+    # Load default settings
+    base_settings_dict = load_settings(DEFAULT_SETTINGS_PATH)
+    merged_settings = base_settings_dict
+
+    # If custom path is provided, load and deep-merge with defaults
+    if custom_path:
+        logger.info(f"Loading custom settings from: {custom_path}")
+        custom_settings_dict = load_settings(custom_path)
+        merged_settings = deep_merge(custom_settings_dict, base_settings_dict)
+    # If custom settings dict is provided, deep-merge with defaults
+    elif custom_setting_dict:
+        logger.info("Applying custom settings dictionary")
+        merged_settings = deep_merge(custom_setting_dict, base_settings_dict)
+
+    config = dict_to_config(merged_settings)
+
+    logger.info("Settings loaded:")
+    logger.info(f"  tmax: {config.optimization.tmax}")
+    logger.info(f"  tmin: {config.optimization.tmin}")
+    logger.info(f"  min_slope: {config.optimization.min_slope}")
+    logger.info(f"  pump_penalty: {config.preprocessing.pump_penalty}")
+
+    return config
+
+
+def config_to_dict(config: Config) -> dict:
+    """Convert Config object to dictionary."""
+    return asdict(config)
 
 
 def flatten_config(config_dict, parent_key="", sep="_"):
@@ -174,7 +236,7 @@ def flatten_config(config_dict, parent_key="", sep="_"):
 
 
 def config_to_dataframe(config: Config) -> pd.DataFrame:
-    config_dict = asdict(config)
+    config_dict = config_to_dict(config)
     flat_config = flatten_config(config_dict)
     df = pd.DataFrame(list(flat_config.items()), columns=["Setting", "Value"])
     return df
@@ -182,7 +244,7 @@ def config_to_dataframe(config: Config) -> pd.DataFrame:
 
 # view defaults settings
 def view_default_settings():
-    default_settings = override_setting_to_config(DEFAULT_SETTINGS_PATH)
+    default_settings = load_config(DEFAULT_SETTINGS_PATH)
     df = config_to_dataframe(default_settings)
     return df
 

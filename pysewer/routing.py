@@ -145,17 +145,25 @@ def rsph_tree(
             break  # exit the loop if no viable terminal is found
 
         # Add edges of path to sewer graph while keeping edge attributes
+        # and propagate sink node in sewer graph attributes (edges and nodes)
         nx.add_path(sewer_graph, path)
 
         edgesinpath = zip(path[:-1], path[1:])
         for edge in edgesinpath:
-            nx.set_edge_attributes(
+            attrs = connection_graph.get_edge_data(edge[0], edge[1])[0]
+            path_dest_node = path[-1]
+            try:
+                sink_node = str(sewer_graph.nodes(data=True)[path_dest_node]["sink_coords"])
+            except KeyError:
+                sink_node = path_dest_node
+
+            attrs["sink_coords"] = str(sink_node)
+            nx.set_node_attributes(
                 sewer_graph,
-                {
-                    (edge[0], edge[1]): connection_graph.get_edge_data(
-                        edge[0], edge[1]
-                    )[0]
-                },
+                {edge_node: {"sink_coords": str(sink_node)} for edge_node in edge}
+            )
+            nx.set_edge_attributes(
+                sewer_graph, {(edge[0], edge[1]): attrs},
             )
         subgraph_nodes.extend(path[1:-1])
         subgraph_nodes = list(set(subgraph_nodes))  # Remove duplicates

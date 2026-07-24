@@ -19,7 +19,7 @@ optimization:
   peak_factor: 2.3 # peak factor for wastewater
   min_slope: -0.01 # min slope required for gravitational flow
   tmax: 8 # max trench depth allowed
-  tmin: 0.25 # min trench depth allowed
+  tmin: 1 # min trench depth allowed
   inflow_trench_depth: 0
   min_trench_depth: 0
   diameters: [0.1, 0.15, 0.2, 0.25, 0.3, 0.4] # diameters to be considered
