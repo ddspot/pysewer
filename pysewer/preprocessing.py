@@ -133,7 +133,7 @@ class DEM:
         if self.no_dem:
             return 0
 
-        elevation = list(self.raster.sample([(point.x, point.y)]))[0][0]
+        elevation = next(iter(self.raster.sample([(point.x, point.y)])))[0]
         elevation = round(float(elevation), 2)
         if elevation == self.raster.nodata:
             raise ValueError(
@@ -169,7 +169,7 @@ class DEM:
         x = np.append(x, line.length)
         interpolated_points = [line.interpolate(dist) for dist in x]
         elevation = [self.get_elevation(ip) for ip in interpolated_points]
-        return list(zip(x, elevation))
+        return list(zip(x, elevation, strict=False))
 
     @property
     def get_crs(self) -> CRS | None:
@@ -371,11 +371,12 @@ class Buildings:
 
         # Convert to Point if Shapefile has MultiPoint Data
         if "MultiPoint" in self.gdf.geometry.type.unique():
-            convert = lambda MultiP: (
-                Point(MultiP.geoms[0].x, MultiP.geoms[0].y)
-                if MultiP.geom_type == "MultiPoint"
-                else MultiP
-            )
+            def convert(MultiP):
+                return (
+                            Point(MultiP.geoms[0].x, MultiP.geoms[0].y)
+                            if MultiP.geom_type == "MultiPoint"
+                            else MultiP
+                        )
             self.gdf["geometry"] = self.gdf["geometry"].apply(convert)
 
         # apply the conversion function to each geometry in the gdf
@@ -473,7 +474,7 @@ class Buildings:
             index=self.gdf.index,
         )
         self.gdf["distance"] = [
-            g.distance(p) for g, p in zip(self.gdf.geometry, self.gdf["nearest_point"])
+            g.distance(p) for g, p in zip(self.gdf.geometry, self.gdf["nearest_point"], strict=False)
         ]
         # -1 marks "no cluster"; clustering labels are >= 0
         self.gdf["cluster"] = -1
@@ -651,7 +652,7 @@ class ModelDomain:
             )
 
         # iterate over each row in the GeoDataFrame
-        for index, row in roads_gdf.iterrows():
+        for _index, row in roads_gdf.iterrows():
             geometry = row["geometry"]
             road_attrs = row.drop(
                 "geometry"
@@ -761,7 +762,7 @@ class ModelDomain:
                     or any(np.isnan(x.x) or np.isnan(x.y) for x in cluster_centers)
                 ):
                     warnings.warn(
-                        "No cluster centers found or invalid values in cluster centers"
+                        "No cluster centers found or invalid values in cluster centers", stacklevel=2
                     )
 
                 # closest edges to cluster centers
@@ -842,7 +843,7 @@ class ModelDomain:
             )
 
         if len(cluster_nodes) > 0:
-            x, y = zip(*cluster_nodes)
+            x, y = zip(*cluster_nodes, strict=False)
             cluster_centroids_gdf = gpd.GeoDataFrame(geometry=gpd.points_from_xy(x, y))
             next_cluster_center = nearest_points(
                 cluster_centroids_gdf.union_all(), point
@@ -937,7 +938,7 @@ class ModelDomain:
         edges_needing_pumps = 0
         total_edges = 0
 
-        for u, v, a in connection_digraph.edges(data=True):
+        for u, v, _a in connection_digraph.edges(data=True):
             # ensure that edge exists before accessing its attributes
             if connection_digraph.has_edge(u, v):
                 total_edges += 1
@@ -972,7 +973,7 @@ class ModelDomain:
 
                     # Constraint flags
                     cover_profile = [
-                        topo[1] - td[1] for td, topo in zip(trench_depth, profile)
+                        topo[1] - td[1] for td, topo in zip(trench_depth, profile, strict=False)
                     ]
                     min_cover = min(cover_profile) if cover_profile else 0
                     violations = []
@@ -1041,7 +1042,7 @@ class ModelDomain:
                 node_attrs = {s: {"node_type": ""}}
             nx.set_node_attributes(self.connection_graph, node_attrs)
 
-    def set_sink_lowest(self, candidate_nodes: list = None):
+    def set_sink_lowest(self, candidate_nodes: list | None = None):
         """
         Sets the sink node to the lowest point in the graph.
 
@@ -1060,7 +1061,7 @@ class ModelDomain:
 
         r = {}
         buildings = self.get_buildings()
-        if candidate_nodes == None:
+        if candidate_nodes is None:
             for n in [k for k in self.connection_graph.nodes if k not in buildings]:
                 r[self.dem.get_elevation(Point(n))] = n
         else:
@@ -1143,7 +1144,7 @@ class ModelDomain:
                 )
             ):
                 warnings.warn(
-                    "Skipped an iteration: Empty or invalid subgraph detected...Skipping this connection."
+                    "Skipped an iteration: Empty or invalid subgraph detected...Skipping this connection.", stacklevel=2
                 )
                 continue
             connection_points = nearest_points(sg_gdf, G_without_sg_gdf)

@@ -35,7 +35,6 @@ dependencies = [
     "pyproj",
     "rasterio",
     "fiona>=1.9.2",
-    "earthpy",
 ]
 
 [project.optional-dependencies]

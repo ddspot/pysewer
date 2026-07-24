@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
+import itertools
+
 import networkx as nx
 from shapely.geometry import LineString, Point
 
@@ -53,11 +55,11 @@ def simplify_graph(
         # add the interstitial edges we're removing to a list so we can retain
         # their spatial geometry
         edge_attributes = dict()
-        for u, v in zip(path[:-1], path[1:]):
+        for u, v in itertools.pairwise(path):
             # there should rarely be multiple edges between interstitial nodes
             # usually happens if OSM has duplicate ways digitized for just one
             # street... we will keep only one of the edges (see below)
-            if not G.number_of_edges(u, v) == 1:
+            if G.number_of_edges(u, v) != 1:
                 # utils.log(f"Found multiple edges between {u} and {v} when simplifying")
                 pass
             # get edge between these nodes: if multiple edges exist between
@@ -75,11 +77,11 @@ def simplify_graph(
 
         for key in edge_attributes:
             # don't touch the length attribute, we'll sum it at the end
-            if len(set(edge_attributes[key])) == 1 and not key == "length":
+            if len(set(edge_attributes[key])) == 1 and key != "length":
                 # if there's only 1 unique value in this attribute list,
                 # consolidate it to the single value (the zero-th)
                 edge_attributes[key] = edge_attributes[key][0]
-            elif not key == "length":
+            elif key != "length":
                 # otherwise, if there are multiple values, keep one of each value
                 edge_attributes[key] = list(set(edge_attributes[key]))
 
@@ -185,7 +187,7 @@ def _build_path(G, endpoint, endpoint_successor, endpoints):
                     if endpoint in G.neighbors(successor):
                         # we have come to the end of a self-looping edge, so
                         # add first node to end of path to close it and return
-                        return path + [endpoint]
+                        return [*path, endpoint]
                     else:
                         # this can happen due to OSM digitization error where
                         # a one-way street turns into a two-way here, but
@@ -241,7 +243,7 @@ def get_essential_nodes(G):
 
     """
     connection_nodes = [
-        x for x, y in G.nodes(data="connection_node", default=False) if y == True
+        x for x, y in G.nodes(data="connection_node", default=False) if y
     ]
     contract_nodes = [
         n for n in G.nodes if G.degree(n) == 2 and n not in connection_nodes

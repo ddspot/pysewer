@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
 
+import itertools
 from collections.abc import Hashable
 from typing import Union
 
@@ -48,7 +49,7 @@ def rsph_tree_fast(
             # add edges of path to sewer graph while keeping edge attributes
             nx.add_path(sewer_graph, path)
 
-            edgesinpath = zip(path[0:], path[1:])
+            edgesinpath = itertools.pairwise(path)
             for e in edgesinpath:
                 nx.set_edge_attributes(
                     sewer_graph,
@@ -66,7 +67,7 @@ def rsph_tree(
     connection_graph: nx.Graph,
     sinks: list[NodeType],
     from_type: str = "building",
-    skip_nodes: list[NodeType] = [],
+    skip_nodes: list[NodeType] | None = None,
 ) -> nx.DiGraph:
     """
     Returns the directed routed steiner tree that connects all terminal nodes to the sink using the repeated shortest path heuristic.
@@ -90,6 +91,8 @@ def rsph_tree(
         The directed routed steiner tree that connects all terminal nodes to the sink using the repeated shortest path heuristic.
     """
     # Create a new DiGraph with the same nodes and attributes as connection_graph
+    if skip_nodes is None:
+        skip_nodes = []
     sewer_graph = nx.DiGraph(nx.create_empty_copy(connection_graph))
     terminals = get_node_keys(connection_graph, field="node_type", value=from_type)
     terminals = [n for n in terminals if n not in skip_nodes]
@@ -149,7 +152,7 @@ def rsph_tree(
         # and propagate sink node in sewer graph attributes (edges and nodes)
         nx.add_path(sewer_graph, path)
 
-        edgesinpath = zip(path[:-1], path[1:])
+        edgesinpath = itertools.pairwise(path)
         for edge in edgesinpath:
             attrs = connection_graph.get_edge_data(edge[0], edge[1])[0]
             path_dest_node = path[-1]

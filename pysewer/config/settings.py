@@ -89,7 +89,7 @@ def load_settings(file_path: str) -> dict:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Settings file not found: {file_path}")
 
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         settings = yaml.safe_load(file)
     return settings
 

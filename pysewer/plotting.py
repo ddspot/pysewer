@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 
-import earthpy.plot as ep  # this throws an error in the IDE, but works fine on Jupyter, uncomment when debugging
-import earthpy.spatial as es  # this throws an error in the IDE, but works fine on Jupyter, uncomment when debugging
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -13,6 +11,23 @@ from rasterio.plot import plotting_extent
 
 from .config.manager import get_config
 from .helper import get_edge_gdf, get_node_gdf
+
+
+def _hillshade(arr: np.ndarray, azimuth: float = 30, altitude: float = 30):
+    """
+    Hillshade of a DEM array (ESRI formula, same as the former earthpy
+    dependency).
+    """
+    azimuth = 360.0 - azimuth
+    x, y = np.gradient(arr)
+    slope = np.pi / 2.0 - np.arctan(np.sqrt(x * x + y * y))
+    aspect = np.arctan2(-x, y)
+    azm_rad = azimuth * np.pi / 180.0
+    alt_rad = altitude * np.pi / 180.0
+    shaded = np.sin(alt_rad) * np.sin(slope) + np.cos(alt_rad) * np.cos(
+        slope
+    ) * np.cos((azm_rad - np.pi / 2.0) - aspect)
+    return 255 * (shaded + 1) / 2
 
 # def get_plot_pos(G):
 #    pos = dict(G.nodes)
@@ -107,22 +122,20 @@ def plot_model_domain(
             alpha=0.5,
         )
         rasterio.plot.show(modelDomain.dem.raster, ax=ax, cmap="Greys_r")
-        # Create and plot the hillshade with earthpy
+        # Create and plot the hillshade
         elevation = modelDomain.dem.raster.read(1)
         # Set masked values to np.nan
         elevation = elevation.astype(float)
         elevation[elevation < 0] = np.nan
-        hillshade = es.hillshade(elevation, altitude=hs_alt, azimuth=hs_az)
+        hillshade = _hillshade(elevation, altitude=hs_alt, azimuth=hs_az)
 
-        ep.plot_bands(
+        ax.imshow(
             hillshade,
-            ax=ax,
             extent=plotting_extent(modelDomain.dem.raster),
-            cbar=False,
-            title="Hillshade made from DTM",
             cmap="Greys_r",
             alpha=0.8,
         )
+        ax.set_title("Hillshade made from DTM")
 
     if plot_connection_graph:
         get_edge_gdf(modelDomain.connection_graph).plot(
@@ -174,8 +187,8 @@ def plot_model_domain(
             )
 
     if info_table is not None:
-        data = [[info_table[key]] for key in info_table.keys()]
-        the_table = ax.table(
+        data = [[info_table[key]] for key in info_table]
+        ax.table(
             cellText=data,
             rowLabels=list(info_table.keys()),
             colLabels=["Sewer Network Metrics"],
@@ -259,19 +272,16 @@ def plot_sewer_attributes(
             alpha=0.5,
         )
         rasterio.plot.show(modelDomain.dem.raster, ax=ax, cmap="Greys_r")
-        # Create and plot the hillshade with earthpy
+        # Create and plot the hillshade
         elevation = modelDomain.dem.raster.read(1)
         # Set masked values to np.nan
         elevation = elevation.astype(float)
         elevation[elevation < 0] = np.nan
-        hillshade = es.hillshade(elevation, altitude=hs_alt, azimuth=hs_az)
+        hillshade = _hillshade(elevation, altitude=hs_alt, azimuth=hs_az)
 
-        ep.plot_bands(
+        ax.imshow(
             hillshade,
-            ax=ax,
             extent=plotting_extent(modelDomain.dem.raster),
-            cbar=False,
-            title="",
             cmap="Greys_r",
             alpha=0.8,
         )

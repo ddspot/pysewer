@@ -110,7 +110,6 @@ def test_wwtp_location(connection_graph):
 
 
 def test_connectivity(connection_graph):
-    sink_coordinates = [(691350, 2553250)]
     wwtp_loc = pysewer.get_node_keys(connection_graph, field="node_type", value="wwtp")[
         0
     ]
@@ -152,12 +151,12 @@ def test_edge_data_profile(connection_graph):
 def test_edge_data_needs_pump(connection_graph):
     test_u = (691535.5977087952, 2553057.6150246616)
     test_v = (691567.7330147347, 2552952.9508892866)
-    assert connection_graph[test_u][test_v][0]["needs_pump"] == False
+    assert not connection_graph[test_u][test_v][0]["needs_pump"]
     test_u = (691384.1703000003, 2553067.1856999993)
     test_v = (691386.9481000002, 2553059.71885)
     # check if node exists
     if test_u in connection_graph and test_v in connection_graph:
-        assert connection_graph[test_u][test_v][0]["needs_pump"] == True
+        assert connection_graph[test_u][test_v][0]["needs_pump"]
 
 
 def test_pump_penalty(connection_graph):

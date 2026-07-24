@@ -139,9 +139,8 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
     """
     # Convert only columns with list of tuples to JSON strings
     for col in gdf.columns:
-        if gdf[col].dtype == "object":
-            if is_list_of_tuples(gdf[col]):
-                gdf[col] = gdf[col].apply(tuple_list_to_json)
+        if gdf[col].dtype == "object" and is_list_of_tuples(gdf[col]):
+            gdf[col] = gdf[col].apply(tuple_list_to_json)
 
     # Define the schema based on the GeoDataFrame
     schema = generate_schema(gdf)
@@ -164,7 +163,7 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
 def export_sewer_network(
     gdf: gpd.GeoDataFrame,
     filepath: str,
-    file_format: str = None,
+    file_format: str | None = None,
 ):
     """
     Export a sewer network GeoDataFrame to a file.

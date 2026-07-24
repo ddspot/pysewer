@@ -4,6 +4,7 @@
 import itertools
 import warnings
 from operator import itemgetter
+from typing import Any
 
 import geopandas as gpd
 import networkx as nx
@@ -62,7 +63,7 @@ def get_path_distance(detailed_path: list[tuple]) -> float:
     >>> get_path_distance([(0, 0), (3, 4), (7, 1)])
     9.848857801796104
     """
-    edgesinpath = zip(detailed_path[0:], detailed_path[1:])
+    edgesinpath = itertools.pairwise(detailed_path)
     path_dist = 0
     for e in edgesinpath:
         path_dist += distance.euclidean(e[0], e[1])
@@ -124,7 +125,7 @@ def get_closest_edge_multiple(G: nx.Graph, list_of_points: list) -> list:
         or edge_gdf.empty
         or any(np.isnan(x.x) or np.isnan(x.y) for x in list_of_points)
     ):
-        warnings.warn("Skippind due to empty or invalid list of points or edges.")
+        warnings.warn("Skippind due to empty or invalid list of points or edges.", stacklevel=2)
         return []
 
     cc = ckdnearest(
@@ -134,7 +135,10 @@ def get_closest_edge_multiple(G: nx.Graph, list_of_points: list) -> list:
 
 
 def get_edge_gdf(
-    G: nx.Graph, field: str = None, value: any = None, detailed: bool = False
+    G: nx.Graph,
+    field: str | None = None,
+    value: Any | None = None,
+    detailed: bool = False,
 ) -> gpd.GeoDataFrame:
     """
     Returns a GeoDataFrame of edges in a networkx graph that match a given field and value.
@@ -200,7 +204,7 @@ def get_node_gdf(G: nx.Graph, field=None, value=None) -> gpd.GeoDataFrame:
     """
     coord_tuples = get_node_keys(G, field=field, value=value)
     try:
-        x, y = zip(*coord_tuples)
+        x, y = zip(*coord_tuples, strict=False)
         data = [G.nodes(data=True)[n] for n in coord_tuples]
         gdf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(x, y))
         if "geometry" not in gdf.columns:
@@ -212,7 +216,7 @@ def get_node_gdf(G: nx.Graph, field=None, value=None) -> gpd.GeoDataFrame:
         return gpd.GeoDataFrame()
 
 
-def get_node_keys(G: nx.Graph, field: str = None, value: str = None):
+def get_node_keys(G: nx.Graph, field: str | None = None, value: str | None = None):
     """
     Returns a list of keys for nodes in the graph `G` that have a specified `field` with a specified `value`.
 
@@ -273,7 +277,7 @@ def get_path_gdf(G, upstream, downstream):
         A GeoDataFrame containing the geometry of the shortest path between the upstream and downstream nodes.
     """
     path = nx.dijkstra_path(G, upstream, downstream)
-    edges = list(zip(path[0:], path[1:]))
+    edges = list(itertools.pairwise(path))
     return gpd.GeoDataFrame(geometry=[G[e[0]][e[1]]["geometry"] for e in edges])
 
 
@@ -307,12 +311,14 @@ def get_mean_slope(
 
 
 def ckdnearest(
-    gdfA: gpd.GeoDataFrame, gdfB: gpd.GeoDataFrame, gdfB_cols=["closest_edge"]
+    gdfA: gpd.GeoDataFrame, gdfB: gpd.GeoDataFrame, gdfB_cols=None
 ) -> gpd.GeoDataFrame:
     """
     Returns a GeoDataFrame containing the closest geometry and attributes from gdfB to each geometry in gdfA.
     """
     # resetting the index of gdfA and gdfB here.
+    if gdfB_cols is None:
+        gdfB_cols = ["closest_edge"]
     gdfA = gdfA.reset_index(drop=True)
     gdfB = gdfB.reset_index(drop=True)
     A = np.concatenate([np.array(geom.coords) for geom in gdfA.geometry.to_list()])
@@ -327,7 +333,7 @@ def ckdnearest(
 
     # check if A or B is empty or contains invalids values
     if len(A) == 0 or len(B) == 0 or np.isnan(A).any() or np.isnan(B).any():
-        warnings.warn("Skippind due to empty or invalid list of points or edges.")
+        warnings.warn("Skippind due to empty or invalid list of points or edges.", stacklevel=2)
         return gdfA
 
     dist, idx = ckd_tree.query(A, k=1)

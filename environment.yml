@@ -32,7 +32,6 @@ dependencies:
   - pyarrow
   - matplotlib
   - pyyaml
-  - earthpy
   - setuptools<81
   - jupyter
   - ipykernel

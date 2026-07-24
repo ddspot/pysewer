@@ -109,7 +109,7 @@ class TestNetworkAttributes:
         routed_nodes = [n for n, deg in self.layout.degree() if deg > 0]
         for node in routed_nodes:
             assert self.layout.nodes[node]["sink_coords"] == self.expected_sink
-        for u, v, data in self.layout.edges(data=True):
+        for _u, _v, data in self.layout.edges(data=True):
             assert data["sink_coords"] == self.expected_sink
 
     def test_total_static_head_on_stations(self):

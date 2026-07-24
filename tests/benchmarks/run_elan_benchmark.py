@@ -65,7 +65,7 @@ def run_pipeline(data_dir: Path, out_dir: Path):
 
     edges = get_edge_gdf(G, detailed=True)
     nodes = get_node_gdf(G, field="node_type", value="wwtp")
-    all_nodes = get_node_gdf(G)
+    get_node_gdf(G)
 
     node_data = dict(G.nodes(data=True))
 
@@ -124,7 +124,7 @@ def main():
     data_dir = args.data_dir
     out_dir = data_dir / "pysewer_run"
 
-    G, ours, crs = run_pipeline(data_dir, out_dir)
+    _G, ours, crs = run_pipeline(data_dir, out_dir)
 
     ref = data_dir / "sewer-outputs.gpkg"
     ref_layers = {

@@ -55,7 +55,7 @@ def get_max_upstream_diameter(G: nx.DiGraph, edge: tuple):
         The maximum diameter of all upstream edges of the given edge.
     """
     diameters = []
-    for u, v, data in G.in_edges(edge[0], data=True):
+    for _u, _v, data in G.in_edges(edge[0], data=True):
         diameters.append(data["diameter"])
     return max(diameters)
 
@@ -308,7 +308,12 @@ def calculate_hydraulic_parameters(
                     edge: {
                         "trench_depth_profile": td_profile,
                         "mean_td": np.mean(
-                            [topo[1] - td[1] for td, topo in zip(td_profile, [profile[0] + profile[-1]])]
+                            [
+                                topo[1] - td[1]
+                                for td, topo in zip(
+                                    td_profile, [profile[0], profile[-1]], strict=False
+                                )
+                            ]
                         ),
                     }
                 }
@@ -348,7 +353,7 @@ def calculate_hydraulic_parameters(
                     edge: {
                         "trench_depth_profile": td_profile,
                         "mean_td": np.mean(
-                            [topo[1] - td[1] for td, topo in zip(td_profile, profile)]
+                            [topo[1] - td[1] for td, topo in zip(td_profile, profile, strict=False)]
                         ),
                     }
                 }
@@ -699,10 +704,10 @@ def select_diameter_with_constraints(
 
 def needs_pump(
     profile,
-    min_slope: float = None,
-    tmax: float = None,
-    tmin: float = None,
-    inflow_trench_depth: float = None,
+    min_slope: float | None = None,
+    tmax: float | None = None,
+    tmin: float | None = None,
+    inflow_trench_depth: float | None = None,
 ):
     """
     Traces a profile to determine if gravitational flow can be achieved within slope and trench depth constraints.
@@ -735,7 +740,7 @@ def needs_pump(
     tmin = tmin or config.optimization.tmin
     inflow_trench_depth = inflow_trench_depth or config.optimization.inflow_trench_depth
 
-    x, y = zip(*profile)
+    x, y = zip(*profile, strict=False)
     if inflow_trench_depth == 0:
         inflow_trench_depth = tmin
         logger.info(f"  Using tmin as inflow_trench_depth: {inflow_trench_depth}")
@@ -783,4 +788,4 @@ def needs_pump(
     logger.info("\nFinal result: No pump needed")
     logger.info(f"  Final trench depth: {trench_depth[-1]}")
     logger.info(f"  Final elevation difference: {y[-1] - trench_depth[-1]}")
-    return (False, y[-1] - trench_depth[-1], list(zip(x, trench_depth)))
+    return (False, y[-1] - trench_depth[-1], list(zip(x, trench_depth, strict=False)))

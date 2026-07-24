@@ -33,7 +33,7 @@ class TestOptimization:
         assert round(pysewer.mannings_equation(diameter, roughness, slope), 3) == 0.205
 
     def test_diameter(self):
-        G = self.sewer_graph = pysewer.calculate_hydraulic_parameters(
+        self.sewer_graph = pysewer.calculate_hydraulic_parameters(
             self.layout,
             sinks=[self.sink_coordinates],
             pressurized_diameter=0.2,
@@ -43,7 +43,7 @@ class TestOptimization:
 
     # test diameter using fast rsph
     def test_diameter_fast_rsph(self):
-        G = self.sewer_graph = pysewer.calculate_hydraulic_parameters(
+        self.sewer_graph = pysewer.calculate_hydraulic_parameters(
             self.layout_fast_rsph,
             sinks=[self.sink_coordinates],
             pressurized_diameter=0.2,
@@ -53,15 +53,15 @@ class TestOptimization:
 
     def test_needs_pump_flat(self):
         profile = [(0.0, 10), (10.0, 10), (20, 10)]
-        needs_p, out_td, td_profile = pysewer.needs_pump(
+        needs_p, out_td, _td_profile = pysewer.needs_pump(
             profile, tmin=0.25, min_slope=-0.01
         )
-        assert needs_p == False
+        assert not needs_p
         assert round(out_td, 2) == 0.45
 
     def test_needs_pump_flat_low_tmax(self):
         profile = [(0.0, 10), (10.0, 10), (100, 10)]
-        needs_p, out_td, td_profile = pysewer.needs_pump(
+        needs_p, _out_td, _td_profile = pysewer.needs_pump(
             profile, tmin=0.25, tmax=0.5, min_slope=-0.01
         )
-        assert needs_p == True
+        assert needs_p
