@@ -19,10 +19,12 @@ uv+mamba two-layer env).
 
 ## To do
 
-- [ ] **Check the first CI pipeline** on codebase.helmholtz.cloud (needs UI —
-      no API token locally): runner availability, test job, Pages deploy;
-      then confirm the Pages URL and update the README docs link
-      (currently still https://despot.pages.ufz.de/pysewer)
+- [x] **CI pipeline green** on codebase.helmholtz.cloud (2026-07-24,
+      pipeline 795352: test + pages both pass; make→sphinx fix b207d68)
+- [ ] **Make Pages public**: the site is deployed at
+      https://wasp.pages.hzdr.de/pysewer/ but redirects to sign-in —
+      set Settings → General → Visibility → Pages → Everyone; then update
+      the README docs link (currently still https://despot.pages.ufz.de/pysewer)
 - [ ] Decide the fate of the old git.ufz.de/despot/pysewer repo
       (currently untouched as a safety net): archive + "moved" notice?
 - [ ] Repoint the GitHub mirror (github.com/dbdespot/pysewer) to mirror the
