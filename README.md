@@ -8,8 +8,8 @@ SPDX-License-Identifier: GPL-3.0-only -->
   - [Documentation](#documentation)
   - [Installation](#installation)
     - [Step 1: Clone the repository and navigate to the root directory](#step-1-clone-the-repository-and-navigate-to-the-root-directory)
-    - [Step 2: Create the conda environment](#step-2-create-the-conda-environment)
-    - [Step 3: Install pysewer via pip](#step-3-install-pysewer-via-pip)
+    - [Step 2: Create the conda environment (native layer)](#step-2-create-the-conda-environment-native-layer)
+    - [Step 3: Install pysewer with uv (PyPI layer)](#step-3-install-pysewer-with-uv-pypi-layer)
   - [Input Data and data representation](#input-data-and-data-representation)
     - [Preprocessing](#preprocessing)
     - [Graph Attributes](#graph-attributes)
@@ -41,52 +41,38 @@ An example of how to use pysewer for generating a sewer network layout can be fo
 
 ## Installation
 
-Currently the installation is easiest managed via Anaconda. Anaconda 3 can be downloaded [here.](https://www.anaconda.com/products/individual). The package is tested with **Python 3.10.6**. We recommend using a conda environment to manage the installation of GDAL and other dependencies given the difficulty of installing GDAL using pip. Therefore we urge to first create a new conda environment and install the required packages.
-
-**Please use conda to install GDAL, it is the easiest way to install GDAL**
+pysewer uses a **two-layer environment**: the geospatial C-library stack
+(GDAL, PROJ, GEOS, rasterio, fiona, geopandas, shapely, …) is installed with
+conda/[mamba](https://mamba.readthedocs.io) from [environment.yml](environment.yml),
+and the pure-Python layer (plus the editable install of pysewer itself) with
+[uv](https://docs.astral.sh/uv/) from [pyproject.toml](pyproject.toml).
+Never install the geospatial C-libraries with pip.
 
 ### Step 1: Clone the repository and navigate to the root directory
 
 ```shell
-git clone https://github.com/dbdespot/pysewer.git
+git clone https://codebase.helmholtz.cloud/wasp/pysewer.git
 cd pysewer
 ```
 
-### Step 2: Create the conda environment
-
-Here you create a conda environment (pysewer) and install the required packages. We recommend directly installing GDAL, Rasterio and Fiona using conda.
-
-Creating the conda environment:
+### Step 2: Create the conda environment (native layer)
 
 ```shell
-conda create -n pysewer python=3.10.6
+mamba env create -f environment.yml   # creates the "pysewer" env
 ```
 
-Activate the environment:
+For reproducible builds, `conda-lock.yml` pins the exact conda layer
+(regenerate with `make lock`).
+
+### Step 3: Install pysewer with uv (PyPI layer)
 
 ```shell
-conda activate pysewer
+uv pip install --python "$(conda info --base)/envs/pysewer/bin/python" -e '.[dev]'
 ```
 
-Install the required packages:
-
-```shell
-conda install -c conda-forge gdal
-```
-
-All other packages are installed via pip during the installation of pysewer.
-Note that the exact versions of the packages used can be found in the [environment.yml](environment.yml) file.
-
-### Step 3: Install pysewer via pip
-
-Now that you have conda environment uo and running, lets install pysewer. To do this you first need to clone pysewer repository hosted [here.](https://github.com/dbdespot/pysewer) and install it using git and pip with:
-
-```shell
-cd pysewer
-pip install .
-# for the development version
-python -m pip install -e .
-```
+Alternatively, `make env-local` (see `mk/env.mk`) performs both steps, and on
+HPC/SLURM systems use `source bin/bootstrap_env.sh pysewer` which creates the
+env under `/work/$USER/conda_envs` and runs the uv step.
 
 Please see the [documentation](https://despot.pages.ufz.de/pysewer) for more details.
 
@@ -228,7 +214,7 @@ GNU GPLv3-modified-UFZ. See [LICENSE](LICENSE) for details.
 
 # How to contribute to pysewer?
 
-Please check out how [Contributing](CONTRIBUTING.md) for on how to contribute to pysewer. Please note that we have created a mirror repository on [Github](https://github.com/dbdespot/pysewer) to allow for easier contribution. The original repository is hosted on [Gitlab](https://git.ufz.de/despot/pysewer).
+Please check out how [Contributing](CONTRIBUTING.md) for on how to contribute to pysewer. Please note that we have created a mirror repository on [Github](https://github.com/dbdespot/pysewer) to allow for easier contribution. The original repository is hosted on [Gitlab](https://codebase.helmholtz.cloud/wasp/pysewer).
 
 ## Code of conduct
 
@@ -236,4 +222,27 @@ Please check out our [Code of Conduct](CODE_OF_CONDUCT.md) for details.
 
 ## How to cite?
 
-Currently, pysewer is under review in the Journal of Open Source Software (JOSS). Please check back later.
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.06430/status.svg)](https://doi.org/10.21105/joss.06430)
+
+pysewer is published in the Journal of Open Source Software (JOSS). If you use
+pysewer in your work, please cite (see also [CITATION.cff](CITATION.cff)):
+
+> Sanne, M., Khurelbaatar, G., Despot, D., van Afferden, M., & Friesen, J.
+> (2024). Pysewer: A Python Library for Sewer Network Generation in Data
+> Scarce Regions. *Journal of Open Source Software*, 9(104), 6430.
+> https://doi.org/10.21105/joss.06430
+
+```bibtex
+@article{Sanne2024pysewer,
+  author  = {Sanne, Moritz and Khurelbaatar, Ganbaatar and Despot, Daneish
+             and van Afferden, Manfred and Friesen, Jan},
+  title   = {Pysewer: A Python Library for Sewer Network Generation
+             in Data Scarce Regions},
+  journal = {Journal of Open Source Software},
+  year    = {2024},
+  volume  = {9},
+  number  = {104},
+  pages   = {6430},
+  doi     = {10.21105/joss.06430},
+}
+```

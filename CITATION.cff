@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite both the software itself and the
+  JOSS article (see preferred-citation).
+type: software
+title: "pysewer: A Python Library for Sewer Network Generation in Data Scarce Regions"
+abstract: >-
+  Pysewer is a sewer network generator for planning wastewater collection
+  and treatment in data-scarce regions. Based on roads, building locations,
+  and elevation data, it generates fully connected sewer networks that
+  connect all buildings to one or several wastewater treatment plant
+  locations, prioritising gravity flow and placing lifting or pumping
+  stations with pressurised pipes where necessary.
+authors:
+  - family-names: Sanne
+    given-names: Moritz
+    affiliation: Helmholtz Centre for Environmental Research GmbH - UFZ
+  - family-names: Khurelbaatar
+    given-names: Ganbaatar
+    orcid: "https://orcid.org/0000-0002-2430-1612"
+    affiliation: Helmholtz Centre for Environmental Research GmbH - UFZ
+  - family-names: Despot
+    given-names: Daneish
+    orcid: "https://orcid.org/0000-0002-8980-5651"
+    affiliation: Helmholtz Centre for Environmental Research GmbH - UFZ
+  - family-names: van Afferden
+    given-names: Manfred
+    affiliation: Helmholtz Centre for Environmental Research GmbH - UFZ
+  - family-names: Friesen
+    given-names: Jan
+    orcid: "https://orcid.org/0000-0003-0454-0437"
+    affiliation: Helmholtz Centre for Environmental Research GmbH - UFZ
+license: GPL-3.0-only
+repository-code: "https://codebase.helmholtz.cloud/wasp/pysewer"
+doi: 10.5281/zenodo.14355668
+keywords:
+  - sewer network
+  - wastewater
+  - infrastructure planning
+  - graph theory
+  - Python
+preferred-citation:
+  type: article
+  title: "Pysewer: A Python Library for Sewer Network Generation in Data Scarce Regions"
+  authors:
+    - family-names: Sanne
+      given-names: Moritz
+    - family-names: Khurelbaatar
+      given-names: Ganbaatar
+      orcid: "https://orcid.org/0000-0002-2430-1612"
+    - family-names: Despot
+      given-names: Daneish
+      orcid: "https://orcid.org/0000-0002-8980-5651"
+    - family-names: van Afferden
+      given-names: Manfred
+    - family-names: Friesen
+      given-names: Jan
+      orcid: "https://orcid.org/0000-0003-0454-0437"
+  journal: Journal of Open Source Software
+  year: 2024
+  volume: 9
+  issue: 104
+  start: 6430
+  doi: 10.21105/joss.06430
+  url: "https://doi.org/10.21105/joss.06430"
