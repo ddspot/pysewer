@@ -21,23 +21,20 @@ uv+mamba two-layer env).
 
 - [x] **CI pipeline green** on codebase.helmholtz.cloud (2026-07-24,
       pipeline 795352: test + pages both pass; make→sphinx fix b207d68)
-- [ ] **Public docs hosting**: codebase.helmholtz.cloud forces Helmholtz AAI
-      login for ALL Pages sites (verified 2026-07-24: every *.pages.hzdr.de
-      site, incl. HiRSE's public website project, redirects anonymous
-      visitors to sign-in — the project-level "Everyone With Access" setting
-      is correct but cannot override the instance policy).
-      https://wasp.pages.hzdr.de/pysewer/ works for logged-in Helmholtz
-      users. For anonymous public docs choose one:
-      (a) GitHub Pages on the dbdespot/pysewer mirror (Actions workflow
-          builds sphinx — pairs with the mirror-repointing task), or
-      (b) Read the Docs.
-      Stopgap: the old https://despot.pages.ufz.de/pysewer is still up and
-      public (stale content). Update the README docs link once decided.
+- [x] **Public docs hosting resolved**: codebase.helmholtz.cloud forces
+      Helmholtz AAI login for ALL Pages sites (instance policy, verified),
+      so public docs publish from the GitHub mirror via Actions:
+      **https://ddspot.github.io/pysewer/** (live). Helmholtz-internal copy:
+      https://wasp.pages.hzdr.de/pysewer/ (AAI login). README links updated.
 - [ ] Decide the fate of the old git.ufz.de/despot/pysewer repo
       (currently untouched as a safety net): archive + "moved" notice?
-- [ ] Repoint the GitHub mirror (github.com/dbdespot/pysewer) to mirror the
-      new remote; notify Jacky Volpes / ELAN that their contributions are
-      merged (their fork can also retarget)
+- [x] GitHub mirror repointed (account renamed dbdespot → ddspot):
+      main @ v0.2.0 + tags pushed, test workflow modernized (micromamba+uv),
+      obsolete JOSS draft-paper workflow removed. Consider configuring
+      automatic push-mirroring on codebase (Settings → Repository →
+      Mirroring) so future pushes sync without manual `git push github`
+- [ ] Notify Jacky Volpes / ELAN that their contributions are merged
+      (draft message in session transcript; their fork can retarget)
 - [ ] **min_cover design question**: cover violations no longer force pumps
       and min_cover defaults to tmin (0.25 m). If a real burial requirement
       is wanted, model it properly (e.g. effective tmin = min_cover + pipe
