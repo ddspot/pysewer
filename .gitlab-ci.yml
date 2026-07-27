@@ -75,6 +75,13 @@ docs-mirror:
     - 'git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"'
     # tr strips stray whitespace/newlines pasted into the CI variable
     - TOKEN="$(printf '%s' "$GITHUB_MIRROR_TOKEN" | tr -d '[:space:]')"
+    # sanity-check the token type before pushing (prints a safe prefix only)
+    - |
+      case "$TOKEN" in
+        github_pat_*|ghp_*) echo "token prefix OK (GitHub PAT), length ${#TOKEN}" ;;
+        glpat-*) echo "ERROR: GITHUB_MIRROR_TOKEN is a GitLab token (glpat-...); a GitHub PAT is required"; exit 1 ;;
+        *) echo "WARNING: unrecognized token prefix '$(printf '%s' "$TOKEN" | cut -c1-6)...', length ${#TOKEN}" ;;
+      esac
     - git push --force "https://ddspot:${TOKEN}@github.com/ddspot/pysewer.git" gh-pages
   only:
     refs:
