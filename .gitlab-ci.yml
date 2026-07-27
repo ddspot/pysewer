@@ -68,7 +68,8 @@ docs-mirror:
     - git config user.name "codebase-ci"
     - git config user.email "wasp-pysewer-ci@codebase.helmholtz.cloud"
     - git add -A
-    - git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"
+    # quoted: an unquoted "docs: ..." scalar would YAML-parse as a mapping
+    - 'git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"'
     - git push --force "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/ddspot/pysewer.git" gh-pages
   only:
     refs:
