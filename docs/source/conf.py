@@ -7,6 +7,7 @@
 # -- Path setup --------------------------------------------------------------
 
 import datetime
+import importlib.metadata
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -29,7 +30,9 @@ project = "pysewer"
 copyright = f"2022 - {datetime.datetime.now().year}, the pysewer developers from UFZ"
 author = "WASP Team, UFZ"
 
-release = "0.1.16"
+# Version comes from the installed package (pyproject.toml), never hardcoded
+release = importlib.metadata.version("pysewer")
+version = release
 
 
 # -- General configuration ---------------------------------------------------

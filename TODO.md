@@ -22,10 +22,19 @@ uv+mamba two-layer env).
 - [x] **CI pipeline green** on codebase.helmholtz.cloud (2026-07-24,
       pipeline 795352: test + pages both pass; make→sphinx fix b207d68)
 - [x] **Public docs hosting resolved**: codebase.helmholtz.cloud forces
-      Helmholtz AAI login for ALL Pages sites (instance policy, verified),
-      so public docs publish from the GitHub mirror via Actions:
-      **https://ddspot.github.io/pysewer/** (live). Helmholtz-internal copy:
-      https://wasp.pages.hzdr.de/pysewer/ (AAI login). README links updated.
+      Helmholtz AAI login for ALL Pages sites (instance policy, re-verified
+      2026-07-27: every *.pages.hzdr.de site 302s to the AAI sign-in), so
+      public docs live at **https://ddspot.github.io/pysewer/**. To conserve
+      GitHub Actions minutes the docs are NOT built with Actions: the
+      codebase CI `docs-mirror` job pushes the sphinx build to the mirror's
+      `gh-pages` branch and GitHub Pages serves it statically ("deploy from
+      branch"). Helmholtz-internal copy: https://wasp.pages.hzdr.de/pysewer/
+      (AAI login).
+- [ ] **Add `GITHUB_MIRROR_TOKEN` CI/CD variable on codebase** (Settings →
+      CI/CD → Variables, masked): fine-grained GitHub PAT with
+      contents:read+write on ddspot/pysewer only. Until it is set the
+      `docs-mirror` job is skipped and gh-pages must be pushed manually
+      (`make docs-publish`).
 - [ ] Decide the fate of the old git.ufz.de/despot/pysewer repo
       (currently untouched as a safety net): archive + "moved" notice?
 - [x] GitHub mirror repointed (account renamed dbdespot → ddspot):

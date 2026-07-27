@@ -45,8 +45,30 @@ pages:
     - *setup_env
   script:
     - python -m sphinx -b html docs/source public
+    - touch public/.nojekyll
   artifacts:
     paths:
       - public
   only:
     - main
+
+# Public docs: codebase Pages is AAI-gated instance-wide, so the same build
+# is pushed to the GitHub mirror's gh-pages branch, which GitHub Pages serves
+# statically (no GitHub Actions involved). Requires the CI/CD variable
+# GITHUB_MIRROR_TOKEN (fine-grained GitHub PAT, contents:write on
+# ddspot/pysewer); the job is skipped while the variable is unset.
+docs-mirror:
+  stage: deploy
+  needs: ["pages"]
+  before_script: []
+  cache: []
+  script:
+    - cd public
+    - git init -b gh-pages
+    - git config user.name "codebase-ci"
+    - git config user.email "wasp-pysewer-ci@codebase.helmholtz.cloud"
+    - git add -A
+    - git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"
+    - git push --force "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/ddspot/pysewer.git" gh-pages
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $GITHUB_MIRROR_TOKEN'

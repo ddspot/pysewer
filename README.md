@@ -36,9 +36,10 @@ It is build around an algorithm for generation of viable sewer-network layouts. 
 ## Documentation
 
 The documentation can be found at [ddspot.github.io/pysewer](https://ddspot.github.io/pysewer/)
-(published from the [GitHub mirror](https://github.com/ddspot/pysewer); Helmholtz
-users can also use the [internal Pages](https://wasp.pages.hzdr.de/pysewer/),
-which requires a Helmholtz AAI login).
+(built by the codebase.helmholtz.cloud CI and served statically via the
+[GitHub mirror](https://github.com/ddspot/pysewer); Helmholtz users can also
+use the [internal Pages](https://wasp.pages.hzdr.de/pysewer/), which requires
+a Helmholtz AAI login).
 
 An example of how to use pysewer for generating a sewer network layout can be found here: [example_sewer_network_generation](notebooks/example_sewer_network_generation.ipynb).
 

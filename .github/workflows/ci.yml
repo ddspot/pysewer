@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-only
 #
 # Test workflow for the GitHub mirror (external contributors); the canonical
-# CI runs on codebase.helmholtz.cloud (.gitlab-ci.yml).
+# CI runs on codebase.helmholtz.cloud (.gitlab-ci.yml). Runs only on pull
+# requests / manual dispatch to conserve Actions minutes — pushes to main are
+# already tested on codebase before they are mirrored.
 
 name: Test
 
-on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 
 jobs:
   test:
