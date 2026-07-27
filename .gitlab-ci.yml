@@ -60,9 +60,13 @@ pages:
 # ddspot/pysewer); the job is skipped while the variable is unset.
 docs-mirror:
   stage: mirror
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
   dependencies:
     - pages
   script:
+    - git --version
     - cd public
     - git init -b gh-pages
     - git config user.name "codebase-ci"
