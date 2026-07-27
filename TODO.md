@@ -30,11 +30,10 @@ uv+mamba two-layer env).
       `gh-pages` branch and GitHub Pages serves it statically ("deploy from
       branch"). Helmholtz-internal copy: https://wasp.pages.hzdr.de/pysewer/
       (AAI login).
-- [ ] **Add `GITHUB_MIRROR_TOKEN` CI/CD variable on codebase** (Settings →
-      CI/CD → Variables, masked): fine-grained GitHub PAT with
-      contents:read+write on ddspot/pysewer only. Until it is set the
-      `docs-mirror` job is skipped and gh-pages must be pushed manually
-      (`make docs-publish`).
+- [x] **`GITHUB_MIRROR_TOKEN` CI/CD variable added on codebase** (2026-07-27):
+      fine-grained GitHub PAT, contents:read+write on ddspot/pysewer; the
+      `docs-mirror` job now publishes gh-pages automatically on every push
+      to main (`make docs-publish` remains as manual fallback).
 - [ ] Decide the fate of the old git.ufz.de/despot/pysewer repo
       (currently untouched as a safety net): archive + "moved" notice?
 - [x] GitHub mirror repointed (account renamed dbdespot → ddspot):
