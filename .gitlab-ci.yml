@@ -66,7 +66,6 @@ docs-mirror:
   dependencies:
     - pages
   script:
-    - git --version
     - cd public
     - git init -b gh-pages
     - git config user.name "codebase-ci"
@@ -74,7 +73,9 @@ docs-mirror:
     - git add -A
     # quoted: an unquoted "docs: ..." scalar would YAML-parse as a mapping
     - 'git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"'
-    - git push --force "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/ddspot/pysewer.git" gh-pages
+    # tr strips stray whitespace/newlines pasted into the CI variable
+    - TOKEN="$(printf '%s' "$GITHUB_MIRROR_TOKEN" | tr -d '[:space:]')"
+    - git push --force "https://ddspot:${TOKEN}@github.com/ddspot/pysewer.git" gh-pages
   only:
     refs:
       - main
