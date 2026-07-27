@@ -82,10 +82,6 @@ docs-mirror:
         glpat-*) echo "ERROR: GITHUB_MIRROR_TOKEN is a GitLab token (glpat-...); a GitHub PAT is required"; exit 1 ;;
         *) echo "WARNING: unrecognized token prefix '$(printf '%s' "$TOKEN" | cut -c1-6)...', length ${#TOKEN}" ;;
       esac
-    # temporary diagnostics: check the token against the GitHub API
-    - apk add --no-cache curl >/dev/null 2>&1 || true
-    - 'curl -s -o /dev/null -w "GET /user -> %{http_code}\n" -H "Authorization: Bearer $TOKEN" https://api.github.com/user || true'
-    - 'curl -s -o /dev/null -w "GET /repos/ddspot/pysewer -> %{http_code}\n" -H "Authorization: Bearer $TOKEN" https://api.github.com/repos/ddspot/pysewer || true'
     - git push --force "https://ddspot:${TOKEN}@github.com/ddspot/pysewer.git" gh-pages
   only:
     refs:
