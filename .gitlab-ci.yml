@@ -18,6 +18,7 @@ cache:
 stages:
   - test
   - deploy
+  - mirror
 
 .setup_env: &setup_env
   - mamba create -y -n pysewer --file conda-linux-64.lock
@@ -58,10 +59,9 @@ pages:
 # GITHUB_MIRROR_TOKEN (fine-grained GitHub PAT, contents:write on
 # ddspot/pysewer); the job is skipped while the variable is unset.
 docs-mirror:
-  stage: deploy
-  needs: ["pages"]
-  before_script: []
-  cache: []
+  stage: mirror
+  dependencies:
+    - pages
   script:
     - cd public
     - git init -b gh-pages
@@ -70,5 +70,8 @@ docs-mirror:
     - git add -A
     - git commit -m "docs: publish sphinx build ($CI_COMMIT_SHORT_SHA)"
     - git push --force "https://x-access-token:${GITHUB_MIRROR_TOKEN}@github.com/ddspot/pysewer.git" gh-pages
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $GITHUB_MIRROR_TOKEN'
+  only:
+    refs:
+      - main
+    variables:
+      - $GITHUB_MIRROR_TOKEN
