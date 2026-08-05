@@ -78,6 +78,23 @@ Alternatively, `make env-local` (see `mk/env.mk`) performs both steps, and on
 HPC/SLURM systems use `source bin/bootstrap_env.sh pysewer` which creates the
 env under `/work/$USER/conda_envs` and runs the uv step.
 
+#### Light install (without plotting)
+
+matplotlib is an optional dependency: `import pysewer` and the full
+preprocessing → routing → design → export chain work without it, which keeps
+installs small when pysewer is embedded in another tool (e.g. the
+[Elan](https://elan-gis.org) QGIS plugin, where QGIS already ships
+matplotlib). The plotting module is loaded lazily on first use; to enable it,
+install the `plot` extra:
+
+```shell
+uv pip install -e '.[plot]'      # or: pip install 'pysewer[plot]'
+```
+
+Calling a plotting function without matplotlib raises an `ImportError` that
+points to this extra. The conda environment above already includes
+matplotlib, so nothing extra is needed in the standard setup.
+
 Please see the [documentation](https://ddspot.github.io/pysewer/) for more details.
 
 ## Input Data and data representation
@@ -154,13 +171,17 @@ The script also exports `docs/pump_penalty_demo.png` (when `matplotlib` is avail
 
 Recent updates added geometric and hydraulic checks to reduce unrealistic layouts:
 
-- **Geometry (connection graph):** cover must stay above `min_cover` (default 1.5 m); short edges are flagged if < `min_pipe_length` (default 2 m); excessively steep slopes are flagged; edges with insufficient cover are forced to `needs_pump`.
+- **Geometry (connection graph):** cover must stay above `min_cover` (default 0.25 m); short edges are flagged if < `min_pipe_length` (default 2 m); excessively steep slopes are flagged (`max_slope`). Cover violations are recorded per edge but do not force a pump — burial depth is governed by `tmin`.
 - **Hydraulics (sizing):** gravity pipes are picked to satisfy d/D ≤ `max_depth_ratio` (default 0.75) and velocities within [`velocity_min`, `velocity_max`] (defaults 0.7–3 m/s). Violations are recorded on edges (`hydraulic_violations`), along with computed `velocity` and `d_over_D`.
 - **Inspection:** the example notebook now includes cells that summarize pump/constraint flags on the connection graph and hydraulic violations after sizing.
 
 Profile smoothing is not applied; the checks run on the sampled profile (spacing `dx`). Increase `dx` if you want a smoother profile check.
 
 ## Plotting
+
+Plotting requires matplotlib (included in the conda environment; on a light
+install add it via `pip install 'pysewer[plot]'`). The module is loaded
+lazily on first use.
 
 ```python
 info = pysewer.get_sewer_info(G)
@@ -181,9 +202,20 @@ sewer_network_gdf = pysewer.get_edge_gdf(G,detailed=True)
 pysewer.export_sewer_network(sewer_network_gdf, "sewer_network.gpkg")
 ```
 
+Supported formats are GeoPackage (`gpkg`, default), ESRI Shapefile (`shp`)
+and GeoParquet (`parquet`). Multi-layer GeoPackages with an explicit layer
+name and CRS can be written with `pysewer.write_gdf_to_gpkg(gdf, path,
+layer=..., crs=...)`.
+
+Float attributes are rounded on export to keep the files free of floating
+point noise, controlled by `export.round_decimals` in the settings
+(`default: 3` decimal places for all float columns and profile tuples,
+`peak_flow: 6` since it is in m³/s, `slope: 5`; set to `null` to disable
+and export raw values).
+
 ## Default parameters
 
-The default or global parameters are stored in the [settings.yaml](pysewer/config/settings.yaml) file. This file can be overwritten by specifying a custom settings file (e.g.[example_settings.yaml](notebooks/example_settings.yaml)) and passing it to the `load_config(custom_settings.yaml)` function. The settings parameters are categorized into 3 sections, namely `preprocessing`, `optimization` and `plotting`.
+The default or global parameters are stored in the [settings.yaml](pysewer/config/settings.yaml) file. It can be overridden with a custom settings file (e.g. [example_settings.yaml](notebooks/example_settings.yaml)) via `pysewer.set_custom_config(custom_path=...)` (or a dict via `custom_settings_dict=...`). The settings are categorized into 4 sections, namely `preprocessing`, `optimization`, `plotting` and `export`.
 
 The table below summaries the key default parameters and their meaning.
 
@@ -195,22 +227,22 @@ The table below summaries the key default parameters and their meaning.
 | `pump_penalty`            | Penalty for using a pump in the cost function                                                                    | 1000    |
 | `dx`                      | Sampling resolution, used for extracting elevation data from the DEM (in meters)                                 | 10      |
 | `max_connection_length`   | The maximum distance between a building and the nearest street for it to be included in the cluster centers list | 30      |
-| `inhabitants_dwelling`    | The number of inhabitants per dwelling.                                                                          | 3       |
-| `daily_wastewater_person` | The daily wastewater generated per person in m³                                                                  | 0.2     |
-| `peak_factor`             | Peak factor for wastewater                                                                                       | 2.3     |
-| `min_slope`               | Minimum allowable slope for gravity segments (negative value = downhill)                                         | -0.01   |
-| `tmax` / `tmin`           | Maximum / minimum trench depth (m)                                                                                | 6.0 / 0.25 |
-| `min_cover`               | Minimum cover depth over pipe (m)                                                                                 | 1.5     |
-| `min_pipe_length`         | Shortest segment length before flagging (m)                                                                       | 2.0     |
-| `velocity_min`/`velocity_max` | Bounds on design velocity (m/s)                                                                               | 0.7 / 3.0 |
-| `max_depth_ratio`         | Maximum d/D used when sizing gravity pipes                                                                        | 0.75    |
-| `min_slope`               | The minimum slope required for gravitational flow.                                                               | -0.1    |
-| `tmax`                    | Maximum trench depth allowed (meters)                                                                            | 8       |
-| `tmin`                    | Minimum trench depth allowed (meters)                                                                            | 0.25    |
-| `min_trench_depth`        | Lowest possible trench depth                                                                                     | 0       |
-| `diameters`               | List of diameters to be considered (meters)                                                                      | List [] |
-| `pressurized_diameter`    | Diameter of pressure pipes to be used (meters)                                                                   | 0.2     |
-| `roughness`               | The pipe roughness coefficient in meters                                                                         | 0.013   |
+| `inhabitants_dwelling`    | The number of inhabitants per dwelling                                                                           | 2       |
+| `inhabitants_dwelling_attribute_name` | Buildings attribute holding the inhabitants count (overrides `inhabitants_dwelling` if set)          | ""      |
+| `daily_wastewater_person` | The daily wastewater generated per person in m³                                                                  | 0.15    |
+| `peak_factor`             | Peak factor for wastewater                                                                                       | 4.0     |
+| `min_slope`               | Minimum slope required for gravity flow (negative value = downhill)                                              | -0.01   |
+| `max_slope`               | Steepest allowed pipe slope before flagging                                                                      | -0.05   |
+| `tmax` / `tmin`           | Maximum / minimum trench depth (m)                                                                               | 6.0 / 0.25 |
+| `inflow_trench_depth` / `min_trench_depth` | Trench depth at the inflow point / lowest possible trench depth (m)                             | 0.25 / 0.25 |
+| `min_cover`               | Minimum cover depth over pipe (m); must not exceed `tmin`                                                        | 0.25    |
+| `min_pipe_length`         | Shortest segment length before flagging (m)                                                                      | 2.0     |
+| `velocity_min`/`velocity_max` | Bounds on design velocity (m/s)                                                                              | 0.7 / 3.0 |
+| `max_depth_ratio`         | Maximum d/D used when sizing gravity pipes                                                                       | 0.75    |
+| `diameters`               | List of diameters to be considered (meters)                                                                      | 0.2 … 2.0 |
+| `pressurized_diameter`    | Diameter of pressure pipes to be used (meters)                                                                   | 0.3     |
+| `roughness`               | The pipe roughness coefficient in meters                                                                         | 0.0015  |
+| `round_decimals`          | Decimal places for float columns in exported files (per-column map, `null` disables)                             | default 3, `peak_flow` 6, `slope` 5 |
 
 ## License
 
