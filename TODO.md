@@ -70,3 +70,13 @@ uv+mamba two-layer env).
       used for their reference run (diameter list incl. 0.1/0.15 m,
       inhabitants=3/dwelling, tmax) and re-run the comparison with matched
       settings
+- [x] ELAN meeting (2026-06-08) suggestions implemented (2026-08-05):
+      export rounding (`export.round_decimals`) and light import (lazy
+      plotting, matplotlib → `plot` extra); response draft in
+      work/ (2026-08-05_pysewer_response_to_elan.md)
+- [ ] Plugin architecture (pluggy, per Jacky's suggestion) for a proper
+      light/full split and v1/v2 behavior selection — next branch;
+      candidate seams: plotting, exporter backends, constraint checks
+- [ ] Consider dropping `needs_pump` from exported layers (routing-internal
+      flag, confuses users — Elan read it as the pump indicator; the
+      authoritative design flag is `pressurized`). Discuss with ELAN first

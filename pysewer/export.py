@@ -14,6 +14,7 @@ import json
 
 import fiona
 import geopandas as gpd
+import pandas.api.types as ptypes
 from fiona.collection import CRS
 
 from .config.manager import get_config
@@ -43,9 +44,40 @@ def is_list(column):
     """Check if a pandas Series contains lists."""
     return all(isinstance(item, list) for item in column)
 
-def tuple_list_to_json(tuple_list):
-    """Serialize a list of tuples to a JSON string."""
+def tuple_list_to_json(tuple_list, decimals: int | None = None):
+    """Serialize a list of tuples to a JSON string, optionally rounding floats."""
+    if decimals is not None:
+
+        def _round(value):
+            return round(value, decimals) if isinstance(value, float) else value
+
+        tuple_list = [
+            tuple(_round(v) for v in item)
+            if isinstance(item, (list, tuple))
+            else _round(item)
+            for item in tuple_list
+        ]
     return json.dumps(tuple_list)
+
+
+def round_float_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """
+    Round float attribute columns according to ``export.round_decimals``.
+
+    The "default" entry covers columns without an explicit setting; a
+    null/None config disables rounding entirely. Keeps exported files free of
+    float noise (7+ decimal places) that downstream tools such as Elan would
+    otherwise have to clean up themselves.
+    """
+    decimals = get_config().export.round_decimals or {}
+    default = decimals.get("default")
+    for col in gdf.columns:
+        if col == "geometry":
+            continue
+        n_digits = decimals.get(col, default)
+        if n_digits is not None and ptypes.is_float_dtype(gdf[col]):
+            gdf[col] = gdf[col].round(n_digits)
+    return gdf
 
 
 def generate_schema(gdf: gpd.GeoDataFrame):
@@ -96,12 +128,16 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
     Notes
     -----
     This function converts any columns with list of tuples to JSON strings before writing to the GPKG file.
+    Float columns and profile tuples are rounded according to ``export.round_decimals``.
     """
+    gdf = round_float_columns(gdf.copy())
+    profile_decimals = (get_config().export.round_decimals or {}).get("default")
     # Convert only columns with list of tuples to JSON strings
     for col in gdf.columns:
-        if gdf[col].dtype == "object":
-            if is_list_of_tuples(gdf[col]) or is_list(gdf[col]):
-                gdf[col] = gdf[col].apply(tuple_list_to_json)
+        if gdf[col].dtype == "object" and (
+            is_list_of_tuples(gdf[col]) or is_list(gdf[col])
+        ):
+            gdf[col] = gdf[col].apply(tuple_list_to_json, decimals=profile_decimals)
 
     # Define the schema based on the GeoDataFrame
     schema = generate_schema(gdf)
@@ -136,11 +172,14 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
     Notes
     -----
     This function converts any columns in the GeoDataFrame that contain lists of tuples to JSON strings before writing to the SHP file.
+    Float columns and profile tuples are rounded according to ``export.round_decimals``.
     """
+    gdf = round_float_columns(gdf.copy())
+    profile_decimals = (get_config().export.round_decimals or {}).get("default")
     # Convert only columns with list of tuples to JSON strings
     for col in gdf.columns:
         if gdf[col].dtype == "object" and is_list_of_tuples(gdf[col]):
-            gdf[col] = gdf[col].apply(tuple_list_to_json)
+            gdf[col] = gdf[col].apply(tuple_list_to_json, decimals=profile_decimals)
 
     # Define the schema based on the GeoDataFrame
     schema = generate_schema(gdf)
@@ -200,6 +239,7 @@ def export_sewer_network(
     elif file_format == "shp":
         write_gdf_to_shp(gdf, filepath)
     elif file_format == "parquet":
+        gdf = round_float_columns(gdf.copy())
         gdf.to_parquet(
             filepath, index=False
         )  # index set false to avoid AttributeError: module 'pandas' has no attribute 'Int64Index'

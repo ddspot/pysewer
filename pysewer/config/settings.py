@@ -74,6 +74,12 @@ class Plotting:
 @dataclass
 class Export:
     file_format: str
+    # Decimal places applied to float attribute columns (and profile tuples)
+    # at export time; "default" covers columns not listed explicitly. None
+    # disables rounding.
+    round_decimals: dict | None = field(
+        default_factory=lambda: {"default": 3, "peak_flow": 6, "slope": 5}
+    )
 
 
 @dataclass

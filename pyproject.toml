@@ -28,7 +28,6 @@ dependencies = [
     "scikit-learn",
     "networkx",
     "pyarrow",
-    "matplotlib",
     "pyyaml",
     "geopandas",
     "shapely>=2.0",
@@ -38,6 +37,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# matplotlib is only needed for pysewer.plotting (loaded lazily); embedding
+# consumers such as the Elan QGIS plugin can install without it.
+plot = [
+    "matplotlib",
+]
 dev = [
     "pytest",
     "ruff",

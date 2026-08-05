@@ -54,3 +54,10 @@ plotting:
 
 export:
   file_format: "gpkg"
+  # decimal places for float columns in exported files; "default" covers any
+  # column not listed. peak_flow is in m³/s and slope is dimensionless, so both
+  # need finer resolution than geometric quantities. Set to null to disable.
+  round_decimals:
+    default: 3
+    peak_flow: 6
+    slope: 5

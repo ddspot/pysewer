@@ -70,6 +70,30 @@ def test_write_gdf_to_gpkg_multiple_layers_and_crs(tmp_path):
     assert isinstance(edges_rt["profile"].iloc[0], str)
 
 
+def test_export_rounds_float_columns(tmp_path):
+    """Float noise is trimmed on export: default 3 decimals, peak_flow 6."""
+    out = tmp_path / "rounded.gpkg"
+    gdf = gpd.GeoDataFrame(
+        {
+            "length": [123.456789012],
+            "peak_flow": [0.000104213987],
+            "profile": [[(0.0, 101.123456789), (10.0, 100.987654321)]],
+            "geometry": [Point(0, 0)],
+        },
+        crs="EPSG:32632",
+    )
+    write_gdf_to_gpkg(gdf, str(out), layer="pipes", crs="EPSG:32632")
+
+    # the caller's GeoDataFrame is left untouched
+    assert gdf["length"].iloc[0] == 123.456789012
+    assert isinstance(gdf["profile"].iloc[0], list)
+
+    rt = gpd.read_file(out, layer="pipes")
+    assert rt["length"].iloc[0] == 123.457
+    assert rt["peak_flow"].iloc[0] == 0.000104
+    assert "101.123]" in rt["profile"].iloc[0].replace(" ", "")
+
+
 def test_estimate_peakflow_custom_inhabitants_attribute():
     """A custom attribute name takes priority over inhabitants_dwelling."""
     G = nx.DiGraph()

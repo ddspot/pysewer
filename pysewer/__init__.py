@@ -13,9 +13,27 @@ from .config.manager import get_config, set_config
 from .export import *
 from .helper import *
 from .optimization import *
-from .plotting import *
 from .preprocessing import *
 from .routing import *
+
+
+def __getattr__(name):
+    # Plotting (and with it matplotlib) loads lazily on first access, so
+    # "import pysewer" works in plot-free environments (e.g. the Elan QGIS
+    # plugin) without matplotlib installed.
+    if name.startswith("_"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    plotting = import_module(".plotting", __name__)
+    if name == "plotting":
+        return plotting
+    try:
+        return getattr(plotting, name)
+    except AttributeError:
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from None
 
 # Load default settings on package import
 DEFAULT_CONFIG = get_config()

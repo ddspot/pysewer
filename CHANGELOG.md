@@ -5,6 +5,26 @@ All notable changes to pysewer are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Follow-ups from the Elan integration meeting (2026-06-08).
+
+### Added
+
+- Configurable rounding of exported float attributes
+  (`export.round_decimals`, default 3 decimals, `peak_flow` 6, `slope` 5);
+  also applies to serialized profile tuples. Requested by the Elan team to
+  avoid 7+ decimal places in GPKG outputs.
+- `plot` optional dependency extra: matplotlib is no longer a required
+  dependency; `pysewer.plotting` is imported lazily so `import pysewer`
+  works without matplotlib installed (a "light" install for embedding,
+  e.g. the Elan QGIS plugin).
+
+### Changed
+
+- `write_gdf_to_gpkg` / `write_gdf_to_shp` no longer mutate the caller's
+  GeoDataFrame (JSON conversion and rounding happen on a copy).
+
 ## [0.2.0] - 2026-07-24
 
 Repository migrated from `git.ufz.de/despot/pysewer` to
