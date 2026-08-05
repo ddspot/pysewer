@@ -25,7 +25,16 @@ def __getattr__(name):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     from importlib import import_module
 
-    plotting = import_module(".plotting", __name__)
+    try:
+        plotting = import_module(".plotting", __name__)
+    except ModuleNotFoundError as e:
+        if e.name and e.name.split(".")[0] in ("matplotlib", "mpl_toolkits"):
+            raise ImportError(
+                "pysewer's plotting functions require matplotlib, which is "
+                "not installed. Install it with: pip install 'pysewer[plot]' "
+                "(or add matplotlib to your environment)."
+            ) from e
+        raise
     if name == "plotting":
         return plotting
     try:
