@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: diamsweep_coarse
+description: >
+  Diameter sensitivity (3/3) — coarse diameter set (floor 0.3 m). The whole
+  distribution shifts up to the new floor, confirming the smallest available
+  diameter governs the result on this small catchment.
+data:
+  dem: tests/test_data/dem.tif
+  roads: tests/test_data/roads_clipped.shp
+  buildings: tests/test_data/buildings_clipped.shp
+  sink: [691350, 2553250]
+config:
+  optimization:
+    tmax: 8.0
+    diameters: [0.3, 0.4, 0.6, 0.8, 1.0]

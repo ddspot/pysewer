@@ -38,6 +38,41 @@ Results land in `work/benchmarks/results/` (git-ignored scratch, see the
 `work/` convention) — one JSON per scenario plus `summary.md` comparing all
 scenarios of the invocation.
 
+## Worked example — diameter sensitivity
+
+Why does pysewer put almost every pipe at the smallest available diameter?
+The `diamsweep_*` scenarios answer this. They run the **same** repo test
+network and change **only** the available diameter list:
+
+```shell
+python benchmarks/scripts/run_scenarios.py \
+    diamsweep_coarse diamsweep_default diamsweep_fine
+```
+
+| scenario (floor) | max fill | gravity diameters |
+|---|---|---|
+| diamsweep_coarse (0.3 m) | 0.006 | 0.3: 95 |
+| diamsweep_default (0.2 m) | 0.019 | 0.2: 84, 0.3: 11 |
+| diamsweep_fine (0.05 m) | 0.70 | 0.05: 83, 0.08: 1, 0.1: 11 |
+
+`max fill` = the largest peak-flow / full-bore-capacity ratio across gravity
+pipes. Reading the table:
+
+- With the coarse and default sets, `max fill` is ~0.6–1.9 %: **every pipe
+  runs far below capacity**, so the smallest available diameter always
+  satisfies the depth-ratio check and the whole network sits at the floor.
+  The distribution simply tracks the smallest size on offer.
+- Only with the fine set (0.05 m floor) does the trunk finally approach
+  capacity (`max fill` 0.70, near the 0.75 `max_depth_ratio`) and step up —
+  which is when a genuine **spread** appears (0.05 / 0.08 / 0.1 m).
+- Network length and station counts are identical across all three: the
+  diameter list changes nothing but the diameters.
+
+Conclusion: on a small domestic catchment the sizing is **floor-limited, not
+capacity-limited** — diameters are small because the flows are small, not
+because the sizing rule is wrong. To obtain a finer spread you need smaller
+available diameters (or higher design flows), not a different sizing rule.
+
 ## Data
 
 - `small_*` scenarios use the repository's own `tests/test_data` — they run

@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: diamsweep_fine
+description: >
+  Diameter sensitivity (2/3) — fine diameter set including small laterals
+  (floor 0.05 m). Demonstrates that most pipes drop to the new smallest
+  size: diameters are floored by the available set, not by the sizing rule,
+  because domestic flows run the pipes far below capacity.
+data:
+  dem: tests/test_data/dem.tif
+  roads: tests/test_data/roads_clipped.shp
+  buildings: tests/test_data/buildings_clipped.shp
+  sink: [691350, 2553250]
+config:
+  optimization:
+    tmax: 8.0
+    diameters: [0.05, 0.08, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4]
+    pressurized_diameter: 0.1
