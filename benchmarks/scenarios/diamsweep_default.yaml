@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: diamsweep_default
 description: >
-  Diameter sensitivity (1/3) — pysewer default diameter set (floor 0.2 m).
-  Same repo test data as the other diamsweep_* scenarios; only the available
-  diameter list changes across the three, isolating its effect.
+  Diameter sensitivity (1/3) — realistic minimum, pysewer default diameter
+  set (floor 0.2 m = DN200, a standard public-sewer minimum). This is the
+  realistic design case. Same repo test data as the other diamsweep_*
+  scenarios; only the available diameter list changes across the three,
+  isolating its effect.
 data:
   dem: tests/test_data/dem.tif
   roads: tests/test_data/roads_clipped.shp

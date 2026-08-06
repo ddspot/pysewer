@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: diamsweep_coarse
 description: >
-  Diameter sensitivity (3/3) — coarse diameter set (floor 0.3 m). The whole
-  distribution shifts up to the new floor, confirming the smallest available
-  diameter governs the result on this small catchment.
+  Diameter sensitivity (2/3) — coarse diameter set (floor 0.3 m = DN300).
+  The whole distribution shifts up to the new floor, confirming the smallest
+  available diameter governs the result on this small catchment.
 data:
   dem: tests/test_data/dem.tif
   roads: tests/test_data/roads_clipped.shp

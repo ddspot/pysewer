@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
 # SPDX-License-Identifier: GPL-3.0-only
-name: diamsweep_fine
+name: diamsweep_probe
 description: >
-  Diameter sensitivity (2/3) — fine diameter set including small laterals
-  (floor 0.05 m). Demonstrates that most pipes drop to the new smallest
-  size: diameters are floored by the available set, not by the sizing rule,
-  because domestic flows run the pipes far below capacity.
+  Diameter sensitivity (3/3) — DIAGNOSTIC PROBE, not a design. The 0.05/0.08 m
+  entries are below any real public-sewer minimum (house-lateral / sub-sewer
+  sizes) and are included only to push the smallest offered diameter under the
+  flow-binding threshold, proving the sizing engine escalates diameter once a
+  pipe finally approaches capacity. Do not read these as recommended sizes.
 data:
   dem: tests/test_data/dem.tif
   roads: tests/test_data/roads_clipped.shp

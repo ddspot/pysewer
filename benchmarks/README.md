@@ -46,32 +46,45 @@ network and change **only** the available diameter list:
 
 ```shell
 python benchmarks/scripts/run_scenarios.py \
-    diamsweep_coarse diamsweep_default diamsweep_fine
+    diamsweep_coarse diamsweep_default diamsweep_probe
 ```
 
-| scenario (floor) | max fill | gravity diameters |
-|---|---|---|
-| diamsweep_coarse (0.3 m) | 0.006 | 0.3: 95 |
-| diamsweep_default (0.2 m) | 0.019 | 0.2: 84, 0.3: 11 |
-| diamsweep_fine (0.05 m) | 0.70 | 0.05: 83, 0.08: 1, 0.1: 11 |
+| scenario (floor) | max fill | gravity diameters | note |
+|---|---|---|---|
+| diamsweep_default (0.2 m / DN200) | 0.019 | 0.2: 84, 0.3: 11 | realistic minimum |
+| diamsweep_coarse (0.3 m / DN300) | 0.006 | 0.3: 95 | coarser realistic set |
+| diamsweep_probe (0.05 m) | 0.70 | 0.05: 83, 0.08: 1, 0.1: 11 | **diagnostic only — non-physical sizes** |
 
 `max fill` = the largest peak-flow / full-bore-capacity ratio across gravity
-pipes. Reading the table:
+pipes.
 
-- With the coarse and default sets, `max fill` is ~0.6–1.9 %: **every pipe
-  runs far below capacity**, so the smallest available diameter always
-  satisfies the depth-ratio check and the whole network sits at the floor.
-  The distribution simply tracks the smallest size on offer.
-- Only with the fine set (0.05 m floor) does the trunk finally approach
-  capacity (`max fill` 0.70, near the 0.75 `max_depth_ratio`) and step up —
-  which is when a genuine **spread** appears (0.05 / 0.08 / 0.1 m).
-- Network length and station counts are identical across all three: the
-  diameter list changes nothing but the diameters.
+**Engineering conclusion (the headline).** Public gravity sewers have a
+*minimum diameter* — typically DN150–DN200 — set by maintenance, blockage
+and self-cleansing rules, **not** by peak flow. On a small domestic
+catchment like this one the peak flows are far too small to require anything
+above that minimum (`max fill` ~2 % at DN200), so the correct design is the
+minimum diameter almost everywhere, stepping up only on the trunk. That is
+exactly what pysewer produces — and it is what a design engineer would
+specify. "All at minimum" is the right answer here, not a symptom of broken
+sizing.
 
-Conclusion: on a small domestic catchment the sizing is **floor-limited, not
-capacity-limited** — diameters are small because the flows are small, not
-because the sizing rule is wrong. To obtain a finer spread you need smaller
-available diameters (or higher design flows), not a different sizing rule.
+**Why the probe row exists.** With realistic diameters the capacity
+constraint never binds, so a natural question is whether the sizing engine
+*can* escalate at all, or is stuck at the floor. `diamsweep_probe` answers
+that by offering deliberately **non-physical** sub-sewer sizes (0.05/0.08 m
+are house-lateral diameters, not public sewers). Only once the smallest pipe
+is that small does the trunk reach capacity (`max fill` 0.70, right at the
+0.75 `max_depth_ratio`) and the engine correctly steps the diameter up,
+producing a spread (0.05 → 0.08 → 0.1 m). So the engine is verified to size
+by capacity when capacity matters; it simply never matters at realistic
+sewer diameters on catchments this small. **Do not read the probe diameters
+as recommended pipe sizes.**
+
+Takeaway: the sizing is **floor-limited, not capacity-limited** here —
+diameters are small because the flows are small, and the smallest *realistic*
+diameter is the correct engineering answer. A finer spread would require
+either genuinely larger design flows or sub-minimum pipes that no one would
+lay.
 
 ## Data
 
