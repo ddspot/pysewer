@@ -161,3 +161,49 @@ def test_estimate_peakflow_uses_runtime_config_defaults(tmp_path):
 
     expected_peak_flow = (((9 * 0.33) / 24) * 5.5) / 3600
     assert pytest.approx(G.nodes["b1"]["peak_flow"]) == expected_peak_flow
+
+
+def test_needs_pump_zero_inflow_uses_custom_tmin():
+    """
+    Regression: inflow_trench_depth=0 means "start at tmin" (head edges pass
+    0). A falsy `or` fallback used to replace the 0 with the
+    inflow_trench_depth default, silently ignoring a user-defined tmin.
+    """
+    from pysewer.optimization import needs_pump
+
+    set_config(custom_settings_dict={"optimization": {"tmin": 0.8}})
+    profile = [(0, 100.0), (10, 99.0)]
+    _, _, trench_profile = needs_pump(profile, inflow_trench_depth=0)
+    assert pytest.approx(100.0 - trench_profile[0][1]) == 0.8
+
+
+def test_needs_pump_explicit_zero_min_slope_not_overridden():
+    """An explicit min_slope=0 must not fall back to the config default."""
+    from pysewer.optimization import needs_pump
+
+    # flat profile: feasible with min_slope=0, infeasible with default -0.01
+    profile = [(0, 100.0), (500, 100.0)]
+    flag, _, _ = needs_pump(profile, min_slope=0, tmax=1.0)
+    assert flag is False
+
+
+def test_model_domain_pump_penalty_tracks_runtime_config():
+    """
+    Regression: pump_penalty was frozen at ModelDomain construction, so
+    config overrides applied afterwards never reached the routing weights.
+    """
+    import pysewer
+
+    md = pysewer.ModelDomain(
+        "tests/test_data/dem.tif",
+        "tests/test_data/roads_clipped.shp",
+        "tests/test_data/buildings_clipped.shp",
+    )
+    assert md.pump_penalty == get_config().preprocessing.pump_penalty
+
+    set_config(custom_settings_dict={"preprocessing": {"pump_penalty": 7777}})
+    assert md.pump_penalty == 7777
+
+    # an explicit value (constructor arg or setter) still wins over config
+    md.set_pump_penalty(42)
+    assert md.pump_penalty == 42

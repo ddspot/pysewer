@@ -561,9 +561,6 @@ class ModelDomain:
         """Initialize Model Domain using the input data."""
         config = get_config()
         clustering = config.preprocessing.clustering if clustering is None else clustering
-        pump_penalty = (
-            config.preprocessing.pump_penalty if pump_penalty is None else pump_penalty
-        )
         connect_buildings = (
             config.preprocessing.connect_buildings
             if connect_buildings is None
@@ -612,7 +609,7 @@ class ModelDomain:
             print("connecting subgraphs")
             self.connect_subgraphs()
 
-        # set pump penalty
+        # set pump penalty (None → resolved lazily from the current config)
         self.pump_penalty = pump_penalty
 
         # set node attributes
@@ -625,6 +622,24 @@ class ModelDomain:
         # connect buildings
         if connect_buildings:
             self.connect_buildings(clustering=clustering)
+
+    @property
+    def pump_penalty(self):
+        """
+        Pump penalty used to weight pump-requiring edges during routing.
+
+        Resolved from the current config at access time unless explicitly
+        set (constructor argument or ``set_pump_penalty``), so config
+        overrides applied after the ModelDomain was created still take
+        effect in ``generate_connection_graph``.
+        """
+        if self._pump_penalty is None:
+            return get_config().preprocessing.pump_penalty
+        return self._pump_penalty
+
+    @pump_penalty.setter
+    def pump_penalty(self, value):
+        self._pump_penalty = value
 
     def create_unsimplified_graph(self, roads_gdf: gpd.GeoDataFrame) -> nx.Graph:
         """

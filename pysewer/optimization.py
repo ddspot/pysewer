@@ -733,12 +733,15 @@ def needs_pump(
         - The height difference between the outflow and the trench depth at the outflow point.
         - A list of (x, trench_depth) tuples representing the trench depth at each point along the profile.
     """
-    # Get current config values if not provided
+    # Get current config values if not provided. None-checks, not `or`: an
+    # explicit 0 (e.g. inflow_trench_depth=0 for head edges, meaning "start
+    # at tmin") must not be swallowed by the config fallback.
     config = get_config()
-    min_slope = min_slope or config.optimization.min_slope
-    tmax = tmax or config.optimization.tmax
-    tmin = tmin or config.optimization.tmin
-    inflow_trench_depth = inflow_trench_depth or config.optimization.inflow_trench_depth
+    min_slope = config.optimization.min_slope if min_slope is None else min_slope
+    tmax = config.optimization.tmax if tmax is None else tmax
+    tmin = config.optimization.tmin if tmin is None else tmin
+    if inflow_trench_depth is None:
+        inflow_trench_depth = config.optimization.inflow_trench_depth
 
     x, y = zip(*profile, strict=False)
     if inflow_trench_depth == 0:
