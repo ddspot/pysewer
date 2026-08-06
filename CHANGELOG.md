@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Follow-ups from the Elan integration meeting (2026-06-08).
+Follow-ups from the Elan integration meeting (2026-06-08) and the Elan
+bug report (2026-08-06).
 
 ### Added
+
+- Benchmark suite (`benchmarks/`): declarative scenario YAMLs, a CLI
+  runner writing JSON + markdown summaries to `work/benchmarks/results`,
+  and a beginner walkthrough notebook. `small_*` scenarios run on the
+  repository test data; `elan_*` scenarios use the (uncommitted) French
+  dataset.
+- Config value validation at load time: negative
+  `tmin`/`tmax`/`inflow_trench_depth`/`min_trench_depth`/`min_cover`/
+  `min_pipe_length` are rejected, and `tmax > tmin`,
+  `velocity_max > velocity_min` are enforced.
 
 - Configurable rounding of exported float attributes
   (`export.round_decimals`, default 3 decimals, `peak_flow` 6, `slope` 5);
@@ -24,6 +35,12 @@ Follow-ups from the Elan integration meeting (2026-06-08).
 
 - `write_gdf_to_gpkg` / `write_gdf_to_shp` no longer mutate the caller's
   GeoDataFrame (JSON conversion and rounding happen on a copy).
+- `needs_pump` is no longer present on the designed network's edges (and
+  therefore no longer exported): it is a routing-internal terrain flag
+  (pump-penalty input) that was repeatedly misread as the pump indicator.
+  On the design, `pressurized` plus the `pumping_station`/
+  `lifting_station` node flags are authoritative. The flag remains on the
+  connection graph.
 
 ### Fixed
 

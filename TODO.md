@@ -77,6 +77,19 @@ uv+mamba two-layer env).
 - [ ] Plugin architecture (pluggy, per Jacky's suggestion) for a proper
       light/full split and v1/v2 behavior selection — next branch;
       candidate seams: plotting, exporter backends, constraint checks
-- [ ] Consider dropping `needs_pump` from exported layers (routing-internal
-      flag, confuses users — Elan read it as the pump indicator; the
-      authoritative design flag is `pressurized`). Discuss with ELAN first
+- [x] `needs_pump` dropped from the designed network/exports (2026-08-06,
+      after the Elan bug report showed it being misread again); it remains
+      on the connection graph for routing
+- [x] Elan bug report 2026-08-06 addressed (see CHANGELOG Unreleased):
+      config validation (negative tmin), needs_pump strip, diameter bug
+      verified fixed on current main (their snapshot predates the v0.2.0
+      velocity-fallback fix — repro: work/benchmarks/elan/
+      repro_feedback_2026-08-06.json), station-count shifts quantified
+      (tmax=8: 28 pumping + 35 lifting vs their v1 27+33)
+- [ ] Ask Elan which pysewer commit/version their "Pysewer-2" snapshot is —
+      confirm the 0.4-diameter run predates the v0.2.0 diameter fix, and
+      have them rerun on current main
+- [ ] Benchmarks: extend the scenario matrix (max_slope sweep — their
+      "to do: play with max_slope" —, other areas, pump_penalty sweep);
+      add more beginner notebooks (02: custom settings, 03: reading
+      violations)
