@@ -120,7 +120,6 @@ def clip_dem(mosaic_path, polygon_utm, out_path):
 
 
 def fetch_town(town, mosaic_path, max_buildings):
-    import geopandas as gpd
     import osmnx as ox
 
     slug = slugify(town)
@@ -185,7 +184,7 @@ def main():
         try:
             case = fetch_town(town, mosaic, args.max_buildings)
             manifest[town] = str(case) if case else "skipped"
-        except Exception as exc:  # noqa: BLE001 — continue with other towns
+        except Exception as exc:
             print(f"{town}: FAILED — {type(exc).__name__}: {exc}")
             manifest[town] = f"error: {exc}"
     (TT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2))

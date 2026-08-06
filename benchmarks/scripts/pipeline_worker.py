@@ -82,7 +82,7 @@ def main(spec_path):
         )
         result.update(
             {
-                "n_pipes": int(len(pipes)),
+                "n_pipes": len(pipes),
                 "total_length_m": round(float(pipes.geometry.length.sum()), 1),
                 "pressurized_length_m": round(
                     float(pressurized.geometry.length.sum()), 1
@@ -100,7 +100,7 @@ def main(spec_path):
                 "peak_flow_max_m3s": round(float(pipes["peak_flow"].max()), 6),
             }
         )
-    except Exception as exc:  # noqa: BLE001 — report, don't crash the driver
+    except Exception as exc:
         result["error"] = f"{type(exc).__name__}: {exc}"
     result["runtime_s"] = round(time.time() - t0, 1)
     Path(spec["out"]).write_text(json.dumps(result, indent=2))
