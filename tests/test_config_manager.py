@@ -194,6 +194,8 @@ def test_needs_pump_explicit_zero_min_slope_not_overridden():
         ({"optimization": {"inflow_trench_depth": -1}}, "inflow_trench_depth"),
         ({"optimization": {"tmax": 0.1}}, "greater than"),  # tmax <= tmin
         ({"optimization": {"velocity_max": 0.5}}, "velocity_max"),
+        # Colebrook k_s (1.5 mm) mistakenly used as Manning's n
+        ({"optimization": {"roughness": 0.0015}}, "Manning"),
     ],
 )
 def test_invalid_depth_and_velocity_values_rejected(bad_settings, match):

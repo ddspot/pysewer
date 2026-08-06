@@ -259,7 +259,7 @@ The table below summaries the key default parameters and their meaning.
 | `max_depth_ratio`         | Maximum d/D used when sizing gravity pipes                                                                       | 0.75    |
 | `diameters`               | List of diameters to be considered (meters)                                                                      | 0.2 … 2.0 |
 | `pressurized_diameter`    | Diameter of pressure pipes to be used (meters)                                                                   | 0.3     |
-| `roughness`               | The pipe roughness coefficient in meters                                                                         | 0.0015  |
+| `roughness`               | Manning's roughness coefficient n (dimensionless; ~0.013 for concrete). Not the Colebrook k_s in metres.          | 0.013   |
 | `round_decimals`          | Decimal places for float columns in exported files (per-column map, `null` disables)                             | default 3, `peak_flow` 6, `slope` 5 |
 
 ## License

@@ -31,7 +31,11 @@ optimization:
   inflow_trench_depth: 0.25
   min_trench_depth: 0.25
   diameters: [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0]
-  roughness: 0.0015
+  # Manning's roughness coefficient n (dimensionless, ~0.009-0.015 for
+  # sewer pipes; concrete ~0.013). NOT the Colebrook-White absolute
+  # roughness height k_s in metres (e.g. 0.0015 m = 1.5 mm) — using a k_s
+  # value here understates n ~8x, inflating capacity and velocity.
+  roughness: 0.013
   pressurized_diameter: 0.3
   # min_cover must not exceed tmin/inflow_trench_depth, otherwise every
   # gravity edge is flagged with a min_cover violation. To require deeper

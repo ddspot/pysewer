@@ -549,7 +549,8 @@ def mannings_equation(pipe_diameter: float, roughness: float, slope: float) -> f
     pipe_diameter : float
         Diameter of the pipe in meters.
     roughness : float
-        Roughness coefficient of the pipe.
+        Manning's roughness coefficient n (dimensionless, ~0.009-0.015 for
+        sewer pipes). NOT the Colebrook-White absolute roughness k_s.
     slope : float
         Slope of the pipe in units of elevation drop per unit length.
 

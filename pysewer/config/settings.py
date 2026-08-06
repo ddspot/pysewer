@@ -165,6 +165,16 @@ def validate_config_values(config: "Config") -> None:
             f"optimization.velocity_max ({opt.velocity_max}) must be greater "
             f"than optimization.velocity_min ({opt.velocity_min})"
         )
+    # roughness is Manning's n (~0.009-0.03 for pipes/channels). A value
+    # below ~0.008 is almost certainly a Colebrook-White absolute roughness
+    # height k_s (e.g. 0.0015 m) mistakenly used as n, which silently
+    # inflates capacity and velocity ~8x.
+    if not 0.008 <= opt.roughness <= 0.1:
+        raise ValueError(
+            f"optimization.roughness ({opt.roughness}) is outside the plausible "
+            "Manning's n range [0.008, 0.1]. Note: this is Manning's n, not the "
+            "Colebrook-White absolute roughness k_s (in metres)."
+        )
 
 
 def override_settings(

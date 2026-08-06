@@ -44,6 +44,16 @@ bug report (2026-08-06).
 
 ### Fixed
 
+- Default `roughness` corrected from `0.0015` to `0.013` in
+  `settings.yaml`. `0.0015` is a Colebrook-White absolute roughness height
+  (1.5 mm) that was being used as Manning's *n* (which should be ~0.013),
+  understating friction ~8× — this inflated pipe capacity and produced
+  unphysical design velocities (up to ~9 m/s). It did **not** affect chosen
+  diameters (flows on typical small catchments run the pipes far below
+  capacity regardless), but it made the reported `velocity` and velocity
+  `hydraulic_violations` unreliable. Config validation now rejects a
+  `roughness` outside the plausible Manning's-n range [0.008, 0.1] to catch
+  the k_s/n confusion; the Manning docstrings clarify the expected quantity.
 - User-defined config values were partially ignored: `needs_pump()` used
   falsy `or` fallbacks, so a custom `tmin` never applied to head edges
   (`inflow_trench_depth=0` was swallowed before the documented "0 → tmin"
