@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: elan_french
+description: >
+  Elan project French dataset (uncommitted, work/benchmarks/elan). Flat
+  3 inhabitants/dwelling on both versions (published pysewer has no
+  population-attribute support), Elan diameter list.
+dem: work/benchmarks/elan/DEM_5m.tif
+roads:
+  path: work/benchmarks/elan/sewer_inputs.gpkg
+  layer: roads_reduced_area
+buildings:
+  path: work/benchmarks/elan/sewer_inputs.gpkg
+  layer: buildings_ign_population
+sink: [708750.1184972611, 1599469.4617119688]
+design:
+  diameters: [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.6, 0.8, 1.0]
+  pressurized_diameter: 0.2
+  roughness: 0.013
+  inhabitants_dwelling: 3
+  daily_wastewater_person: 0.15
+  peak_factor: 4.0

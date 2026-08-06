@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: reviewer_full
+description: >
+  JOSS reviewer dataset, full extent (17k buildings — heavy; queued last).
+  Sink from the reviewer notebook.
+dem: data/from_reviewer/elevation.tif
+roads: data/from_reviewer/roads.geojson
+buildings: data/from_reviewer/buildings.geojson
+sink: [297022.3270521787, 5716792.940139463]
+design:
+  diameters: [0.3, 0.4, 0.5]
+  pressurized_diameter: 0.2
+  roughness: 0.013
+  inhabitants_dwelling: 3
+  daily_wastewater_person: 0.2
+  peak_factor: 2.3

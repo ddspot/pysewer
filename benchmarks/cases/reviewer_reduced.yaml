@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: reviewer_reduced
+description: >
+  JOSS reviewer dataset (UTM 31N), reduced to the cropped_dem extent
+  (staged by stage_datasets.py from data/from_reviewer). Design settings
+  from the reviewer's conf_settings.yaml.
+dem: data/from_reviewer/cropped_dem.tif
+roads: work/benchmarks/reviewer/roads_reduced.gpkg
+buildings: work/benchmarks/reviewer/buildings_reduced.gpkg
+sink: lowest
+design:
+  diameters: [0.3, 0.4, 0.5]
+  pressurized_diameter: 0.2
+  roughness: 0.013
+  inhabitants_dwelling: 3
+  daily_wastewater_person: 0.2
+  peak_factor: 2.3

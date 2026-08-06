@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: example_case
+description: the documented example (notebooks/example_data, UTM 40N)
+dem: notebooks/example_data/1_DEM/dem_10m1.tif
+roads: notebooks/example_data/3_Roads/roads_projected.shp
+buildings: notebooks/example_data/2_Buildings/buildings_projected.shp
+sink: [690500, 2557000]

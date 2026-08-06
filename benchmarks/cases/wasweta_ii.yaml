@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: wasweta_ii
+description: >
+  Wasweta II test case (Kenya, UTM 36S; staged from the Nextcloud share by
+  stage_datasets.py — data not committed). Sink = lowest road vertex.
+dem: work/benchmarks/wasweta/dem_utm.tif
+roads: work/benchmarks/wasweta/roads_utm.shp
+buildings: work/benchmarks/wasweta/buildings_utm.shp
+sink: lowest
