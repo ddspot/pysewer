@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: small_tmax8
+description: repo test data, default trenching limit (tmax 8 m) — runs on any clone
+data:
+  dem: tests/test_data/dem.tif
+  roads: tests/test_data/roads_clipped.shp
+  buildings: tests/test_data/buildings_clipped.shp
+  sink: [691350, 2553250]
+config:
+  optimization:
+    tmax: 8.0

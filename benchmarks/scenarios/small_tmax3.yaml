@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: small_tmax3
+description: repo test data, shallow trenching limit (tmax 3 m) — station count sensitivity
+data:
+  dem: tests/test_data/dem.tif
+  roads: tests/test_data/roads_clipped.shp
+  buildings: tests/test_data/buildings_clipped.shp
+  sink: [691350, 2553250]
+config:
+  optimization:
+    tmax: 3.0

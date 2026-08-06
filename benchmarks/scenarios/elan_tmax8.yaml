@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: elan_tmax8
+description: >
+  French dataset (Elan project), their diameter list and population
+  attribute, tmax 8 m — mirrors the Pysewer-1 vs Pysewer-2 comparison of
+  the 2026-08-06 bug report. Requires work/benchmarks/elan (not committed).
+data:
+  dem: work/benchmarks/elan/DEM_5m.tif
+  gpkg: work/benchmarks/elan/sewer_inputs.gpkg
+  roads_layer: roads_reduced_area
+  buildings_layer: buildings_ign_population
+  wwtp_layer: wwtp
+config:
+  optimization:
+    inhabitants_dwelling_attribute_name: population
+    diameters: [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.6, 0.8, 1.0]
+    pressurized_diameter: 0.2
+    tmax: 8.0
