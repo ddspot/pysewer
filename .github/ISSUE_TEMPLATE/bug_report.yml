@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+name: Bug report
+description: Report a reproducible problem in pysewer
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! A pysewer result depends on the **input data**,
+        the **configuration**, and the exact **code version**. Please provide
+        all three so we can reproduce and fix the issue — reports we cannot
+        reproduce usually cannot be actioned. See
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#reporting-bugs--please-make-it-reproducible).
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong, in one or two sentences.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pysewer version / commit
+      description: >
+        `python -c "import importlib.metadata; print(importlib.metadata.version('pysewer'))"`
+        and, if installed from source, the output of `git rev-parse --short HEAD`.
+        If you used a branch or fork, name it.
+      placeholder: "0.2.0 (commit e72ce30) / or: Djedouas fork, branch elan-sprint-18"
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: >
+        Best: a benchmark scenario YAML (see benchmarks/README.md) so we run
+        exactly what you ran. Otherwise a short, self-contained Python script.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration (non-default parameters)
+      description: >
+        Your set_custom_config(...) dict or custom settings.yaml. List every
+        parameter you changed (tmax, diameters, pump_penalty, ...). Reminder:
+        set custom config BEFORE constructing the ModelDomain.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Input data
+      description: >
+        Describe the dataset (extent, CRS, #buildings/roads) and how to get
+        it. If it cannot be shared publicly, say so — we will arrange a
+        private transfer. A clipped/synthetic extract that still shows the bug
+        is very welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected vs. actual behavior
+      description: >
+        What you expected and what happened, with numbers where relevant
+        (diameter distribution, station counts, an attribute table, a plot).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        `python -c "import geopandas, shapely, numpy, pysewer; print(geopandas.__version__, shapely.__version__, numpy.__version__)"`
+        plus your OS and Python version.
+    validations:
+      required: true

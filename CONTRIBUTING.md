@@ -2,80 +2,110 @@
 
 👍🎉 First off, thanks for taking the time to contribute! 🎉👍
 
-The following is a set of guidelines for contributing to pysewer and its repositories, which are hosted on GitHub. These are mostly guidelines, not rules. Use your best judgment, and feel free to propose changes to this document in a pull request.
+These are guidelines, not hard rules — use your best judgment and feel free
+to propose changes to this document itself.
+
+## Where pysewer lives
+
+- **Canonical repository (GitLab):**
+  <https://codebase.helmholtz.cloud/wasp/pysewer> — CI, releases and the
+  authoritative history live here.
+- **GitHub mirror:** <https://github.com/ddspot/pysewer> — kept in sync for
+  external collaborators who prefer GitHub (and where filing issues does not
+  require a Helmholtz account).
+
+You can report issues and open contributions on **either** platform. If you
+are an external collaborator without a Helmholtz login, the **GitHub mirror
+is the easiest entry point** — we ferry issues/PRs to the canonical repo.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the pysewer Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [your email].
+This project is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By
+participating you are expected to uphold it; please report unacceptable
+behavior to the contact listed there.
 
-How Can I Contribute?
+## Reporting bugs — please make it reproducible
 
-## Reporting Bugs
+**This is the most important section.** A pysewer network depends on the
+input data, the configuration, *and* the exact code version. We can only
+confirm and fix a bug we can reproduce, so a good report includes all three.
+Please use the bug-report template (it appears automatically when you open a
+new issue on either platform) and fill in:
 
-- Ensure the bug was not already reported by searching on GitHub under Issues.
-- If you’re unable to find an open issue addressing the problem, open a new one. Be sure to include a title and clear description, as much relevant information as possible, and a code sample or an executable test case demonstrating the expected behavior that is not occurring.
+1. **pysewer version and commit.** Output of:
+   ```python
+   import importlib.metadata, subprocess
+   print(importlib.metadata.version("pysewer"))
+   print(subprocess.run(["git","-C","<repo>","rev-parse","--short","HEAD"],
+                         capture_output=True, text=True).stdout)
+   ```
+   Version provenance matters: several past "regressions" turned out to be
+   old snapshots. If you installed from a branch or fork, say which.
+2. **A minimal reproducer.** The gold standard is a **benchmark scenario**:
+   add a small YAML under `benchmarks/scenarios/` (see
+   [`benchmarks/README.md`](benchmarks/README.md)) that declares the dataset
+   and the config overrides, so we run *exactly* what you ran with
+   `python benchmarks/scripts/run_scenarios.py <name>`. If a scenario is not
+   practical, a short self-contained Python script is fine.
+3. **The exact configuration.** Your `set_custom_config(...)` dict or custom
+   `settings.yaml` — every non-default parameter (`tmax`, diameter list,
+   `pump_penalty`, etc.). Remember to set custom config **before**
+   constructing the `ModelDomain` (see the config docs).
+4. **The input data**, or enough to reproduce it. If the data cannot be
+   shared publicly, say so — we will arrange a private transfer, and a
+   synthetic or clipped extract that still shows the bug is very welcome.
+5. **Expected vs. actual behavior**, with numbers/screenshots where relevant
+   (e.g. diameter distribution, station counts, an attribute table).
+6. **Environment:** OS, Python version, and key package versions. A quick
+   dump: `python -c "import geopandas, shapely, numpy, pysewer; \
+   print(geopandas.__version__, shapely.__version__, numpy.__version__)"`.
 
-## Suggesting Enhancements
+Before filing, please search existing issues to avoid duplicates.
 
-- Determine which repository the enhancement should be suggested in.
-- Perform a cursory search to see if the enhancement has already been suggested. If it has, add to the discussion.
-- When you are creating an enhancement suggestion, please include as many details as possible.
+## Suggesting enhancements
 
-## Forking and Pull Requests
+Open an issue with the feature template. Describe the use case (the *why*),
+not only the *what*, and give a concrete example if you can.
 
-### Fork the Repository
+## Contributing code (merge/pull requests)
 
-Only maintainers can commit directly to the main branch. All contributions must be made through pull requests from your own fork. Please follow these steps to contribute:
+Only maintainers commit directly to `main`. All contributions go through a
+merge request (GitLab) or pull request (GitHub) from a branch or fork:
 
-  1. Fork the repository on GitHub.
-  2. Create a new branch in your fork to isolate the changes.
-  3. Submit a pull request (PR) from your fork’s branch to the main repository’s develop branch (or another designated branch). Please bear in mind that a PR should be submitted when feature or bug is fixed, the code is tested, documented etc and ready to be merged.
-  4. Ensure your branch is up-to-date with the latest version of the develop branch before submitting.
+1. Fork or branch from the current `main`.
+2. Make focused changes on a topic branch.
+3. **Add or update tests** (pytest) for any new or changed behavior, and run
+   the suite locally: `python -m pytest tests/ -q`.
+4. Keep the changelog current (`CHANGELOG.md`, "Unreleased" section) and the
+   docs/README if you changed user-facing behavior.
+5. Run the linter: `ruff check pysewer/ tests/`.
+6. Open the MR/PR against `main`. It will be reviewed before merging.
 
-> [!NOTE]  
->
-> - Permissions and Main Branch: Only maintainers and trusted collaborators have direct commit rights to the main branch to ensure its stability.  
-> - Code Review: All PRs will undergo a code review process by the maintainers before being merged into the main repository.
-> - Unit Tests: Add unit tests for any new or changed functionality to ensure that your code works as expected. (pytest is preferred)
-> - No Breaking Changes: Please avoid introducing breaking changes unless absolutely necessary and discussed with the maintainers in advance.
-> - Automated Testing: Ensure your contribution passes all existing automated tests before submitting a PR.
+Notes:
+- `main` is protected; the CI (pytest + docs build) must pass.
+- Avoid breaking changes unless discussed with the maintainers first.
+- External contributions preserve your authorship when we ferry them between
+  the mirror and the canonical repo.
 
-### Maintainers and Trusted Collaborators
+## Style
 
-The main branch is protected to ensure the stability of pysewer. Only maintainers and trusted collaborators have direct write access. To become a trusted collaborator or maintainer, individuals must demonstrate a significant and consistent contribution to the project. Please note that adding maintainers/ collaborators is still under discussion as it extends to the organization admin and the legal framework that we need to follow.
+### Commit messages
+- Imperative present tense ("Add feature", not "Added feature").
+- Keep the first line ≤ 72 characters; explain the *why* in the body.
 
+### Issues and PRs
+- Clear, descriptive title.
+- Enough detail and concrete examples for someone else to act on it.
 
-## Styleguides
+## Issue labels
 
-### Git Commit Messages
+- `bug` — something is broken
+- `enhancement` — a feature request
+- `discussion` — open-ended discussion
+- `help wanted` — assistance welcome
 
-- Use the present tense (“Add feature” not “Added feature”).
-- Limit the first line to 72 characters or fewer.
-
-### GitHub Pull Requests and Issues
-
-- Use a clear and descriptive title for the issue to identify the suggestion.
-- Provide a comprehensive description of the suggested enhancement in as much detail as possible.
-- Provide specific examples to demonstrate the steps.
-
-## Additional Notes
-
-### Issue and Pull Request Labels
-
-This section lists the labels we use to help us track and manage issues and pull requests.
-
-- bug - Issues that are bugs.
-- enhancement - Issues that are feature requests.
-- discussion - Issues that are discussions.
-- help wanted - Issues that require assistance.
-
-## Acknowledgements
-
-As this contributing guidelines have been adapted from a couple of open source reposguidelines, we would like to acknowledge the original authors for their contributions.
-
-### References
+## References
 
 - [Open Source Guides](https://opensource.guide/)
-- [Contributing to Open Source](https://opensource.com/article/19/7/how-to-contribute-to-open-source)
-- [GitHub Docs](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-code-of-conduct-to-your-project)
-- [scipy contributing](https://github.com/scipy/scipy/blob/a06de4e129fbd45e3367f1f86d84ce7ef580da93/CONTRIBUTING.rst)
+- [scipy contributing](https://github.com/scipy/scipy/blob/main/CONTRIBUTING.rst)
+- [How to write a reproducible bug report](https://stackoverflow.com/help/minimal-reproducible-example)

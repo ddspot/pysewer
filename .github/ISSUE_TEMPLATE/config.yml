@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)
+# SPDX-License-Identifier: GPL-3.0-only
+blank_issues_enabled: true
+contact_links:
+  - name: Canonical repository (GitLab)
+    url: https://codebase.helmholtz.cloud/wasp/pysewer
+    about: The authoritative repo. Issues here need a Helmholtz account; use this GitHub mirror if you don't have one.
+  - name: Documentation
+    url: https://ddspot.github.io/pysewer/
+    about: Usage, installation and the API reference — check here before filing.
