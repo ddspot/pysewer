@@ -44,6 +44,16 @@ bug report (2026-08-06).
 
 ### Fixed
 
+- Capacity criterion and `d_over_D` now use the true proportional flow
+  depth (Butler / BS EN 752). Previously the exported `d_over_D` was the
+  flow ratio `Q/Q_full` and the sizing check `Q/Q_full <= max_depth_ratio`
+  effectively enforced d/D ≈ 0.65 instead of the intended 0.75 (for
+  circular pipes, d/D = 0.75 corresponds to Q/Q_full ≈ 0.912). Sizing now
+  selects the smallest diameter conveying the design flow at
+  d/D ≤ `max_depth_ratio` (exact wetted-angle capacity), and `d_over_D`
+  reports the normal-flow proportional depth. Realistic designs are
+  unchanged (capacity rarely binds); near-capacity pipes may now
+  legitimately stay one size smaller.
 - Default `roughness` corrected from `0.0015` to `0.013` in
   `settings.yaml`. `0.0015` is a Colebrook-White absolute roughness height
   (1.5 mm) that was being used as Manning's *n* (which should be ~0.013),

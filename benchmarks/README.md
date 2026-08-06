@@ -49,20 +49,21 @@ python benchmarks/scripts/run_scenarios.py \
     diamsweep_coarse diamsweep_default diamsweep_probe
 ```
 
-| scenario (floor) | max fill | gravity diameters | note |
+| scenario (floor) | max fill (d/D) | gravity diameters | note |
 |---|---|---|---|
-| diamsweep_default (0.2 m / DN200) | 0.019 | 0.2: 84, 0.3: 11 | realistic minimum |
-| diamsweep_coarse (0.3 m / DN300) | 0.006 | 0.3: 95 | coarser realistic set |
-| diamsweep_probe (0.05 m) | 0.70 | 0.05: 83, 0.08: 1, 0.1: 11 | **diagnostic only — non-physical sizes** |
+| diamsweep_default (0.2 m / DN200) | 0.09 | 0.2: 84, 0.3: 11 | realistic minimum |
+| diamsweep_coarse (0.3 m / DN300) | 0.06 | 0.3: 95 | coarser realistic set |
+| diamsweep_probe (0.05 m) | 0.65 | 0.05: 84, 0.1: 11 | **diagnostic only — non-physical sizes** |
 
-`max fill` = the largest peak-flow / full-bore-capacity ratio across gravity
-pipes.
+`max fill` = the largest proportional flow depth d/D across gravity pipes
+(the Butler/BS EN 752 design limit is d/D ≤ 0.75).
 
 **Engineering conclusion (the headline).** Public gravity sewers have a
 *minimum diameter* — typically DN150–DN200 — set by maintenance, blockage
 and self-cleansing rules, **not** by peak flow. On a small domestic
 catchment like this one the peak flows are far too small to require anything
-above that minimum (`max fill` ~2 % at DN200), so the correct design is the
+above that minimum (the deepest-running DN200 pipe flows at d/D ≈ 0.09), so
+the correct design is the
 minimum diameter almost everywhere, stepping up only on the trunk. That is
 exactly what pysewer produces — and it is what a design engineer would
 specify. "All at minimum" is the right answer here, not a symptom of broken
@@ -73,9 +74,9 @@ constraint never binds, so a natural question is whether the sizing engine
 *can* escalate at all, or is stuck at the floor. `diamsweep_probe` answers
 that by offering deliberately **non-physical** sub-sewer sizes (0.05/0.08 m
 are house-lateral diameters, not public sewers). Only once the smallest pipe
-is that small does the trunk reach capacity (`max fill` 0.70, right at the
-0.75 `max_depth_ratio`) and the engine correctly steps the diameter up,
-producing a spread (0.05 → 0.08 → 0.1 m). So the engine is verified to size
+is that small does the trunk approach the design limit (`max fill` d/D 0.65
+vs. the 0.75 `max_depth_ratio`) and the engine correctly steps the diameter
+up, producing a spread (0.05 → 0.1 m). So the engine is verified to size
 by capacity when capacity matters; it simply never matters at realistic
 sewer diameters on catchments this small. **Do not read the probe diameters
 as recommended pipe sizes.**

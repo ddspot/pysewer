@@ -381,9 +381,10 @@ def calculate_hydraulic_parameters(
                 )
                 diam = max(diam, max_inflow_diameters)
 
-            # Hydraulic checks (depth ratio, velocity) for reporting
-            q_full = _full_flow_manning(diam, roughness, slope)
-            depth_ratio = peak_flow / q_full if q_full > 0 else 1.0
+            # Hydraulic checks for reporting: true proportional depth d/D
+            # (normal depth via wetted angle, Butler's quantity — NOT the
+            # flow ratio Q/Q_full) and partial-flow velocity
+            depth_ratio = _proportional_depth(diam, roughness, slope, peak_flow)
             velocity = _partial_flow_velocity(diam, roughness, slope, peak_flow)
             if (
                 depth_ratio > config.optimization.max_depth_ratio
@@ -637,6 +638,68 @@ def _full_flow_manning(diameter: float, roughness: float, slope: float) -> float
     return area * velocity
 
 
+def _partial_flow_capacity(
+    diameter: float, roughness: float, slope: float, depth_ratio: float
+) -> float:
+    """
+    Manning capacity of a circular pipe flowing at a given proportional
+    depth d/D (exact wetted-angle geometry). depth_ratio=1 gives the
+    full-bore capacity, 0.5 gives exactly half of it (same hydraulic
+    radius), and 0.75 gives ~0.91 of full-bore. Butler's capacity
+    criterion is Q_design <= this capacity at d/D = max_depth_ratio.
+    """
+    if not 0 < depth_ratio <= 1:
+        raise ValueError("depth_ratio must be in (0, 1]")
+    if slope >= 0:
+        slope = -1e-6
+    r = diameter / 2
+    # wetted angle for flow depth h = depth_ratio * D
+    theta = 2 * math.acos(1 - 2 * depth_ratio)
+    area = r * r * (theta - math.sin(theta)) / 2
+    perimeter = r * theta
+    rh = area / perimeter
+    velocity = (1 / roughness) * rh ** (2 / 3) * (-slope) ** 0.5
+    return area * velocity
+
+
+def _proportional_depth(
+    diameter: float, roughness: float, slope: float, flow: float
+) -> float:
+    """
+    Normal-flow proportional depth d/D for a given discharge (Manning,
+    bisection on the wetted angle — Butler's quantity for the d/D <= 0.75
+    capacity criterion). Returns 0.0 for no flow and 1.0 when the pipe is
+    surcharged (flow >= full-bore capacity).
+    """
+    if flow <= 0:
+        return 0.0
+    if slope >= 0:
+        slope = -1e-6
+    s = -slope
+    r = diameter / 2
+
+    def q_of(theta):
+        area = r * r * (theta - math.sin(theta)) / 2
+        perimeter = r * theta
+        if perimeter == 0:
+            return 0.0
+        rh = area / perimeter
+        return area * (1 / roughness) * rh ** (2 / 3) * s**0.5
+
+    if flow >= q_of(2 * math.pi):
+        return 1.0
+    lo, hi = 1e-6, 2 * math.pi
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if q_of(mid) < flow:
+            lo = mid
+        else:
+            hi = mid
+    theta = (lo + hi) / 2
+    depth = r * (1 - math.cos(theta / 2))
+    return depth / diameter
+
+
 def _partial_flow_velocity(
     diameter: float, roughness: float, slope: float, flow: float
 ) -> float:
@@ -684,10 +747,13 @@ def select_diameter_with_constraints(
     vmax: float,
 ):
     """
-    Pick the smallest diameter whose full-flow capacity satisfies the maximum
-    depth ratio. Velocity bounds are evaluated at partial flow on the selected
-    pipe and recorded as violations only: sizing cannot fix a slow pipe (a
-    smaller pipe raises velocity but breaks capacity, a larger one lowers it
+    Pick the smallest diameter that conveys the design flow at a
+    proportional depth d/D <= max_depth_ratio (Butler / BS EN 752 capacity
+    criterion; the capacity at that depth is computed with exact
+    wetted-angle geometry, e.g. d/D = 0.75 allows ~0.91 of full-bore flow).
+    Velocity bounds are evaluated at partial flow on the selected pipe and
+    recorded as violations only: sizing cannot fix a slow pipe (a smaller
+    pipe raises velocity but breaks capacity, a larger one lowers it
     further), so velocity must not drive the size choice.
 
     Returns (diameter, violations).
@@ -695,8 +761,7 @@ def select_diameter_with_constraints(
     violations = []
     chosen = None
     for d in sorted(diameters):
-        q_full = _full_flow_manning(d, roughness, slope)
-        if q_full > 0 and target_flow / q_full <= max_depth_ratio:
+        if target_flow <= _partial_flow_capacity(d, roughness, slope, max_depth_ratio):
             chosen = d
             break
     if chosen is None:
