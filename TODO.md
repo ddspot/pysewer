@@ -93,3 +93,12 @@ uv+mamba two-layer env).
       "to do: play with max_slope" —, other areas, pump_penalty sweep);
       add more beginner notebooks (02: custom settings, 03: reading
       violations)
+- [ ] **Butler conformity roadmap** (docs/butler_conformity_assessment.md,
+      2026-08-06): P0 — d_over_D is a flow ratio mislabeled as depth;
+      compute true proportional depth (wetted angle) and implement the
+      capacity criterion as Q ≤ Q(d/D=max_depth_ratio) (port
+      pysewer-storm's mannings_equation(fill_ratio)). P1 — variable peak
+      factor PF(P) (babbitt/harman + cap 6 per BS EN 752) and optional
+      infiltration_fraction. P1 — suppress velocity_min at intermittent
+      heads (Q < 1 L/s) with BS EN deemed-to-satisfy gradient check
+      instead; optional DU method later
