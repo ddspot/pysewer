@@ -25,6 +25,18 @@ Follow-ups from the Elan integration meeting (2026-06-08).
 - `write_gdf_to_gpkg` / `write_gdf_to_shp` no longer mutate the caller's
   GeoDataFrame (JSON conversion and rounding happen on a copy).
 
+### Fixed
+
+- User-defined config values were partially ignored: `needs_pump()` used
+  falsy `or` fallbacks, so a custom `tmin` never applied to head edges
+  (`inflow_trench_depth=0` was swallowed before the documented "0 → tmin"
+  branch) and explicit zero `min_slope`/`tmax`/`tmin` arguments were
+  replaced by defaults.
+- `ModelDomain` froze `pump_penalty` at construction; config overrides set
+  afterwards (e.g. `set_custom_config` after creating the model domain)
+  had no effect on routing weights. `pump_penalty` is now resolved lazily
+  from the current config unless explicitly set.
+
 ## [0.2.0] - 2026-07-24
 
 Repository migrated from `git.ufz.de/despot/pysewer` to
