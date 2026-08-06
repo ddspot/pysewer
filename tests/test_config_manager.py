@@ -187,6 +187,21 @@ def test_needs_pump_explicit_zero_min_slope_not_overridden():
     assert flag is False
 
 
+@pytest.mark.parametrize(
+    "bad_settings,match",
+    [
+        ({"optimization": {"tmin": -0.5}}, "tmin"),
+        ({"optimization": {"inflow_trench_depth": -1}}, "inflow_trench_depth"),
+        ({"optimization": {"tmax": 0.1}}, "greater than"),  # tmax <= tmin
+        ({"optimization": {"velocity_max": 0.5}}, "velocity_max"),
+    ],
+)
+def test_invalid_depth_and_velocity_values_rejected(bad_settings, match):
+    """Elan bug report 2026-08-06: negative tmin (and friends) must fail loudly."""
+    with pytest.raises(ValueError, match=match):
+        set_config(custom_settings_dict=bad_settings)
+
+
 def test_model_domain_pump_penalty_tracks_runtime_config():
     """
     Regression: pump_penalty was frozen at ModelDomain construction, so

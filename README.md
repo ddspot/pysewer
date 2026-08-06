@@ -129,12 +129,16 @@ Edge Attributes:
     "geometry": detailed shapely line
     "length"
     "diameter"
-    "pressurized": bool
+    "pressurized": bool   # authoritative design flag (pump upstream)
     "profile"
-    "needs_pump": bool
     "private_sewer":bool
     "weight": value representing arbitrary cost function
 ```
+
+The connection graph additionally carries a `needs_pump` flag per candidate
+edge — a terrain-feasibility input used to weight routing (pump penalty).
+It is stripped from the final designed network: there, `pressurized` (plus
+the `pumping_station`/`lifting_station` node flags) is the design result.
 
 ## Routing Solver
 
@@ -216,6 +220,20 @@ and export raw values).
 ## Default parameters
 
 The default or global parameters are stored in the [settings.yaml](pysewer/config/settings.yaml) file. It can be overridden with a custom settings file (e.g. [example_settings.yaml](notebooks/example_settings.yaml)) via `pysewer.set_custom_config(custom_path=...)` (or a dict via `custom_settings_dict=...`). The settings are categorized into 4 sections, namely `preprocessing`, `optimization`, `plotting` and `export`.
+
+**Set the custom config before creating the `ModelDomain`.** The
+`preprocessing` parameters `clustering` and `connect_buildings` are consumed
+while the connection graph is built inside `ModelDomain(...)`, so config
+overrides applied afterwards cannot affect them:
+
+```python
+pysewer.set_custom_config(custom_path="my_settings.yaml")  # 1st
+md = pysewer.ModelDomain(dem, roads, buildings)            # 2nd
+```
+
+Most other parameters (including `pump_penalty` and all `optimization`
+values) are read from the live config at the pipeline stage that uses them,
+so they may also be changed between stages.
 
 The table below summaries the key default parameters and their meaning.
 

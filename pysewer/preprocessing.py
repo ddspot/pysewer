@@ -535,6 +535,16 @@ class ModelDomain:
     connect_buildings : bool, optional
         Whether to connect buildings to the sewer network. Default is True.
 
+    Notes
+    -----
+    ``clustering`` and ``connect_buildings`` are consumed here, during
+    construction (the connection graph is built in ``__init__``). If they
+    come from a custom config, call ``pysewer.set_custom_config(...)``
+    **before** creating the ModelDomain — overrides applied afterwards
+    cannot affect an already-built graph. ``pump_penalty`` is exempt: it is
+    resolved from the current config when the connection graph is
+    generated, so later config changes (or ``set_pump_penalty``) do apply.
+
     Attributes
     ----------
     roads : Roads

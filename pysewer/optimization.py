@@ -431,6 +431,13 @@ def calculate_hydraulic_parameters(
             }
             nx.set_node_attributes(G, node_attrs)
 
+    # Strip the routing-internal terrain flag from the designed network:
+    # it is a per-candidate-edge feasibility input for the pump penalty, not
+    # a design result, and exporting it next to `pressurized` has repeatedly
+    # been misread as "this pipe needs a pump" (Elan bug report 2026-08-06).
+    for _, _, data in G.edges(data=True):
+        data.pop("needs_pump", None)
+
     return G
 
 

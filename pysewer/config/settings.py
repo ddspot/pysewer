@@ -136,6 +136,37 @@ def validate_settings(settings: dict) -> None:
             raise ValueError(f"Missing required section in settings: {section}")
 
 
+def validate_config_values(config: "Config") -> None:
+    """
+    Sanity-check parameter values that would silently produce nonsense
+    networks (e.g. negative trench depths — Elan bug report 2026-08-06).
+    """
+    opt = config.optimization
+    for name in (
+        "tmin",
+        "tmax",
+        "inflow_trench_depth",
+        "min_trench_depth",
+        "min_cover",
+        "min_pipe_length",
+    ):
+        value = getattr(opt, name)
+        if value < 0:
+            raise ValueError(
+                f"optimization.{name} must be >= 0, got {value}"
+            )
+    if opt.tmax <= opt.tmin:
+        raise ValueError(
+            f"optimization.tmax ({opt.tmax}) must be greater than "
+            f"optimization.tmin ({opt.tmin})"
+        )
+    if opt.velocity_max <= opt.velocity_min:
+        raise ValueError(
+            f"optimization.velocity_max ({opt.velocity_max}) must be greater "
+            f"than optimization.velocity_min ({opt.velocity_min})"
+        )
+
+
 def override_settings(
     custom_path: str | None = None, custom_setting_dict: dict | None = None
 ) -> dict:
@@ -214,6 +245,7 @@ def load_config(
         merged_settings = deep_merge(custom_setting_dict, base_settings_dict)
 
     config = dict_to_config(merged_settings)
+    validate_config_values(config)
 
     logger.info("Settings loaded:")
     logger.info(f"  tmax: {config.optimization.tmax}")

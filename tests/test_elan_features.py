@@ -136,6 +136,20 @@ class TestNetworkAttributes:
         for _u, _v, data in self.layout.edges(data=True):
             assert data["sink_coords"] == self.expected_sink
 
+    def test_final_graph_has_no_needs_pump_edge_attribute(self):
+        """
+        needs_pump is a routing-internal terrain flag; on the designed
+        network only `pressurized` is authoritative (Elan bug report
+        2026-08-06: the exported flag was misread as the pump indicator).
+        """
+        sewer_graph = pysewer.estimate_peakflow(self.layout)
+        G = pysewer.calculate_hydraulic_parameters(
+            sewer_graph, sinks=[self.sink_coordinates]
+        )
+        for _u, _v, data in G.edges(data=True):
+            assert "needs_pump" not in data
+            assert "pressurized" in data
+
     def test_total_static_head_on_stations(self):
         sewer_graph = pysewer.estimate_peakflow(
             self.layout, inhabitants_dwelling=6, daily_wastewater_person=250
