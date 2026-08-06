@@ -386,12 +386,26 @@ def calculate_hydraulic_parameters(
             # flow ratio Q/Q_full) and partial-flow velocity
             depth_ratio = _proportional_depth(diam, roughness, slope, peak_flow)
             velocity = _partial_flow_velocity(diam, roughness, slope, peak_flow)
+            # depth criterion applies to gravity pipes only — a pressurized
+            # main flows full by design (d/D = 1 is its normal state)
             if (
-                depth_ratio > config.optimization.max_depth_ratio
+                not pressurized
+                and depth_ratio > config.optimization.max_depth_ratio
                 and "depth_ratio" not in violations
             ):
                 violations.append("depth_ratio")
+            # Self-cleansing: at intermittent heads (small-sewer regime,
+            # Butler §9.4) the steady partial-flow velocity is physically
+            # meaningless, so velocity_min does not apply; the BS EN 752
+            # deemed-to-satisfy minimum gradient is checked instead.
             if (
+                not pressurized
+                and peak_flow < config.optimization.small_sewer_flow_threshold
+            ):
+                violations = [v for v in violations if v != "velocity_min"]
+                if -slope < config.optimization.dts_min_gradient:
+                    violations.append("gradient_below_dts")
+            elif (
                 velocity < config.optimization.velocity_min
                 and "velocity_min" not in violations
             ):
@@ -442,12 +456,57 @@ def calculate_hydraulic_parameters(
     return G
 
 
+def peak_factor_for_population(
+    population: float,
+    method: str | None = None,
+    constant: float | None = None,
+    cap: float | None = None,
+) -> float:
+    """
+    Peak factor for a given cumulative upstream population.
+
+    Butler & Davies (Urban Drainage, ch. 9): the peak-to-average ratio
+    decreases downstream with population served (diversification and
+    attenuation). Supported methods (P = population in thousands):
+
+    - "constant": the fixed ``peak_factor`` everywhere (legacy behavior)
+    - "babbitt":  5 / P^0.2
+    - "harman":   1 + 14 / (4 + sqrt(P))
+    - "gifft":    5 / P^(1/6)
+
+    Variable factors are capped at ``peak_factor_max`` (BS EN 752 multiple:
+    6) and floored at 1.
+    """
+    config = get_config()
+    method = config.optimization.peak_factor_method if method is None else method
+    constant = config.optimization.peak_factor if constant is None else constant
+    cap = config.optimization.peak_factor_max if cap is None else cap
+
+    if method == "constant":
+        return constant
+    p_thousands = max(population, 1.0) / 1000.0
+    if method == "babbitt":
+        pf = 5.0 / p_thousands**0.2
+    elif method == "harman":
+        pf = 1.0 + 14.0 / (4.0 + p_thousands**0.5)
+    elif method == "gifft":
+        pf = 5.0 / p_thousands ** (1.0 / 6.0)
+    else:
+        raise ValueError(
+            f"Unknown peak_factor_method {method!r}; expected constant, "
+            "babbitt, harman or gifft"
+        )
+    return min(max(pf, 1.0), cap)
+
+
 def estimate_peakflow(
     G: nx.Graph,
     inhabitants_dwelling: int | None = None,
     inhabitants_dwelling_attribute_name: str | None = None,
     daily_wastewater_person: float | None = None,
     peak_factor: float | None = None,
+    peak_factor_method: str | None = None,
+    infiltration_fraction: float | None = None,
 ):
     """
     Estimate the peakflow in m³/s for a node n in Graph G.
@@ -463,12 +522,21 @@ def estimate_peakflow(
     daily_wastewater_person : float
         The daily wastewater generated per person in m³.
     peak_factor : float, optional
-        The peak factor to use in the calculation, by default 2.3.
+        The peak factor used when ``peak_factor_method`` is "constant"
+        (default from config).
+    peak_factor_method : str, optional
+        "constant" (default), or "babbitt"/"harman"/"gifft" to vary the
+        factor with cumulative upstream population, capped at
+        ``peak_factor_max`` (see ``peak_factor_for_population``).
+    infiltration_fraction : float, optional
+        Infiltration as a fraction of the domestic daily flow (Butler
+        Eq. 9.1; conventional 0.1). Added unfactored: Q_peak = PF*PG + I.
 
     Returns
     -------
     networkx.Graph
-        The graph with updated node attributes for peak flow, average daily flow, and upstream pe.
+        The graph with updated node attributes: peak_flow, average_daily_flow,
+        upstream_pe and the applied peak_factor.
     """
     logger.info("\n=== Dry Weather Flow  Estimation ===")
 
@@ -490,6 +558,11 @@ def estimate_peakflow(
     )
     peak_factor = (
         config.optimization.peak_factor if peak_factor is None else peak_factor
+    )
+    infiltration_fraction = (
+        config.optimization.infiltration_fraction
+        if infiltration_fraction is None
+        else infiltration_fraction
     )
 
     for n in G.nodes():
@@ -525,8 +598,15 @@ def estimate_peakflow(
         upstream_daily = total_population * daily_wastewater_person
         # Calculate total upstream peak flow
         upstream_pe = total_population
-        peak_flow = ((upstream_daily / 24) * peak_factor) / 3600
-        logger.info(f"  Peak flow: {peak_flow:.6f} m³/s")
+        pf = peak_factor_for_population(
+            total_population, method=peak_factor_method, constant=peak_factor
+        )
+        # Butler Eq. 9.1 / §9.3.6: infiltration is part of DWF but not of
+        # the diurnal peak — the factor applies to the domestic component
+        # only: Q_peak = PF*PG + I  (the "4(DWF-I)+I" form)
+        infiltration_daily = infiltration_fraction * upstream_daily
+        peak_flow = (pf * upstream_daily + infiltration_daily) / 86400.0
+        logger.info(f"  Peak flow: {peak_flow:.6f} m³/s (PF={pf:.2f})")
         logger.info(f"  Average daily flow: {upstream_daily:.6f} m³/s")
         logger.info(f"  Upstream peak flow: {upstream_pe:.6f} people")
 
@@ -535,6 +615,7 @@ def estimate_peakflow(
                 "peak_flow": peak_flow,
                 "average_daily_flow": upstream_daily,
                 "upstream_pe": upstream_pe,
+                "peak_factor": pf,
             }
         }
         nx.set_node_attributes(G, atr)

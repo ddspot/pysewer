@@ -147,6 +147,100 @@ def test_capacity_criterion_is_depth_not_flow_ratio():
     assert diam2 == 0.4
 
 
+def test_peak_factor_formulas_back_of_envelope():
+    """
+    Hand checks against Butler Table 9.4 (P in thousands):
+      Babbitt 5/P^0.2:  P=1k -> 5.00;  P=250k -> 5/250^0.2 = 1.66 (Butler
+      Example 9.2);  P=100k -> 1.99
+      Harman 1+14/(4+sqrt(P)): P=100k -> 1+14/(4+10) = 2.00
+      Cap: P=10 people -> Babbitt 12.6 raw, capped to peak_factor_max=6.
+    """
+    from pysewer.optimization import peak_factor_for_population as pf
+
+    assert pf(1000, method="babbitt") == pytest.approx(5.0)
+    assert pf(250_000, method="babbitt") == pytest.approx(1.66, abs=0.01)
+    assert pf(100_000, method="babbitt") == pytest.approx(1.99, abs=0.01)
+    assert pf(100_000, method="harman") == pytest.approx(2.0, abs=0.01)
+    assert pf(10, method="babbitt") == 6.0  # capped (BS EN 752 multiple)
+    assert pf(12345, method="constant", constant=4.0) == 4.0
+
+
+def test_estimate_peakflow_variable_pf_and_infiltration():
+    """
+    100 people, G=0.15 m3/hd.d, babbitt (capped at 6 for such a small
+    population), infiltration 10% of domestic flow, unfactored:
+      Q_peak = (6*15 + 0.1*15)/86400 = 0.0010590 m3/s
+    """
+    from pysewer.optimization import estimate_peakflow
+
+    set_config(
+        custom_settings_dict={
+            "optimization": {
+                "peak_factor_method": "babbitt",
+                "infiltration_fraction": 0.1,
+            }
+        }
+    )
+    G = nx.DiGraph()
+    G.add_node("b1", node_type="building")
+    G.add_node("s1", node_type="sink")
+    G.add_edge("b1", "s1")
+    estimate_peakflow(G, inhabitants_dwelling=100, daily_wastewater_person=0.15)
+
+    expected = (6 * 15 + 0.1 * 15) / 86400.0
+    assert G.nodes["b1"]["peak_flow"] == pytest.approx(expected)
+    assert G.nodes["b1"]["peak_factor"] == 6.0
+
+
+def _design_single_edge(peak_flow, terrain_slope, config_overrides=None):
+    """Run calculate_hydraulic_parameters on one gravity edge and return its
+    hydraulic violations."""
+    from shapely.geometry import LineString
+
+    overrides = {"optimization": {"diameters": [0.2, 0.3]}}
+    if config_overrides:
+        overrides["optimization"].update(config_overrides)
+    set_config(custom_settings_dict=overrides)
+
+    G = nx.DiGraph()
+    G.add_node("a", peak_flow=peak_flow)
+    G.add_node("b")
+    G.add_edge(
+        "a",
+        "b",
+        profile=[(0, 10.0), (100.0, 10.0 + 100 * terrain_slope)],
+        needs_pump=False,
+        geometry=LineString([(0, 0), (100, 0)]),
+    )
+    calculate_hydraulic_parameters(G, sinks=["b"])
+    return G.edges[("a", "b")]["hydraulic_violations"]
+
+
+def test_dts_suppresses_velocity_min_at_intermittent_heads():
+    """
+    Butler ch. 9.4: below the small-sewer flow threshold (1 L/s) the steady
+    velocity_min check does not apply; the deemed-to-satisfy minimum
+    gradient (1:150) is checked instead.
+    """
+    # tiny flow, design gradient 1% (>= 1:150): clean — no velocity_min
+    violations = _design_single_edge(0.0001, -0.01)
+    assert "velocity_min" not in violations
+    assert "gradient_below_dts" not in violations
+
+    # tiny flow, gentle terrain and min_slope 1:500 (< 1:150): DTS flag,
+    # still no meaningless velocity_min
+    violations = _design_single_edge(
+        0.0001, -0.002, config_overrides={"min_slope": -0.002}
+    )
+    assert "gradient_below_dts" in violations
+    assert "velocity_min" not in violations
+
+    # above the threshold the steady-flow velocity check applies as before
+    violations = _design_single_edge(0.002, -0.002, config_overrides={"min_slope": -0.002})
+    assert "velocity_min" in violations
+    assert "gradient_below_dts" not in violations
+
+
 def test_hydraulic_violations_flagged_when_no_diameter_fits():
     """
     If no diameter meets d/D or velocity bounds, the edge records a violation.

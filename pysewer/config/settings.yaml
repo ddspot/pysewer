@@ -45,6 +45,20 @@ optimization:
   velocity_min: 0.7
   velocity_max: 3.0
   max_depth_ratio: 0.75
+  # peak-flow model (Butler & Davies ch. 9): "constant" applies peak_factor
+  # everywhere; "babbitt" (5/P^0.2), "harman" (1+14/(4+sqrt(P))) or "gifft"
+  # (5/P^(1/6)) vary the factor with cumulative upstream population
+  # (P in thousands), capped at peak_factor_max (BS EN 752 multiple: 6)
+  peak_factor_method: "constant"
+  peak_factor_max: 6.0
+  # infiltration as a fraction of the domestic daily flow (Butler Eq. 9.1,
+  # conventional 0.1); added unfactored: Q_peak = PF*PG + I
+  infiltration_fraction: 0.0
+  # small-sewer (intermittent) regime: below this design flow [m3/s] the
+  # steady velocity_min check is meaningless (Butler ch. 9.4) and is
+  # replaced by the deemed-to-satisfy minimum gradient (default 1:150)
+  small_sewer_flow_threshold: 0.001
+  dts_min_gradient: 0.00667
 
 plotting:
   plot_connection_graph: false

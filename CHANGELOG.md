@@ -42,6 +42,23 @@ bug report (2026-08-06).
   `lifting_station` node flags are authoritative. The flag remains on the
   connection graph.
 
+### Added (Butler conformity, P1)
+
+- Variable peak factor: `optimization.peak_factor_method` supports
+  `babbitt` (5/P^0.2), `harman` (1+14/(4+√P)) and `gifft` (5/P^(1/6)) in
+  addition to the legacy `constant`; the factor is evaluated per node from
+  the cumulative upstream population, capped at `peak_factor_max`
+  (BS EN 752 multiple: 6) and stored as a `peak_factor` node attribute.
+- Infiltration allowance: `optimization.infiltration_fraction` (Butler
+  Eq. 9.1; conventional 0.1) — added to the peak unfactored:
+  `Q_peak = PF·PG + I`. Default 0 keeps previous behavior.
+- Self-cleansing at intermittent heads: below
+  `small_sewer_flow_threshold` (default 1 L/s — Butler's small-sewer
+  regime) the physically meaningless steady `velocity_min` flag is no
+  longer recorded; the BS EN 752 deemed-to-satisfy minimum gradient is
+  checked instead (`dts_min_gradient`, default 1:150; violation
+  `gradient_below_dts`).
+
 ### Fixed
 
 - Capacity criterion and `d_over_D` now use the true proportional flow

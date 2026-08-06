@@ -57,6 +57,19 @@ class Optimization:
     velocity_min: float = 0.7
     velocity_max: float = 3.0
     max_depth_ratio: float = 0.75
+    # Peak-flow model (Butler & Davies ch. 9): "constant" uses peak_factor
+    # everywhere; "babbitt"/"harman"/"gifft" vary the factor with cumulative
+    # upstream population, capped at peak_factor_max (BS EN 752: 6).
+    peak_factor_method: str = "constant"
+    peak_factor_max: float = 6.0
+    # Infiltration as a fraction of the domestic daily flow (Butler Eq. 9.1;
+    # conventional 0.1). Added unfactored: Q_peak = PF*PG + I.
+    infiltration_fraction: float = 0.0
+    # Small-sewer (intermittent) regime: below this design flow [m3/s] the
+    # steady velocity_min check is replaced by the BS EN 752
+    # deemed-to-satisfy minimum gradient (Butler Table 9.8).
+    small_sewer_flow_threshold: float = 0.001
+    dts_min_gradient: float = 1 / 150
 
 
 @dataclass
@@ -174,6 +187,29 @@ def validate_config_values(config: "Config") -> None:
             f"optimization.roughness ({opt.roughness}) is outside the plausible "
             "Manning's n range [0.008, 0.1]. Note: this is Manning's n, not the "
             "Colebrook-White absolute roughness k_s (in metres)."
+        )
+    if opt.peak_factor_method not in ("constant", "babbitt", "harman", "gifft"):
+        raise ValueError(
+            f"optimization.peak_factor_method ({opt.peak_factor_method!r}) must "
+            "be one of: constant, babbitt, harman, gifft"
+        )
+    if opt.peak_factor_max < 1:
+        raise ValueError(
+            f"optimization.peak_factor_max ({opt.peak_factor_max}) must be >= 1"
+        )
+    if not 0 <= opt.infiltration_fraction < 1:
+        raise ValueError(
+            f"optimization.infiltration_fraction ({opt.infiltration_fraction}) "
+            "must be in [0, 1)"
+        )
+    if opt.small_sewer_flow_threshold < 0:
+        raise ValueError(
+            f"optimization.small_sewer_flow_threshold "
+            f"({opt.small_sewer_flow_threshold}) must be >= 0"
+        )
+    if opt.dts_min_gradient <= 0:
+        raise ValueError(
+            f"optimization.dts_min_gradient ({opt.dts_min_gradient}) must be > 0"
         )
 
 

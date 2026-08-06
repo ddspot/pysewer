@@ -256,7 +256,10 @@ The table below summaries the key default parameters and their meaning.
 | `min_cover`               | Minimum cover depth over pipe (m); must not exceed `tmin`                                                        | 0.25    |
 | `min_pipe_length`         | Shortest segment length before flagging (m)                                                                      | 2.0     |
 | `velocity_min`/`velocity_max` | Bounds on design velocity (m/s)                                                                              | 0.7 / 3.0 |
-| `max_depth_ratio`         | Maximum d/D used when sizing gravity pipes                                                                       | 0.75    |
+| `max_depth_ratio`         | Maximum proportional flow depth d/D used when sizing gravity pipes                                               | 0.75    |
+| `peak_factor_method`      | "constant", or "babbitt"/"harman"/"gifft" to vary the peak factor with upstream population (capped at `peak_factor_max`) | constant |
+| `infiltration_fraction`   | Infiltration as a fraction of the domestic daily flow, added unfactored to the peak                              | 0.0     |
+| `small_sewer_flow_threshold` | Below this design flow (m³/s) `velocity_min` is replaced by the deemed-to-satisfy gradient check (`dts_min_gradient`, 1:150) | 0.001 |
 | `diameters`               | List of diameters to be considered (meters)                                                                      | 0.2 … 2.0 |
 | `pressurized_diameter`    | Diameter of pressure pipes to be used (meters)                                                                   | 0.3     |
 | `roughness`               | Manning's roughness coefficient n (dimensionless; ~0.013 for concrete). Not the Colebrook k_s in metres.          | 0.013   |

@@ -93,12 +93,15 @@ uv+mamba two-layer env).
       "to do: play with max_slope" —, other areas, pump_penalty sweep);
       add more beginner notebooks (02: custom settings, 03: reading
       violations)
-- [ ] **Butler conformity roadmap** (docs/butler_conformity_assessment.md,
-      2026-08-06): P0 — d_over_D is a flow ratio mislabeled as depth;
-      compute true proportional depth (wetted angle) and implement the
-      capacity criterion as Q ≤ Q(d/D=max_depth_ratio) (port
-      pysewer-storm's mannings_equation(fill_ratio)). P1 — variable peak
-      factor PF(P) (babbitt/harman + cap 6 per BS EN 752) and optional
-      infiltration_fraction. P1 — suppress velocity_min at intermittent
-      heads (Q < 1 L/s) with BS EN deemed-to-satisfy gradient check
-      instead; optional DU method later
+- [x] **Butler conformity P0 + P1 implemented** (2026-08-06, see
+      docs/butler_conformity_assessment.md and CHANGELOG): true d/D
+      criterion + reporting; variable peak factor (babbitt/harman/gifft,
+      cap 6) + infiltration_fraction; deemed-to-satisfy gradients replace
+      velocity_min at intermittent heads. Defaults are backward-compatible
+      (constant PF, no infiltration) — **decide whether to switch the
+      recommended defaults to babbitt + infiltration 0.1 in the docs/
+      example settings** after the next Elan benchmark round
+- [ ] Butler conformity, remaining (optional): Discharge Unit method
+      (Q = k·√ΣDU) as head-flow model; Colebrook-White (k_s 0.6/1.5 mm)
+      as alternative to Manning; velocity check at 2·DWF per Sewers for
+      Adoption
