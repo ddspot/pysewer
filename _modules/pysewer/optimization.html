@@ -1,0 +1,1464 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pysewer.optimization &#8212; pysewer 0.2.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-codeautolink.css?v=b2176991" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../_static/documentation_options.js?v=938c9ccc"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=5ae071a5"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/pysewer/optimization';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.2.0" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+     
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">pysewer 0.2.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../about/index.html">
+    About
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../install.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_reference/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://www.ufz.de/index.php?en=51198">
+    UFZ WASP
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ddspot/pysewer" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../about/index.html">
+    About
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../install.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api_reference/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://www.ufz.de/index.php?en=51198">
+    UFZ WASP
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/ddspot/pysewer" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">pysewer.optimization</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                   <h1>Source code for pysewer.optimization</h1><div class="highlight"><pre>
+<span></span><span class="c1"># SPDX-FileCopyrightText: 2023 Helmholtz Centre for Environmental Research (UFZ)</span>
+<span class="c1"># SPDX-License-Identifier: GPL-3.0-only</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Hashable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config.manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.helper</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_mean_slope</span><span class="p">,</span> <span class="n">get_node_keys</span><span class="p">,</span> <span class="n">get_upstream_nodes</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="n">NodeType</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Hashable</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="place_lifting_station">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.place_lifting_station">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_lifting_station</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Places a lifting station at the specified node in the graph.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The graph to add the lifting station to.</span>
+<span class="sd">    node : int</span>
+<span class="sd">        The node to add the lifting station to.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    networkx.Graph</span>
+<span class="sd">        The graph with the added lifting station.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;lifting_station&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">G</span></div>
+
+
+
+<div class="viewcode-block" id="get_max_upstream_diameter">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.get_max_upstream_diameter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_max_upstream_diameter</span><span class="p">(</span><span class="n">G</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the maximum diameter of all upstream edges of the given edge in the directed graph G.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.DiGraph</span>
+<span class="sd">        The directed graph.</span>
+<span class="sd">    edge : tuple</span>
+<span class="sd">        The edge for which to find the maximum upstream diameter.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The maximum diameter of all upstream edges of the given edge.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">diameters</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_u</span><span class="p">,</span> <span class="n">_v</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">diameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;diameter&quot;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">diameters</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="place_pump">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.place_pump">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_pump</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Places a pump at the specified node in the graph G and sets downstream edges &quot;pressurized&quot; attribute.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The graph in which the pump is to be placed.</span>
+<span class="sd">    node : hashable</span>
+<span class="sd">        The node at which the pump is to be placed.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    networkx.Graph</span>
+<span class="sd">        The graph with the pump placed at the specified node and downstream edges &quot;pressurized&quot; attribute set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">G</span><span class="o">.</span><span class="n">out_degree</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+    <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;pumping_station&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+    <span class="n">downstream</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+    <span class="n">edge_attrs</span> <span class="o">=</span> <span class="p">{(</span><span class="n">node</span><span class="p">,</span> <span class="n">downstream</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;pressurized&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">G</span></div>
+
+
+
+<div class="viewcode-block" id="set_diameter">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.set_diameter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_diameter</span><span class="p">(</span><span class="n">G</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set the diameter of an edge in a graph.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The graph to modify.</span>
+<span class="sd">    edge : tuple</span>
+<span class="sd">        The edge to modify.</span>
+<span class="sd">    diameter : float</span>
+<span class="sd">        The diameter to set.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    networkx.Graph</span>
+<span class="sd">        The modified graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_us</span> <span class="o">=</span> <span class="n">get_max_upstream_diameter</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">edge</span><span class="p">)</span>
+    <span class="n">diameter</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">diameter</span><span class="p">,</span> <span class="n">max_us</span><span class="p">)</span>
+    <span class="n">edge_attrs</span> <span class="o">=</span> <span class="p">{(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span> <span class="p">{</span><span class="s2">&quot;diameter&quot;</span><span class="p">:</span> <span class="n">diameter</span><span class="p">}}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">G</span></div>
+
+
+
+<div class="viewcode-block" id="get_downstream_junction">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.get_downstream_junction">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_downstream_junction</span><span class="p">(</span><span class="n">G</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the next downstream junction from the specified node in G.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The graph to search for the downstream junction.</span>
+<span class="sd">    node : int</span>
+<span class="sd">        The node to start the search from.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    int</span>
+<span class="sd">        The downstream junction from the specified node in G.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The downstream junction is defined as the next junction in the graph that has a degree greater than 2 or an out-degree of 0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">junction</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+    <span class="k">while</span> <span class="n">G</span><span class="o">.</span><span class="n">degree</span><span class="p">(</span><span class="n">junction</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">G</span><span class="o">.</span><span class="n">out_degree</span><span class="p">(</span><span class="n">junction</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">junction</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">junction</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">junction</span></div>
+
+
+
+<div class="viewcode-block" id="get_junction_front">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.get_junction_front">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_junction_front</span><span class="p">(</span><span class="n">G</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span> <span class="n">junctions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of junctions or terminals which have as many entries for inflow trench depths as they have incoming edges.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.DiGraph</span>
+<span class="sd">        A directed graph representing the sewer network.</span>
+<span class="sd">    junctions : list</span>
+<span class="sd">        A list of junctions or terminals in the sewer network.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of junctions or terminals which have as many entries for inflow trench depths as they have incoming edges.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">n</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">G</span><span class="o">.</span><span class="n">in_degree</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">==</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;upstream_traversed&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">junctions</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">r</span></div>
+
+
+
+<div class="viewcode-block" id="reverse_bfs">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.reverse_bfs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reverse_bfs</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">sink</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">include_private_sewer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns an iterator over edges in a sequential fashion, starting at the terminals (i.e. buildings) and returning all upstream edges of a junction before moving downstream</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.DiGraph</span>
+<span class="sd">        The graph to traverse</span>
+<span class="sd">    sink : str</span>
+<span class="sd">        The node to start the traversal from</span>
+<span class="sd">    include_private_sewer : bool, optional</span>
+<span class="sd">        Whether to include private sewer nodes in the traversal, by default True</span>
+
+<span class="sd">    Yields</span>
+<span class="sd">    ------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple representing an edge in the graph, in the form (source, target)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">include_private_sewer</span><span class="p">:</span>
+        <span class="c1"># reduce graph</span>
+        <span class="n">buildings</span> <span class="o">=</span> <span class="n">get_node_keys</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="s2">&quot;node_type&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;building&quot;</span><span class="p">)</span>
+        <span class="c1"># remove buildings</span>
+        <span class="n">G</span><span class="o">.</span><span class="n">remove_nodes_from</span><span class="p">(</span><span class="n">buildings</span><span class="p">)</span>
+    <span class="c1"># We start from the sink in reversed graph direction</span>
+    <span class="n">bfs_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">edge_bfs</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">sink</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;reverse&quot;</span><span class="p">))</span>
+    <span class="c1"># We then flip the list and return the reversed edges to start from sources</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">bfs_edges</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="p">((</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_hydraulic_parameters">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.calculate_hydraulic_parameters">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_hydraulic_parameters</span><span class="p">(</span>
+    <span class="n">G</span><span class="p">,</span>
+    <span class="n">sinks</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">pressurized_diameter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">diameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">include_private_sewer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">combined_sewer_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates hydraulic parameters for a sewer network graph.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The sewer network graph.</span>
+<span class="sd">    sinks : list</span>
+<span class="sd">        A list of sink nodes in the graph.</span>
+<span class="sd">    pressurized_diameter : float</span>
+<span class="sd">        The diameter of pressurized pipes in the network.</span>
+<span class="sd">    diameters : list</span>
+<span class="sd">        A list of available pipe diameters.</span>
+<span class="sd">    roughness : float</span>
+<span class="sd">        The roughness coefficient of the pipes.</span>
+<span class="sd">    include_private_sewer : bool, optional</span>
+<span class="sd">        Whether to include private sewer connections in the graph, by default True.</span>
+<span class="sd">    combined_sewer_factor : float, optional</span>
+<span class="sd">        Multiplicative factor applied to the dry-weather peak wastewater flow to represent</span>
+<span class="sd">        additional stormwater and inflow contributions in a combined sewer system. The</span>
+<span class="sd">        design flow used for pipe sizing becomes:</span>
+
+<span class="sd">            Q_design = Q_peak_wastewater * combined_sewer_factor</span>
+
+<span class="sd">        where Q_peak_wastewater is computed in `estimate_peakflow` as</span>
+
+<span class="sd">            Q_peak_wastewater = (((P * daily_wastewater_person)/24) * peak_factor) / 3600</span>
+
+<span class="sd">        with P being the total upstream population. Typical values vary by catchment and</span>
+<span class="sd">        design standard; use calibration (see Notes) if a reference network exists.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    networkx.Graph</span>
+<span class="sd">        The sewer network graph with updated hydraulic parameters.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function places pumps/lifting stations on linear sections between road junctions.</span>
+<span class="sd">    Three cases are possible:</span>
+<span class="sd">    1. Terrain does not allow for gravity flow to the downstream node (this check uses the &quot;needs_pump&quot; attribute from the preprocessing</span>
+<span class="sd">    to reduce computational load) -&gt; place pump</span>
+<span class="sd">    2. Terrain does not require pump but lowest inflow trench depth is too low for gravitational flow -&gt; place lifting station</span>
+<span class="sd">    3. Gravity flow is possible within given constraints</span>
+
+<span class="sd">     Calibration tip</span>
+<span class="sd">     --------------</span>
+<span class="sd">     If you need the modeled design flows or aggregate volumes to match a known/reference</span>
+<span class="sd">     combined system (e.g., legacy network capacity), you can iteratively adjust</span>
+<span class="sd">     `combined_sewer_factor`:</span>
+
+<span class="sd">     1. Choose an initial value (e.g., 1–10).</span>
+<span class="sd">     2. Run `estimate_peakflow` (dry-weather) and then this function with that factor.</span>
+<span class="sd">     3. Compute a comparison metric (e.g., sum of edge design flows at a key cross-section,</span>
+<span class="sd">         maximum trunk flow, or total storage/throughput proxy) and compare to the reference.</span>
+<span class="sd">     4. Update the factor using a simple proportional control, e.g.,</span>
+<span class="sd">         factor_new = factor_old * (ReferenceValue / ModeledValue), and iterate until within tolerance.</span>
+
+<span class="sd">     This approach scales the design flows uniformly and is a coarse substitute for a</span>
+<span class="sd">     full hydrologic rainfall–runoff model when only reference totals are available.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+    <span class="n">pressurized_diameter</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">pressurized_diameter</span>
+        <span class="k">if</span> <span class="n">pressurized_diameter</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">pressurized_diameter</span>
+    <span class="p">)</span>
+    <span class="n">diameters</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">diameters</span> <span class="k">if</span> <span class="n">diameters</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">diameters</span>
+    <span class="n">roughness</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">roughness</span> <span class="k">if</span> <span class="n">roughness</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">roughness</span>
+    <span class="n">include_private_sewer</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">preprocessing</span><span class="o">.</span><span class="n">add_private_sewer</span>
+        <span class="k">if</span> <span class="n">include_private_sewer</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">include_private_sewer</span>
+    <span class="p">)</span>
+    <span class="n">min_trench_depth</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">min_trench_depth</span>
+
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;inflow_trench_depths&quot;</span><span class="p">)</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;inflow_diameters&quot;</span><span class="p">)</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;pressurized&quot;</span><span class="p">)</span>
+    <span class="n">edge_counter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">buildings</span> <span class="o">=</span> <span class="n">get_node_keys</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="s2">&quot;node_type&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;building&quot;</span><span class="p">)</span>
+    <span class="n">onsite_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="k">if</span> <span class="n">G</span><span class="o">.</span><span class="n">degree</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">buildings</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">onsite_nodes</span><span class="p">))</span>
+    <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;onsite&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">onsite_nodes</span><span class="p">}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">sink</span> <span class="ow">in</span> <span class="n">sinks</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sink</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sink </span><span class="si">{</span><span class="n">sink</span><span class="si">}</span><span class="s2"> not in graph&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">reverse_bfs</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">sink</span><span class="p">,</span> <span class="n">include_private_sewer</span><span class="o">=</span><span class="n">include_private_sewer</span><span class="p">):</span>
+            <span class="c1"># Node Values for trench depths cant be clearly defined for pumps and lifting stations because they have seperate incoming and outcoming values</span>
+            <span class="n">pressurized</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">upstream</span> <span class="o">=</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">downstream</span> <span class="o">=</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">max_inflow_diameters</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">upstream</span><span class="p">][</span><span class="s2">&quot;inflow_diameters&quot;</span><span class="p">])</span>
+            <span class="n">max_inflow_tds</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">upstream</span><span class="p">][</span><span class="s2">&quot;inflow_trench_depths&quot;</span><span class="p">])</span>
+            <span class="n">profile</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">edge</span><span class="p">][</span><span class="s2">&quot;profile&quot;</span><span class="p">]</span>
+
+            <span class="c1"># Does the edge need a pump starting at min td?</span>
+            <span class="n">needs_p</span><span class="p">,</span> <span class="n">out_trench_depth</span><span class="p">,</span> <span class="n">td_profile</span> <span class="o">=</span> <span class="n">needs_pump</span><span class="p">(</span>
+                <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">inflow_trench_depth</span><span class="o">=</span><span class="n">min_trench_depth</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">needs_p</span><span class="p">:</span>
+                <span class="n">G</span> <span class="o">=</span> <span class="n">place_pump</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">upstream</span><span class="p">)</span>
+                <span class="n">pressurized</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">edge_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">edge</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;trench_depth_profile&quot;</span><span class="p">:</span> <span class="n">td_profile</span><span class="p">,</span>
+                        <span class="s2">&quot;mean_td&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                            <span class="p">[</span>
+                                <span class="n">topo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">td</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                                <span class="k">for</span> <span class="n">td</span><span class="p">,</span> <span class="n">topo</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                                    <span class="n">td_profile</span><span class="p">,</span> <span class="p">[</span><span class="n">profile</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">profile</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span>
+                                <span class="p">)</span>
+                            <span class="p">]</span>
+                        <span class="p">),</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">upstream</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;total_static_head&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">td_profile</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">td_profile</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_inflow_tds</span> <span class="o">-</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">tmin</span><span class="p">),</span>  <span class="mi">2</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># check if edge needs a lifting station based on max inflow td</span>
+                <span class="n">needs_p</span><span class="p">,</span> <span class="n">out_trench_depth</span><span class="p">,</span> <span class="n">td_profile</span> <span class="o">=</span> <span class="n">needs_pump</span><span class="p">(</span>
+                    <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">inflow_trench_depth</span><span class="o">=</span><span class="n">max_inflow_tds</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">needs_p</span><span class="p">:</span>
+                    <span class="n">G</span> <span class="o">=</span> <span class="n">place_lifting_station</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">upstream</span><span class="p">)</span>
+                    <span class="c1"># update outflow td value now with lifting station at start of edge</span>
+                    <span class="n">_</span><span class="p">,</span> <span class="n">out_trench_depth</span><span class="p">,</span> <span class="n">td_profile</span> <span class="o">=</span> <span class="n">needs_pump</span><span class="p">(</span>
+                        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">inflow_trench_depth</span><span class="o">=</span><span class="n">min_trench_depth</span>
+                    <span class="p">)</span>
+                <span class="c1"># append downstream inflow td value and upstream total static head</span>
+                <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">downstream</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;inflow_trench_depths&quot;</span><span class="p">:</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">()[</span><span class="n">downstream</span><span class="p">][</span>
+                            <span class="s2">&quot;inflow_trench_depths&quot;</span>
+                        <span class="p">]</span>
+                        <span class="o">+</span> <span class="p">[</span><span class="n">out_trench_depth</span><span class="p">]</span>
+                    <span class="p">},</span>
+                    <span class="n">upstream</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;total_static_head&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">max_inflow_tds</span> <span class="o">-</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">tmin</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+                <span class="c1"># add trenchdepth profile to edge:</span>
+                <span class="n">edge_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">edge</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;trench_depth_profile&quot;</span><span class="p">:</span> <span class="n">td_profile</span><span class="p">,</span>
+                        <span class="s2">&quot;mean_td&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">topo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">td</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">td</span><span class="p">,</span> <span class="n">topo</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">td_profile</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+                        <span class="p">),</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="c1"># Diameter</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span>
+
+            <span class="n">slope</span> <span class="o">=</span> <span class="n">get_mean_slope</span><span class="p">(</span>
+                <span class="n">G</span><span class="p">,</span> <span class="n">upstream</span><span class="p">,</span> <span class="n">downstream</span><span class="p">,</span> <span class="n">td_profile</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">td_profile</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1"># Calculate diameter</span>
+            <span class="c1"># adjust peak flow for combined sewer</span>
+            <span class="n">peak_flow</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">upstream</span><span class="p">][</span><span class="s2">&quot;peak_flow&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">combined_sewer_factor</span>
+            <span class="n">violations</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">pressurized</span><span class="p">:</span>
+                <span class="n">diam</span> <span class="o">=</span> <span class="n">pressurized_diameter</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">diam</span><span class="p">,</span> <span class="n">violations</span> <span class="o">=</span> <span class="n">select_diameter_with_constraints</span><span class="p">(</span>
+                    <span class="n">peak_flow</span><span class="p">,</span>
+                    <span class="n">diameters</span><span class="p">,</span>
+                    <span class="n">roughness</span><span class="p">,</span>
+                    <span class="n">slope</span><span class="p">,</span>
+                    <span class="n">max_depth_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">max_depth_ratio</span><span class="p">,</span>
+                    <span class="n">vmin</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">velocity_min</span><span class="p">,</span>
+                    <span class="n">vmax</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">velocity_max</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">diam</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">diam</span><span class="p">,</span> <span class="n">max_inflow_diameters</span><span class="p">)</span>
+
+            <span class="c1"># Hydraulic checks for reporting: true proportional depth d/D</span>
+            <span class="c1"># (normal depth via wetted angle, Butler&#39;s quantity — NOT the</span>
+            <span class="c1"># flow ratio Q/Q_full) and partial-flow velocity</span>
+            <span class="n">depth_ratio</span> <span class="o">=</span> <span class="n">_proportional_depth</span><span class="p">(</span><span class="n">diam</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="n">peak_flow</span><span class="p">)</span>
+            <span class="n">velocity</span> <span class="o">=</span> <span class="n">_partial_flow_velocity</span><span class="p">(</span><span class="n">diam</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="n">peak_flow</span><span class="p">)</span>
+            <span class="c1"># depth criterion applies to gravity pipes only — a pressurized</span>
+            <span class="c1"># main flows full by design (d/D = 1 is its normal state)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">pressurized</span>
+                <span class="ow">and</span> <span class="n">depth_ratio</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">max_depth_ratio</span>
+                <span class="ow">and</span> <span class="s2">&quot;depth_ratio&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">violations</span>
+            <span class="p">):</span>
+                <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;depth_ratio&quot;</span><span class="p">)</span>
+            <span class="c1"># Self-cleansing: at intermittent heads (small-sewer regime,</span>
+            <span class="c1"># Butler §9.4) the steady partial-flow velocity is physically</span>
+            <span class="c1"># meaningless, so velocity_min does not apply; the BS EN 752</span>
+            <span class="c1"># deemed-to-satisfy minimum gradient is checked instead.</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">pressurized</span>
+                <span class="ow">and</span> <span class="n">peak_flow</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">small_sewer_flow_threshold</span>
+            <span class="p">):</span>
+                <span class="n">violations</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">violations</span> <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="s2">&quot;velocity_min&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="o">-</span><span class="n">slope</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">dts_min_gradient</span><span class="p">:</span>
+                    <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;gradient_below_dts&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span>
+                <span class="n">velocity</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">velocity_min</span>
+                <span class="ow">and</span> <span class="s2">&quot;velocity_min&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">violations</span>
+            <span class="p">):</span>
+                <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;velocity_min&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">velocity</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">velocity_max</span>
+                <span class="ow">and</span> <span class="s2">&quot;velocity_max&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">violations</span>
+            <span class="p">):</span>
+                <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;velocity_max&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Write results to graph</span>
+            <span class="n">edge_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">edge</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;diameter&quot;</span><span class="p">:</span> <span class="n">diam</span><span class="p">,</span>
+                    <span class="s2">&quot;peak_flow&quot;</span><span class="p">:</span> <span class="n">peak_flow</span><span class="p">,</span>
+                    <span class="s2">&quot;edge_counter&quot;</span><span class="p">:</span> <span class="n">edge_counter</span><span class="p">,</span>
+                    <span class="s2">&quot;velocity&quot;</span><span class="p">:</span> <span class="n">velocity</span><span class="p">,</span>
+                    <span class="s2">&quot;d_over_D&quot;</span><span class="p">:</span> <span class="n">depth_ratio</span><span class="p">,</span>
+                    <span class="s2">&quot;hydraulic_violations&quot;</span><span class="p">:</span> <span class="n">violations</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span>
+            <span class="n">edge_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">downstream</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;inflow_trench_depths&quot;</span><span class="p">:</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">downstream</span><span class="p">][</span><span class="s2">&quot;inflow_trench_depths&quot;</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="p">[</span><span class="n">out_trench_depth</span><span class="p">]</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+
+            <span class="c1"># diameter</span>
+            <span class="n">node_attrs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">downstream</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;inflow_diameters&quot;</span><span class="p">:</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">()[</span><span class="n">downstream</span><span class="p">][</span><span class="s2">&quot;inflow_diameters&quot;</span><span class="p">]</span>
+                    <span class="o">+</span> <span class="p">[</span><span class="n">diam</span><span class="p">]</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+
+    <span class="c1"># Strip the routing-internal terrain flag from the designed network:</span>
+    <span class="c1"># it is a per-candidate-edge feasibility input for the pump penalty, not</span>
+    <span class="c1"># a design result, and exporting it next to `pressurized` has repeatedly</span>
+    <span class="c1"># been misread as &quot;this pipe needs a pump&quot; (Elan bug report 2026-08-06).</span>
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;needs_pump&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">G</span></div>
+
+
+
+<div class="viewcode-block" id="peak_factor_for_population">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.peak_factor_for_population">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">peak_factor_for_population</span><span class="p">(</span>
+    <span class="n">population</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">constant</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Peak factor for a given cumulative upstream population.</span>
+
+<span class="sd">    Butler &amp; Davies (Urban Drainage, ch. 9): the peak-to-average ratio</span>
+<span class="sd">    decreases downstream with population served (diversification and</span>
+<span class="sd">    attenuation). Supported methods (P = population in thousands):</span>
+
+<span class="sd">    - &quot;constant&quot;: the fixed ``peak_factor`` everywhere (legacy behavior)</span>
+<span class="sd">    - &quot;babbitt&quot;:  5 / P^0.2</span>
+<span class="sd">    - &quot;harman&quot;:   1 + 14 / (4 + sqrt(P))</span>
+<span class="sd">    - &quot;gifft&quot;:    5 / P^(1/6)</span>
+
+<span class="sd">    Variable factors are capped at ``peak_factor_max`` (BS EN 752 multiple:</span>
+<span class="sd">    6) and floored at 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">peak_factor_method</span> <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">method</span>
+    <span class="n">constant</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">peak_factor</span> <span class="k">if</span> <span class="n">constant</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">constant</span>
+    <span class="n">cap</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">peak_factor_max</span> <span class="k">if</span> <span class="n">cap</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cap</span>
+
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;constant&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">constant</span>
+    <span class="n">p_thousands</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">population</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1000.0</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;babbitt&quot;</span><span class="p">:</span>
+        <span class="n">pf</span> <span class="o">=</span> <span class="mf">5.0</span> <span class="o">/</span> <span class="n">p_thousands</span><span class="o">**</span><span class="mf">0.2</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;harman&quot;</span><span class="p">:</span>
+        <span class="n">pf</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">14.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">+</span> <span class="n">p_thousands</span><span class="o">**</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;gifft&quot;</span><span class="p">:</span>
+        <span class="n">pf</span> <span class="o">=</span> <span class="mf">5.0</span> <span class="o">/</span> <span class="n">p_thousands</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">6.0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Unknown peak_factor_method </span><span class="si">{</span><span class="n">method</span><span class="si">!r}</span><span class="s2">; expected constant, &quot;</span>
+            <span class="s2">&quot;babbitt, harman or gifft&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">pf</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">cap</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="estimate_peakflow">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.estimate_peakflow">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_peakflow</span><span class="p">(</span>
+    <span class="n">G</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">,</span>
+    <span class="n">inhabitants_dwelling</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">inhabitants_dwelling_attribute_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">daily_wastewater_person</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">peak_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">peak_factor_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">infiltration_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Estimate the peakflow in m³/s for a node n in Graph G.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : networkx.Graph</span>
+<span class="sd">        The graph to estimate peakflow for.</span>
+<span class="sd">    inhabitants_dwelling : int</span>
+<span class="sd">        The number of inhabitants per dwelling to use if inhabitants_dwelling_attribute_name is empty.</span>
+<span class="sd">    inhabitants_dwelling_attribute_name : str</span>
+<span class="sd">        The attribute name with the number of inhabitants per dwelling.</span>
+<span class="sd">    daily_wastewater_person : float</span>
+<span class="sd">        The daily wastewater generated per person in m³.</span>
+<span class="sd">    peak_factor : float, optional</span>
+<span class="sd">        The peak factor used when ``peak_factor_method`` is &quot;constant&quot;</span>
+<span class="sd">        (default from config).</span>
+<span class="sd">    peak_factor_method : str, optional</span>
+<span class="sd">        &quot;constant&quot; (default), or &quot;babbitt&quot;/&quot;harman&quot;/&quot;gifft&quot; to vary the</span>
+<span class="sd">        factor with cumulative upstream population, capped at</span>
+<span class="sd">        ``peak_factor_max`` (see ``peak_factor_for_population``).</span>
+<span class="sd">    infiltration_fraction : float, optional</span>
+<span class="sd">        Infiltration as a fraction of the domestic daily flow (Butler</span>
+<span class="sd">        Eq. 9.1; conventional 0.1). Added unfactored: Q_peak = PF*PG + I.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    networkx.Graph</span>
+<span class="sd">        The graph with updated node attributes: peak_flow, average_daily_flow,</span>
+<span class="sd">        upstream_pe and the applied peak_factor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Dry Weather Flow  Estimation ===&quot;</span><span class="p">)</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+    <span class="n">inhabitants_dwelling_attribute_name</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">inhabitants_dwelling_attribute_name</span>
+        <span class="k">if</span> <span class="n">inhabitants_dwelling_attribute_name</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">inhabitants_dwelling_attribute_name</span>
+    <span class="p">)</span>
+    <span class="n">inhabitants_dwelling</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">inhabitants_dwelling</span>
+        <span class="k">if</span> <span class="n">inhabitants_dwelling</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">inhabitants_dwelling</span>
+    <span class="p">)</span>
+    <span class="n">daily_wastewater_person</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">daily_wastewater_person</span>
+        <span class="k">if</span> <span class="n">daily_wastewater_person</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">daily_wastewater_person</span>
+    <span class="p">)</span>
+    <span class="n">peak_factor</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">peak_factor</span> <span class="k">if</span> <span class="n">peak_factor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">peak_factor</span>
+    <span class="p">)</span>
+    <span class="n">infiltration_fraction</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">infiltration_fraction</span>
+        <span class="k">if</span> <span class="n">infiltration_fraction</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">infiltration_fraction</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="n">upstream_buildings</span> <span class="o">=</span> <span class="n">get_upstream_nodes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="s2">&quot;node_type&quot;</span><span class="p">,</span> <span class="s2">&quot;building&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Building node </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">: upstream_buildings=</span><span class="si">{</span><span class="n">upstream_buildings</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">total_population</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Sum up populations from each upstream building/block</span>
+        <span class="k">for</span> <span class="n">building</span> <span class="ow">in</span> <span class="n">upstream_buildings</span><span class="p">:</span>
+            <span class="n">building_data</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">building</span><span class="p">]</span>
+            <span class="c1"># Try to get population in this priority:</span>
+            <span class="c1"># 1. custom inhabitants_dwelling_attribute_name (total population for the block)</span>
+            <span class="c1"># 2. block_population (total population for the block)</span>
+            <span class="c1"># 3. number_of_dwellings * inhabitants_dwelling</span>
+            <span class="c1"># 4. fallback to single dwelling with inhabitants_dwelling</span>
+            <span class="k">if</span> <span class="n">inhabitants_dwelling_attribute_name</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Using custom attribute name &#39;</span><span class="si">{</span><span class="n">inhabitants_dwelling_attribute_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+                <span class="n">block_pop</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">building_data</span><span class="p">[</span><span class="n">inhabitants_dwelling_attribute_name</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s2">&quot;block_population&quot;</span> <span class="ow">in</span> <span class="n">building_data</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;  Using block_population&quot;</span><span class="p">)</span>
+                <span class="n">block_pop</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">building_data</span><span class="p">[</span><span class="s2">&quot;block_population&quot;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s2">&quot;number_of_dwellings&quot;</span> <span class="ow">in</span> <span class="n">building_data</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;  Using number_of_dwellings&quot;</span><span class="p">)</span>
+                <span class="n">block_pop</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">building_data</span><span class="p">[</span><span class="s2">&quot;number_of_dwellings&quot;</span><span class="p">])</span> <span class="o">*</span> <span class="n">inhabitants_dwelling</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Fallback: assume one dwelling with default inhabitants</span>
+                <span class="n">block_pop</span> <span class="o">=</span> <span class="n">inhabitants_dwelling</span>
+
+            <span class="n">total_population</span> <span class="o">+=</span> <span class="n">block_pop</span>
+
+        <span class="c1"># Calculate total daily wastewater volume</span>
+        <span class="n">upstream_daily</span> <span class="o">=</span> <span class="n">total_population</span> <span class="o">*</span> <span class="n">daily_wastewater_person</span>
+        <span class="c1"># Calculate total upstream peak flow</span>
+        <span class="n">upstream_pe</span> <span class="o">=</span> <span class="n">total_population</span>
+        <span class="n">pf</span> <span class="o">=</span> <span class="n">peak_factor_for_population</span><span class="p">(</span>
+            <span class="n">total_population</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">peak_factor_method</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="n">peak_factor</span>
+        <span class="p">)</span>
+        <span class="c1"># Butler Eq. 9.1 / §9.3.6: infiltration is part of DWF but not of</span>
+        <span class="c1"># the diurnal peak — the factor applies to the domestic component</span>
+        <span class="c1"># only: Q_peak = PF*PG + I  (the &quot;4(DWF-I)+I&quot; form)</span>
+        <span class="n">infiltration_daily</span> <span class="o">=</span> <span class="n">infiltration_fraction</span> <span class="o">*</span> <span class="n">upstream_daily</span>
+        <span class="n">peak_flow</span> <span class="o">=</span> <span class="p">(</span><span class="n">pf</span> <span class="o">*</span> <span class="n">upstream_daily</span> <span class="o">+</span> <span class="n">infiltration_daily</span><span class="p">)</span> <span class="o">/</span> <span class="mf">86400.0</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Peak flow: </span><span class="si">{</span><span class="n">peak_flow</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> m³/s (PF=</span><span class="si">{</span><span class="n">pf</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Average daily flow: </span><span class="si">{</span><span class="n">upstream_daily</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> m³/s&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Upstream peak flow: </span><span class="si">{</span><span class="n">upstream_pe</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> people&quot;</span><span class="p">)</span>
+
+        <span class="n">atr</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">n</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;peak_flow&quot;</span><span class="p">:</span> <span class="n">peak_flow</span><span class="p">,</span>
+                <span class="s2">&quot;average_daily_flow&quot;</span><span class="p">:</span> <span class="n">upstream_daily</span><span class="p">,</span>
+                <span class="s2">&quot;upstream_pe&quot;</span><span class="p">:</span> <span class="n">upstream_pe</span><span class="p">,</span>
+                <span class="s2">&quot;peak_factor&quot;</span><span class="p">:</span> <span class="n">pf</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">atr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">G</span></div>
+
+
+
+<div class="viewcode-block" id="mannings_equation">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.mannings_equation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mannings_equation</span><span class="p">(</span><span class="n">pipe_diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the volume flow rate of a pipe using Manning&#39;s equation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pipe_diameter : float</span>
+<span class="sd">        Diameter of the pipe in meters.</span>
+<span class="sd">    roughness : float</span>
+<span class="sd">        Manning&#39;s roughness coefficient n (dimensionless, ~0.009-0.015 for</span>
+<span class="sd">        sewer pipes). NOT the Colebrook-White absolute roughness k_s.</span>
+<span class="sd">    slope : float</span>
+<span class="sd">        Slope of the pipe in units of elevation drop per unit length.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Volume flow rate of the pipe in cubic meters per second.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the slope is greater than 0.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Manning&#39;s equation is used to calculate the volume flow rate of a pipe based on its diameter, roughness coefficient, and slope.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check slope for correctness:</span>
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Slope &gt; 0, make sure slope is in negative units in elevation drop/ unit in length&quot;</span>
+        <span class="p">)</span>
+    <span class="c1"># calculating cross section for half full flow:</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">pipe_diameter</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="c1"># wetted perimeter</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">pipe_diameter</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="c1"># hydraulic radius</span>
+    <span class="n">Rh</span> <span class="o">=</span> <span class="n">A</span> <span class="o">/</span> <span class="n">P</span>
+    <span class="c1"># cross sectional mean velocity</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">roughness</span><span class="p">)</span> <span class="o">*</span> <span class="n">Rh</span> <span class="o">**</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">slope</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="c1"># volume_flow</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">A</span> <span class="o">*</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">q</span></div>
+
+
+
+<div class="viewcode-block" id="select_diameter">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.select_diameter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">select_diameter</span><span class="p">(</span>
+    <span class="n">target_flow</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">diameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the minimum pipe diameter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    target_flow : float</span>
+<span class="sd">        The target flow rate in cubic meters per second.</span>
+<span class="sd">    diameters : list</span>
+<span class="sd">        A list of possible pipe diameters in meters.</span>
+<span class="sd">    roughness : float</span>
+<span class="sd">        The pipe roughness coefficient in meters.</span>
+<span class="sd">    slope : float</span>
+<span class="sd">        The pipe slope in meters per meter.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The minimum pipe diameter required to achieve the target flow rate.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the maximum diameter is insufficient to reach the target flow rate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">diameters</span> <span class="o">=</span> <span class="n">diameters</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">flow</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">flow</span> <span class="o">&lt;=</span> <span class="n">target_flow</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">selected_diameter</span> <span class="o">=</span> <span class="n">diameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Maximum Diameter insufficient to reach target flow&quot;</span><span class="p">)</span>
+        <span class="n">flow</span> <span class="o">=</span> <span class="n">mannings_equation</span><span class="p">(</span><span class="n">selected_diameter</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">slope</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">selected_diameter</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_full_flow_manning</span><span class="p">(</span><span class="n">diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manning full-flow capacity for a circular pipe.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1e-6</span>
+    <span class="n">area</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">diameter</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">perimeter</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">diameter</span>
+    <span class="n">rh</span> <span class="o">=</span> <span class="n">area</span> <span class="o">/</span> <span class="n">perimeter</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">roughness</span><span class="p">)</span> <span class="o">*</span> <span class="n">rh</span> <span class="o">**</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">slope</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">area</span> <span class="o">*</span> <span class="n">velocity</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_partial_flow_capacity</span><span class="p">(</span>
+    <span class="n">diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">depth_ratio</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manning capacity of a circular pipe flowing at a given proportional</span>
+<span class="sd">    depth d/D (exact wetted-angle geometry). depth_ratio=1 gives the</span>
+<span class="sd">    full-bore capacity, 0.5 gives exactly half of it (same hydraulic</span>
+<span class="sd">    radius), and 0.75 gives ~0.91 of full-bore. Butler&#39;s capacity</span>
+<span class="sd">    criterion is Q_design &lt;= this capacity at d/D = max_depth_ratio.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">depth_ratio</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;depth_ratio must be in (0, 1]&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1e-6</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">diameter</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="c1"># wetted angle for flow depth h = depth_ratio * D</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">acos</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">depth_ratio</span><span class="p">)</span>
+    <span class="n">area</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">perimeter</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">theta</span>
+    <span class="n">rh</span> <span class="o">=</span> <span class="n">area</span> <span class="o">/</span> <span class="n">perimeter</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">roughness</span><span class="p">)</span> <span class="o">*</span> <span class="n">rh</span> <span class="o">**</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">slope</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">area</span> <span class="o">*</span> <span class="n">velocity</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_proportional_depth</span><span class="p">(</span>
+    <span class="n">diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">flow</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normal-flow proportional depth d/D for a given discharge (Manning,</span>
+<span class="sd">    bisection on the wetted angle — Butler&#39;s quantity for the d/D &lt;= 0.75</span>
+<span class="sd">    capacity criterion). Returns 0.0 for no flow and 1.0 when the pipe is</span>
+<span class="sd">    surcharged (flow &gt;= full-bore capacity).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">flow</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1e-6</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="o">-</span><span class="n">slope</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">diameter</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">q_of</span><span class="p">(</span><span class="n">theta</span><span class="p">):</span>
+        <span class="n">area</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">perimeter</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">theta</span>
+        <span class="k">if</span> <span class="n">perimeter</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="n">rh</span> <span class="o">=</span> <span class="n">area</span> <span class="o">/</span> <span class="n">perimeter</span>
+        <span class="k">return</span> <span class="n">area</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">roughness</span><span class="p">)</span> <span class="o">*</span> <span class="n">rh</span> <span class="o">**</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span><span class="o">**</span><span class="mf">0.5</span>
+
+    <span class="k">if</span> <span class="n">flow</span> <span class="o">&gt;=</span> <span class="n">q_of</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">60</span><span class="p">):</span>
+        <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span> <span class="o">+</span> <span class="n">hi</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">q_of</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">flow</span><span class="p">:</span>
+            <span class="n">lo</span> <span class="o">=</span> <span class="n">mid</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hi</span> <span class="o">=</span> <span class="n">mid</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span> <span class="o">+</span> <span class="n">hi</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">depth</span> <span class="o">/</span> <span class="n">diameter</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_partial_flow_velocity</span><span class="p">(</span>
+    <span class="n">diameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">flow</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Flow velocity at normal depth for a given discharge in a circular pipe</span>
+<span class="sd">    (Manning), found by bisection on the wetted angle. Falls back to</span>
+<span class="sd">    continuity (flow / full area) when the pipe is surcharged.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">flow</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">slope</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1e-6</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="o">-</span><span class="n">slope</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">diameter</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">q_of</span><span class="p">(</span><span class="n">theta</span><span class="p">):</span>
+        <span class="n">area</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">perimeter</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">theta</span>
+        <span class="k">if</span> <span class="n">perimeter</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="n">rh</span> <span class="o">=</span> <span class="n">area</span> <span class="o">/</span> <span class="n">perimeter</span>
+        <span class="k">return</span> <span class="n">area</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">roughness</span><span class="p">)</span> <span class="o">*</span> <span class="n">rh</span> <span class="o">**</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span><span class="o">**</span><span class="mf">0.5</span>
+
+    <span class="k">if</span> <span class="n">flow</span> <span class="o">&gt;=</span> <span class="n">q_of</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">flow</span> <span class="o">/</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">60</span><span class="p">):</span>
+        <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span> <span class="o">+</span> <span class="n">hi</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">q_of</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">flow</span><span class="p">:</span>
+            <span class="n">lo</span> <span class="o">=</span> <span class="n">mid</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hi</span> <span class="o">=</span> <span class="n">mid</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span> <span class="o">+</span> <span class="n">hi</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">area</span> <span class="o">=</span> <span class="n">r</span> <span class="o">*</span> <span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">flow</span> <span class="o">/</span> <span class="n">area</span>
+
+
+<div class="viewcode-block" id="select_diameter_with_constraints">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.select_diameter_with_constraints">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">select_diameter_with_constraints</span><span class="p">(</span>
+    <span class="n">target_flow</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">diameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+    <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">slope</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">max_depth_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">vmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">vmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pick the smallest diameter that conveys the design flow at a</span>
+<span class="sd">    proportional depth d/D &lt;= max_depth_ratio (Butler / BS EN 752 capacity</span>
+<span class="sd">    criterion; the capacity at that depth is computed with exact</span>
+<span class="sd">    wetted-angle geometry, e.g. d/D = 0.75 allows ~0.91 of full-bore flow).</span>
+<span class="sd">    Velocity bounds are evaluated at partial flow on the selected pipe and</span>
+<span class="sd">    recorded as violations only: sizing cannot fix a slow pipe (a smaller</span>
+<span class="sd">    pipe raises velocity but breaks capacity, a larger one lowers it</span>
+<span class="sd">    further), so velocity must not drive the size choice.</span>
+
+<span class="sd">    Returns (diameter, violations).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">violations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">diameters</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">target_flow</span> <span class="o">&lt;=</span> <span class="n">_partial_flow_capacity</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="n">max_depth_ratio</span><span class="p">):</span>
+            <span class="n">chosen</span> <span class="o">=</span> <span class="n">d</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">chosen</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">chosen</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">diameters</span><span class="p">)</span>
+        <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;no_diameter_meets_depth_ratio&quot;</span><span class="p">)</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="n">_partial_flow_velocity</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">roughness</span><span class="p">,</span> <span class="n">slope</span><span class="p">,</span> <span class="n">target_flow</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">velocity</span> <span class="o">&lt;</span> <span class="n">vmin</span><span class="p">:</span>
+        <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;velocity_min&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">velocity</span> <span class="o">&gt;</span> <span class="n">vmax</span><span class="p">:</span>
+        <span class="n">violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;velocity_max&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">chosen</span><span class="p">,</span> <span class="n">violations</span></div>
+
+
+
+<div class="viewcode-block" id="needs_pump">
+<a class="viewcode-back" href="../../api_reference/optimization.html#pysewer.optimization.needs_pump">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">needs_pump</span><span class="p">(</span>
+    <span class="n">profile</span><span class="p">,</span>
+    <span class="n">min_slope</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">inflow_trench_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Traces a profile to determine if gravitational flow can be achieved within slope and trench depth constraints.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    profile : list of tuples</span>
+<span class="sd">        A list of (x, y) tuples representing the profile to be traced.</span>
+<span class="sd">    min_slope : float, optional</span>
+<span class="sd">        The minimum slope required for gravitational flow. Default is -0.01.</span>
+<span class="sd">    tmax : float, optional</span>
+<span class="sd">        The maximum trench depth allowed. Default is 8.</span>
+<span class="sd">    tmin : float, optional</span>
+<span class="sd">        The minimum trench depth allowed. Default is 0.25.</span>
+<span class="sd">    inflow_trench_depth : float, optional</span>
+<span class="sd">        The trench depth at the inflow point. If not specified, it is set to tmin.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        - A boolean indicating whether a pump is needed.</span>
+<span class="sd">        - The height difference between the outflow and the trench depth at the outflow point.</span>
+<span class="sd">        - A list of (x, trench_depth) tuples representing the trench depth at each point along the profile.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get current config values if not provided. None-checks, not `or`: an</span>
+    <span class="c1"># explicit 0 (e.g. inflow_trench_depth=0 for head edges, meaning &quot;start</span>
+    <span class="c1"># at tmin&quot;) must not be swallowed by the config fallback.</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+    <span class="n">min_slope</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">min_slope</span> <span class="k">if</span> <span class="n">min_slope</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">min_slope</span>
+    <span class="n">tmax</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">tmax</span> <span class="k">if</span> <span class="n">tmax</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tmax</span>
+    <span class="n">tmin</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">tmin</span> <span class="k">if</span> <span class="n">tmin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tmin</span>
+    <span class="k">if</span> <span class="n">inflow_trench_depth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">inflow_trench_depth</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">optimization</span><span class="o">.</span><span class="n">inflow_trench_depth</span>
+
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">profile</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">inflow_trench_depth</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inflow_trench_depth</span> <span class="o">=</span> <span class="n">tmin</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Using tmin as inflow_trench_depth: </span><span class="si">{</span><span class="n">inflow_trench_depth</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">trench_depth</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="c1"># adjust inflow trenchdepth</span>
+    <span class="n">trench_depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">inflow_trench_depth</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Initial trench depth: </span><span class="si">{</span><span class="n">trench_depth</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">next_min_elevation</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">min_slope</span> <span class="o">+</span> <span class="n">trench_depth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Checking segment </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Distance: </span><span class="si">{</span><span class="n">dx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Current elevation: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Next elevation: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Required next_min_elevation: </span><span class="si">{</span><span class="n">next_min_elevation</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Max allowed depth: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tmax</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Min allowed depth: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tmin</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1">## Case 1: to achieve the min slope we would need to dig a trench deeper than tmax -&gt; needs pump</span>
+        <span class="k">if</span> <span class="n">next_min_elevation</span> <span class="o">&lt;</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmax</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;  CASE 1: Pump needed - trench would be too deep&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Would need depth: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">next_min_elevation</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Max allowed: </span><span class="si">{</span><span class="n">tmax</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="kc">True</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="p">[</span>
+                    <span class="p">(</span>
+                        <span class="mi">0</span><span class="p">,</span>
+                        <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmin</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmin</span><span class="p">),</span>
+                <span class="p">],</span>
+            <span class="p">)</span>
+        <span class="c1">## case 2: min slope point is within Trench depth range: set trench depth to calculated height</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">next_min_elevation</span> <span class="o">&lt;</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmin</span>
+            <span class="ow">and</span> <span class="n">next_min_elevation</span> <span class="o">&gt;</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmax</span>
+        <span class="p">):</span>
+            <span class="n">trench_depth</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">next_min_elevation</span>
+        <span class="c1">##case 3: min slope point is higher than min trenchdepth: set to tmin</span>
+        <span class="k">elif</span> <span class="n">next_min_elevation</span> <span class="o">&gt;=</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmin</span><span class="p">:</span>
+            <span class="n">trench_depth</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmin</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Final result: No pump needed&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Final trench depth: </span><span class="si">{</span><span class="n">trench_depth</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Final elevation difference: </span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">trench_depth</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">trench_depth</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">trench_depth</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span></div>
+
+</pre></div>
+<div class="section ablog__blog_comments">
+   
+</div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2022 - 2026, the pysewer developers from UFZ.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,991 @@
+
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Preprocessing — pysewer 0.2.0 documentation</title>
+<script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+<!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+<noscript>
+<style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+</noscript>
+<!-- Loaded before other Sphinx assets -->
+<link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet"/>
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet"/>
+<link href="../_static/pygments.css?v=8f2a1f02" rel="stylesheet" type="text/css"/>
+<link href="../_static/plot_directive.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-codeautolink.css?v=b2176991" rel="stylesheet" type="text/css"/>
+<link href="../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx-design.min.css?v=95c83b7e" rel="stylesheet" type="text/css"/>
+<!-- So that users can add custom icons -->
+<script defer="" src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" rel="preload"/>
+<link as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" rel="preload"/>
+<script src="../_static/documentation_options.js?v=938c9ccc"></script>
+<script src="../_static/doctools.js?v=fd6eb6e6"></script>
+<script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+<script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+<script src="../_static/copybutton.js?v=5ae071a5"></script>
+<script src="../_static/design-tabs.js?v=f930bc37"></script>
+<script>DOCUMENTATION_OPTIONS.pagename = 'api_reference/preprocessing';</script>
+<script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="routing_solver.html" rel="next" title="Routing Solvers"/>
+<link href="index.html" rel="prev" title="API reference"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="en" name="docsearch:language"/>
+<meta content="0.2.0" name="docsearch:version"/>
+<script src="../_static/searchtools.js"></script>
+<script src="../_static/language_data.js"></script>
+<script src="../searchindex.js"></script>
+</head>
+<body data-default-mode="">
+<div class="skip-link d-print-none" id="pst-skip-link"><a href="#main-content">Skip to main content</a></div>
+<div id="pst-scroll-pixel-helper"></div>
+<button class="btn rounded-pill" id="pst-back-to-top" type="button">
+<i class="fa-solid fa-arrow-up"></i>Back to top</button>
+<dialog id="pst-search-dialog">
+<form action="../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input aria-label="Search the docs ..." autocapitalize="off" autocomplete="off" autocorrect="off" class="form-control" name="q" placeholder="Search the docs ..." spellcheck="false" type="search"/>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+</dialog>
+<div class="pst-async-banner-revealer d-none">
+<aside aria-label="Version warning" class="d-none d-print-none" id="bd-header-version-warning"></aside>
+</div>
+<header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none" id="pst-header">
+<div class="bd-header__inner bd-page-width">
+<button aria-label="Site navigation" class="pst-navbar-icon sidebar-toggle primary-toggle">
+<span class="fa-solid fa-bars"></span>
+</button>
+<div class="col-lg-3 navbar-header-items__start">
+<div class="navbar-item">
+<a class="navbar-brand logo" href="../index.html">
+<p class="title logo__title">pysewer 0.2.0 documentation</p>
+</a></div>
+</div>
+<div class="col-lg-9 navbar-header-items">
+<div class="me-auto navbar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../about/index.html">
+    About
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../install.html">
+    Installation
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-external" href="https://www.ufz.de/index.php?en=51198">
+    UFZ WASP
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="navbar-header-items__end">
+<div class="navbar-item navbar-persistent--container">
+<button aria-label="Search" class="btn search-button-field search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass"></i>
+<span class="search-button__default-text">Search</span>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+</div>
+<div class="navbar-item">
+<div class="theme-switch-container dropdown pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Color mode">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" data-bs-toggle="dropdown">
+<i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+</button>
+<ul class="dropdown-menu dropdown-menu-end">
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+</ul>
+</div></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ddspot/pysewer" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i><span class="visually-hidden">GitHub</span></a>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="navbar-persistent--mobile">
+<button aria-label="Search" class="btn search-button-field search-button__button pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Search">
+<i class="fa-solid fa-magnifying-glass"></i>
+<span class="search-button__default-text">Search</span>
+<span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+</div>
+<button aria-label="On this page" class="pst-navbar-icon sidebar-toggle secondary-toggle">
+<span class="fa-solid fa-outdent"></span>
+</button>
+</div>
+</header>
+<div class="bd-container">
+<div class="bd-container__inner bd-page-width">
+<dialog id="pst-primary-sidebar-modal"></dialog>
+<div class="bd-sidebar-primary bd-sidebar" id="pst-primary-sidebar">
+<div class="sidebar-header-items sidebar-primary__section">
+<div class="sidebar-header-items__center">
+<div class="navbar-item">
+<nav>
+<ul class="bd-navbar-elements navbar-nav">
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../about/index.html">
+    About
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../install.html">
+    Installation
+  </a>
+</li>
+<li class="nav-item current active">
+<a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+<li class="nav-item">
+<a class="nav-link nav-external" href="https://www.ufz.de/index.php?en=51198">
+    UFZ WASP
+  </a>
+</li>
+</ul>
+</nav></div>
+</div>
+<div class="sidebar-header-items__end">
+<div class="navbar-item">
+<div class="theme-switch-container dropdown pst-js-only" data-bs-placement="bottom" data-bs-toggle="tooltip" title="Color mode">
+<button aria-label="Color mode" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" data-bs-toggle="dropdown">
+<i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+<i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+<i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+</button>
+<ul class="dropdown-menu dropdown-menu-end">
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+<li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+</ul>
+</div></div>
+<div class="navbar-item"><ul aria-label="Icon Links" class="navbar-icon-links">
+<li class="nav-item">
+<a class="nav-link pst-navbar-icon" data-bs-placement="bottom" data-bs-toggle="tooltip" href="https://github.com/ddspot/pysewer" rel="noopener" target="_blank" title="GitHub"><i aria-hidden="true" class="fa-brands fa-github fa-lg"></i><span class="visually-hidden">GitHub</span></a>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sidebar-primary-items__start sidebar-primary__section">
+<div class="sidebar-primary-item pst-sidebar-collapse"><button aria-controls="pst-primary-sidebar" aria-expanded="true" id="pst-collapse-sidebar-button">
+<svg aria-hidden="true" class="pst-icon" focusable="false" role="img" viewbox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+<path d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z" fill="currentColor"></path>
+</svg>
+<span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+<span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+<div class="sidebar-primary-item">
+<nav aria-label="Section Navigation" class="bd-docs-nav bd-links">
+<p aria-level="1" class="bd-links__title" role="heading">Section Navigation</p>
+<div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Content:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing_solver.html">Routing Solvers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optimization.html">Hydraulic Design and Optimisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualisation.html">Visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config_settings.html">Configuration Setting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utilities.html">Utilities</a></li>
+</ul>
+</div>
+</nav></div>
+</div>
+<div class="sidebar-primary-items__end sidebar-primary__section">
+<div class="sidebar-primary-item">
+<div class="flat" data-ea-manual="true" data-ea-publisher="readthedocs" data-ea-type="readthedocs-sidebar" id="ethical-ad-placement">
+</div></div>
+</div>
+</div>
+<main class="bd-main" id="main-content" role="main">
+<div class="bd-content">
+<div class="bd-article-container">
+<div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+<div class="header-article-items__start">
+<div class="header-article-item">
+<nav aria-label="Breadcrumb" class="d-print-none">
+<ul class="bd-breadcrumbs">
+<li class="breadcrumb-item breadcrumb-home">
+<a aria-label="Home" class="nav-link" href="../index.html">
+<i class="fa-solid fa-home"></i>
+</a>
+</li>
+<li class="breadcrumb-item"><a class="nav-link" href="index.html">API reference</a></li>
+<li aria-current="page" class="breadcrumb-item active"><span class="ellipsis">Preprocessing</span></li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+</div>
+<div id="searchbox"></div>
+<article class="bd-article">
+<section id="preprocessing">
+<h1>Preprocessing<a class="headerlink" href="#preprocessing" title="Link to this heading">#</a></h1>
+<section id="data-import-and-preprocessing">
+<h2>Data import and preprocessing<a class="headerlink" href="#data-import-and-preprocessing" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+</tbody>
+</table>
+</div>
+<dl class="py class" id="module-pysewer.preprocessing">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pysewer.preprocessing.</span></span><span class="sig-name descname"><span class="pre">DEM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.DEM" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A class for handling digital elevation model (DEM) data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – The file path to the DEM raster file.</p></li>
+<li><p><strong>raster</strong> (<em>rasterio.DatasetReader</em><em>, </em><em>optional</em>) – The rasterio dataset reader object for the DEM raster file.</p></li>
+<li><p><strong>no_dem</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – A flag indicating whether or not a DEM has been loaded.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.get_elevation">
+<span class="sig-name descname"><span class="pre">get_elevation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.Point</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">int:</span></span></span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.get_elevation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.DEM.get_elevation" title="Link to this definition">#</a></dt>
+<dd><p>Returns elevation data in meters for a given point rounded to two decimals.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.get_profile">
+<span class="sig-name descname"><span class="pre">get_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.LineString</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">List[Tuple[float,</span> <span class="pre">int]]:</span></span></span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.get_profile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.DEM.get_profile" title="Link to this definition">#</a></dt>
+<dd><p>Extracts elevation data from a digital elevation model (DEM) along a given path.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.reproject_dem">
+<span class="sig-name descname"><span class="pre">reproject_dem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">CRS</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None:</span></span></span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.reproject_dem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.DEM.reproject_dem" title="Link to this definition">#</a></dt>
+<dd><p>Reprojects the DEM raster to the given CRS.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.Properties">
+<span class="sig-name descname"><span class="pre">Properties</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pysewer.preprocessing.DEM.Properties" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">----------</span></span></dt>
+<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_crs</span> <span class="pre">:</span> <span class="pre">CRS</span></span></dt>
+<dd><p>Returns the coordinate system of the DEM object.</p>
+</dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.file_path">
+<span class="sig-name descname"><span class="pre">file_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pysewer.preprocessing.DEM.file_path" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.raster">
+<span class="sig-name descname"><span class="pre">raster</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DatasetReader</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#pysewer.preprocessing.DEM.raster" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.no_dem">
+<span class="sig-name descname"><span class="pre">no_dem</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#pysewer.preprocessing.DEM.no_dem" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.remove_nodata">
+<span class="sig-name descname"><span class="pre">remove_nodata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.remove_nodata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.DEM.remove_nodata" title="Link to this definition">#</a></dt>
+<dd><p>Removes or replaces nodata values in the DEM raster.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fill_value</strong> (<em>float, optional</em>) – The value to replace nodata values with. Default is 0.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If no DEM is loaded, cannot remove nodata values.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">get_elevation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Point</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.get_elevation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Link to this definition">#</a></dt>
+<dd><p>Returns elevation data in meters for a given point rounded to two decimals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>point</strong> (<em>shapely.geometry.Point</em>) – The point for which to retrieve elevation data.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The elevation in meters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the query point is out of bounds or if there is no elevation data for the given coordinates.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">get_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LineString</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.get_profile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id1" title="Link to this definition">#</a></dt>
+<dd><p>Extracts elevation data from a digital elevation model (DEM) along a given path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>line</strong> (<em>shapely.geometry.LineString</em>) – The path along which to extract elevation data.</p></li>
+<li><p><strong>dx</strong> (<em>float, optional</em>) – The sampling resolution in meters. Default is 10.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of (x, elevation) tuples representing the x-coordinate and elevation data of the profile.
+The x-coordinate values start at 0 and are spaced at intervals of dx meters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of Tuples</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="pysewer.preprocessing.DEM.get_crs">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_crs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS" title="(in pyproj v3.7.2)"><span class="pre">CRS</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><a class="headerlink" href="#pysewer.preprocessing.DEM.get_crs" title="Link to this definition">#</a></dt>
+<dd><p>Returns the coordinate system of the DEM Object</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">reproject_dem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://pyproj4.github.io/pyproj/stable/api/crs/crs.html#pyproj.crs.CRS" title="(in pyproj v3.7.2)"><span class="pre">CRS</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#DEM.reproject_dem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id2" title="Link to this definition">#</a></dt>
+<dd><p>Reprojects the DEM raster to the given CRS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>crs</strong> (<em>CRS</em>) – The target CRS to reproject the raster to.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If no DEM is loaded, cannot reproject DEM.</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="py class" id="module-0">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pysewer.preprocessing.</span></span><span class="sig-name descname"><span class="pre">Buildings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">GeoDataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">roads_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pysewer.preprocessing.Roads" title="pysewer.preprocessing.Roads"><span class="pre">Roads</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A class to preprocess building data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_data</strong> (<em>str or geopandas.GeoDataFrame</em>) – Path to a shapefile or a GeoDataFrame containing the input data.</p></li>
+<li><p><strong>roads_obj</strong> (<em>pysewer.Roads</em>) – A Roads object containing the road network data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>gdf</strong> (<em>geopandas.GeoDataFrame</em>) – The input building data.</p></li>
+<li><p><strong>roads_obj</strong> (<em>pysewer.Roads</em>) – The road network data.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_gdf():</span></span></dt>
+<dd><p>Returns building data as geopandas dataframe.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_crs():</span></span></dt>
+<dd><p>Returns the Coordinate System of the DEM Object.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">cluster_centers(max_connection_length):</span></span></dt>
+<dd><p>Returns a list of cluster centers for all buildings with greater than max_connection_length distance to the nearest street.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings.get_gdf">
+<span class="sig-name descname"><span class="pre">get_gdf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings.get_gdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings.get_gdf" title="Link to this definition">#</a></dt>
+<dd><p>Returns building data as geopandas dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The building data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>geopandas.GeoDataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings.get_crs">
+<span class="sig-name descname"><span class="pre">get_crs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings.get_crs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings.get_crs" title="Link to this definition">#</a></dt>
+<dd><p>Returns the Coordinate System of the DEM Object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The Coordinate Reference System (CRS) of the building data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings.set_crs">
+<span class="sig-name descname"><span class="pre">set_crs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings.set_crs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings.set_crs" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings.convert_to_points">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">convert_to_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings.convert_to_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings.convert_to_points" title="Link to this definition">#</a></dt>
+<dd><p>Converts the building polygons or multipolygons to points.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Buildings.cluster_centers">
+<span class="sig-name descname"><span class="pre">cluster_centers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_connection_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Buildings.cluster_centers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Buildings.cluster_centers" title="Link to this definition">#</a></dt>
+<dd><p>Returns a list of cluster centers for all buildings with greater than max_connection_length distance to the nearest street.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>max_connection_length</strong> (<em>float</em>) – The maximum distance between a building and the nearest street for it to be included in the cluster centers list.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A GeoDataFrame containing the cluster centers and their distances to the nearest street, sorted by distance.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>geopandas.GeoDataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="py class" id="module-1">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pysewer.preprocessing.</span></span><span class="sig-name descname"><span class="pre">Roads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">GeoDataFrame</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A class to represent road data from either a shapefile or a geopandas dataframe.
+Attributes:
+———-
+gdf : geopandas.GeoDataFrame</p>
+<blockquote>
+<div><p>A geopandas dataframe containing road data.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>merged_roads<span class="classifier">shapely.geometry.MultiLineString</span></dt><dd><p>A shapely MultiLineString object representing the merged road data.</p>
+</dd>
+</dl>
+<section id="methods">
+<h3>Methods:<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<dl class="simple">
+<dt>__init__(self, input_data: str or geopandas.GeoDataFrame) -&gt; None</dt><dd><p>Initializes a Roads object with road data from either a shapefile or a geopandas dataframe.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads.get_nearest_point">
+<span class="sig-name descname"><span class="pre">get_nearest_point</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads.get_nearest_point"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads.get_nearest_point" title="Link to this definition">#</a></dt>
+<dd><p>Returns the nearest location to the input point on the street network.
+:Parameters: <strong>point</strong> (<em>shapely.geometry.Point</em>) – Point to find nearest location to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Nearest location to the input point on the street network.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>shapely.geometry.Point</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads.get_gdf">
+<span class="sig-name descname"><span class="pre">get_gdf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads.get_gdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads.get_gdf" title="Link to this definition">#</a></dt>
+<dd><p>Returns the road data as a geopandas dataframe.
+:returns: The road data as a geopandas dataframe.
+:rtype: geopandas.GeoDataFrame</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads.get_crs">
+<span class="sig-name descname"><span class="pre">get_crs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads.get_crs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads.get_crs" title="Link to this definition">#</a></dt>
+<dd><p>Gets the coordinate reference system (CRS) of the Roads object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The coordinate system of the Roads object.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads.set_crs">
+<span class="sig-name descname"><span class="pre">set_crs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads.set_crs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads.set_crs" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.Roads.get_merged_roads">
+<span class="sig-name descname"><span class="pre">get_merged_roads</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#Roads.get_merged_roads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.Roads.get_merged_roads" title="Link to this definition">#</a></dt>
+<dd><p>Merge the road network as a shapely MultiLineString.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>merged road network as a shapely MultiLineString</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>shapely MultiLineString</p>
+</dd>
+</dl>
+</dd></dl>
+</section>
+</dd></dl>
+</section>
+<section id="simplfy-graph">
+<h2>Simplfy Graph<a class="headerlink" href="#simplfy-graph" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+</tbody>
+</table>
+</div>
+<dl class="py function" id="module-pysewer.simplify">
+<dt class="sig sig-object py" id="pysewer.simplify.simplify_graph">
+<span class="sig-prename descclassname"><span class="pre">pysewer.simplify.</span></span><span class="sig-name descname"><span class="pre">simplify_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">G</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/multidigraph.html#networkx.MultiDiGraph" title="(in NetworkX v3.6.1)"><span class="pre">MultiDiGraph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_rings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/multidigraph.html#networkx.MultiDiGraph" title="(in NetworkX v3.6.1)"><span class="pre">MultiDiGraph</span></a></span></span><a class="reference internal" href="../_modules/pysewer/simplify.html#simplify_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.simplify.simplify_graph" title="Link to this definition">#</a></dt>
+<dd><p>Simplify a graph’s topology by removing interstitial nodes.
+Simplify graph topology by removing all nodes that are not intersections
+or dead-ends. Create an edge directly between the end points that
+encapsulate them, but retain the geometry of the original edges, saved as
+an attribute in new edge. Some of the resulting consolidated edges may
+comprise multiple OSM ways, and if so, their multiple attribute values are
+stored as a list.
+:Parameters: * <strong>G</strong> (<em>networkx.MultiDiGraph</em>) – input graph</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>strict</strong> (<em>bool</em>) – if False, allow nodes to be end points even if they fail all other
+rules but have incident edges with different OSM IDs. Lets you keep
+nodes at elbow two-way intersections, but sometimes individual blocks
+have multiple OSM IDs within them too.</p></li>
+<li><p><strong>remove_rings</strong> (<em>bool</em>) – if True, remove isolated self-contained rings that have no endpoints</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>G</strong> – topologically simplified graph</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/multidigraph.html#networkx.MultiDiGraph" title="(in NetworkX v3.6.1)">networkx.MultiDiGraph</a></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="pysewer.simplify.get_essential_nodes">
+<span class="sig-prename descclassname"><span class="pre">pysewer.simplify.</span></span><span class="sig-name descname"><span class="pre">get_essential_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">G</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/simplify.html#get_essential_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.simplify.get_essential_nodes" title="Link to this definition">#</a></dt>
+<dd><p>Returns a list of essential nodes to build the simplified graph. This includes all junctions (degree &gt; 2), buildings, and connection points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>G</strong> (<em>networkx.Graph</em>) – NetworkX street graph with connected buildings.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of node keys.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">road_network</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">road_network</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">road_network</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">connection_node</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">connection_node</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">get_essential_nodes</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+<span class="go">[1, 2, 3, 5]</span>
+</pre></div>
+</div>
+</dd></dl>
+</section>
+<section id="generate-connection-graph">
+<h2>Generate Connection Graph<a class="headerlink" href="#generate-connection-graph" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+</tbody>
+</table>
+</div>
+<dl class="py class" id="module-2">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">pysewer.preprocessing.</span></span><span class="sig-name descname"><span class="pre">ModelDomain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dem</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">roads</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">buildings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">clustering</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pump_penalty</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connect_buildings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Class for preprocessing input data for the sewer network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dem</strong> (<em>str</em>) – Path to the digital elevation model file.</p></li>
+<li><p><strong>roads</strong> (<em>str</em>) – Path to the roads shapefile.</p></li>
+<li><p><strong>buildings</strong> (<em>str</em>) – Path to the buildings shapefile.</p></li>
+<li><p><strong>clustering</strong> (<em>str, optional</em>) – Clustering method for connecting buildings to the sewer network. Default is “centers”.</p></li>
+<li><p><strong>pump_penalty</strong> (<em>int, optional</em>) – Penalty for adding a pump to the sewer network. Default is 1000.</p></li>
+<li><p><strong>connect_buildings</strong> (<em>bool, optional</em>) – Whether to connect buildings to the sewer network. Default is True.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p><code class="docutils literal notranslate"><span class="pre">clustering</span></code> and <code class="docutils literal notranslate"><span class="pre">connect_buildings</span></code> are consumed here, during
+construction (the connection graph is built in <code class="docutils literal notranslate"><span class="pre">__init__</span></code>). If they
+come from a custom config, call <code class="docutils literal notranslate"><span class="pre">pysewer.set_custom_config(...)</span></code>
+<strong>before</strong> creating the ModelDomain — overrides applied afterwards
+cannot affect an already-built graph. <code class="docutils literal notranslate"><span class="pre">pump_penalty</span></code> is exempt: it is
+resolved from the current config when the connection graph is
+generated, so later config changes (or <code class="docutils literal notranslate"><span class="pre">set_pump_penalty</span></code>) do apply.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>roads</strong> (<a class="reference internal" href="#pysewer.preprocessing.Roads" title="pysewer.preprocessing.Roads"><em>Roads</em></a>) – Roads object.</p></li>
+<li><p><strong>buildings</strong> (<a class="reference internal" href="#pysewer.preprocessing.Buildings" title="pysewer.preprocessing.Buildings"><em>Buildings</em></a>) – Buildings object.</p></li>
+<li><p><strong>dem</strong> (<a class="reference internal" href="#pysewer.preprocessing.DEM" title="pysewer.preprocessing.DEM"><em>DEM</em></a>) – DEM object.</p></li>
+<li><p><strong>connection_graph</strong> (<em>nx.Graph</em>) – Graph representing the road network.</p></li>
+<li><p><strong>pump_penalty</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Penalty for adding a pump to the sewer network.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.pump_penalty">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pump_penalty</span></span><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.pump_penalty" title="Link to this definition">#</a></dt>
+<dd><p>Pump penalty used to weight pump-requiring edges during routing.</p>
+<p>Resolved from the current config at access time unless explicitly
+set (constructor argument or <code class="docutils literal notranslate"><span class="pre">set_pump_penalty</span></code>), so config
+overrides applied after the ModelDomain was created still take
+effect in <code class="docutils literal notranslate"><span class="pre">generate_connection_graph</span></code>.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.create_unsimplified_graph">
+<span class="sig-name descname"><span class="pre">create_unsimplified_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">roads_gdf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">GeoDataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/graph.html#networkx.Graph" title="(in NetworkX v3.6.1)"><span class="pre">Graph</span></a></span></span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.create_unsimplified_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.create_unsimplified_graph" title="Link to this definition">#</a></dt>
+<dd><p>Create an unsimplified graph from a GeoDataFrame of roads.
+:Parameters: <strong>roads_gdf</strong> (<em>gpd.GeoDataFrame</em>) – A GeoDataFrame containing road data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An unsimplified graph containing nodes and edges from the GeoDataFrame.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>nx.Graph</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.connect_buildings">
+<span class="sig-name descname"><span class="pre">connect_buildings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_connection_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clustering</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.connect_buildings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.connect_buildings" title="Link to this definition">#</a></dt>
+<dd><p>Connects the buildings in the network by adding nodes to the graph.
+:Parameters: * <strong>max_connection_length</strong> (<em>int, optional</em>) – The maximum distance between a building and the nearest street for it to be included in the cluster</p>
+<blockquote>
+<div><blockquote>
+<div><p>centers list. The default is 30.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p><strong>clustering</strong> (<em>str, optional</em>) – The method used to cluster the buildings. Can be “centers” or “none”. The default is “centers”.</p></li>
+</ul>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method adds nodes to the graph to connect the buildings in the network. It first gets the building points
+and then clusters them based on the specified method. If clustering is set to “centers”, it gets the cluster
+centers and finds the closest edges to them. It then adds nodes to the graph for each cluster center, with the
+closest edge as an attribute. If clustering is set to “none”, it simply adds nodes to the graph for each building.
+In both cases, it finds the closest edges to the buildings and adds nodes to the graph for each building, with
+the closest edge as an attribute.</p>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">network</span> <span class="o">=</span> <span class="n">Network</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">network</span><span class="o">.</span><span class="n">connect_buildings</span><span class="p">(</span><span class="n">max_connection_length</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">clustering</span><span class="o">=</span><span class="s2">"centers"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.add_node">
+<span class="sig-name descname"><span class="pre">add_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closest_edge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_attributes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.add_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.add_node" title="Link to this definition">#</a></dt>
+<dd><p>Adds a node to the connection graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>point</strong> (<em>shapely.geometry.Point</em>) – The point to add as a node.</p></li>
+<li><p><strong>node_type</strong> (<em>str</em>) – The type of node to add.</p></li>
+<li><p><strong>closest_edge</strong> (<em>shapely.geometry.LineString, optional</em>) – The closest edge to the point. Defaults to None.</p></li>
+<li><p><strong>node_attributes</strong> (<em>dict, optional</em>) – Additional attributes to add to the node. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method adds a node to the connection graph. If <cite>closest_edge</cite> is not provided, it finds the closest edge to
+the point and uses that as the <cite>closest_edge</cite>. It then disconnects edges from the node and adds the node to the
+connection graph. If there are any cluster centers, it connects the node to the nearest cluster center. If there
+are no cluster centers, it connects the node to the road network.</p>
+</div>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.connect_to_roadnetwork">
+<span class="sig-name descname"><span class="pre">connect_to_roadnetwork</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">G</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/graph.html#networkx.Graph" title="(in NetworkX v3.6.1)"><span class="pre">Graph</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn_point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">closest_edge</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_private_sewer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.connect_to_roadnetwork"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.connect_to_roadnetwork" title="Link to this definition">#</a></dt>
+<dd><p>Connects a new node to the road network by inserting a connection point on the closest edge and adjusting edges.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>G</strong> (<em>networkx.Graph</em>) – The road network graph.</p></li>
+<li><p><strong>new_node</strong> (<em>NodeTpye</em>) – The new node to be connected to the road network.</p></li>
+<li><p><strong>conn_point</strong> (<em>pysewer.Point</em>) – The point where the new node will be connected to the road network.</p></li>
+<li><p><strong>closest_edge</strong> (<em>pysewer.Edge</em>) – The closest edge to the new node.</p></li>
+<li><p><strong>add_private_sewer</strong> (<em>bool, optional</em>) – Whether to add a private sewer between the new node and the connection point. Defaults to True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the connection was successful, False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.generate_connection_graph">
+<span class="sig-name descname"><span class="pre">generate_connection_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><a class="reference external" href="https://networkx.org/documentation/stable/reference/classes/multidigraph.html#networkx.MultiDiGraph" title="(in NetworkX v3.6.1)"><span class="pre">MultiDiGraph</span></a></span></span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.generate_connection_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.generate_connection_graph" title="Link to this definition">#</a></dt>
+<dd><p>Generates a connection graph from the given connection data and returns it.
+This method simplifies the connection graph, removes any self loops, sets trench depth node attributes to 0,
+calculates the geometry, distance, profile, needs_pump, weight, and elevation attributes for each edge and node
+in the connection graph.</p>
+<section id="returns">
+<h3>Returns:<a class="headerlink" href="#returns" title="Link to this heading">#</a></h3>
+<dl class="simple">
+<dt>nx.MultiDiGraph</dt><dd><p>A directed graph representing the connections between the different points in the network.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.add_sink">
+<span class="sig-name descname"><span class="pre">add_sink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sink_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'wwtp'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.add_sink"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.add_sink" title="Link to this definition">#</a></dt>
+<dd><p>Adds a sink node to the graph at the specified location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sink_location</strong> (<em>tuple</em>) – A tuple containing the x and y coordinates of the sink location.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.reset_sinks">
+<span class="sig-name descname"><span class="pre">reset_sinks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.reset_sinks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.reset_sinks" title="Link to this definition">#</a></dt>
+<dd><p>Resets the sinks in the connection graph by setting their node_type attribute to an empty string.
+:returns: This method does not return anything.
+:rtype: None</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.set_sink_lowest">
+<span class="sig-name descname"><span class="pre">set_sink_lowest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidate_nodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.set_sink_lowest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.set_sink_lowest" title="Link to this definition">#</a></dt>
+<dd><p>Sets the sink node to the lowest point in the graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>candidate_nodes</strong> (<em>list, optional</em>) – A list of candidate nodes to consider for the sink node. If None, all nodes except buildings are considered.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition-notes admonition">
+<p class="admonition-title">Notes</p>
+<p>This method sets the sink node to the lowest point in the graph. If candidate_nodes is not None, only the nodes in candidate_nodes that are not buildings are considered.</p>
+</div>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.get_sinks">
+<span class="sig-name descname"><span class="pre">get_sinks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.get_sinks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.get_sinks" title="Link to this definition">#</a></dt>
+<dd><p>Returns a list of node keys for all wastewater treatment plants (wwtp) in the connection graph.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.set_pump_penalty">
+<span class="sig-name descname"><span class="pre">set_pump_penalty</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.set_pump_penalty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.set_pump_penalty" title="Link to this definition">#</a></dt>
+<dd><p>Set the pump penalty for the current instance of the ModelDomain class.
+:Parameters: <strong>pp</strong> (<em>float</em>) – The pump penalty to set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.get_buildings">
+<span class="sig-name descname"><span class="pre">get_buildings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.get_buildings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.get_buildings" title="Link to this definition">#</a></dt>
+<dd><p>Returns a list of node keys for all buildings in the connection graph.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pysewer.preprocessing.ModelDomain.connect_subgraphs">
+<span class="sig-name descname"><span class="pre">connect_subgraphs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pysewer/preprocessing.html#ModelDomain.connect_subgraphs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysewer.preprocessing.ModelDomain.connect_subgraphs" title="Link to this definition">#</a></dt>
+<dd><p>Identifies unconnected street subnetworks and connects them based on shortest distance</p>
+</dd></dl>
+</dd></dl>
+</section>
+</section>
+<div class="section ablog__blog_comments">
+</div>
+</article>
+<footer class="prev-next-footer d-print-none">
+<div class="prev-next-area">
+<a class="left-prev" href="index.html" title="previous page">
+<i class="fa-solid fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title">API reference</p>
+</div>
+</a>
+<a class="right-next" href="routing_solver.html" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title">Routing Solvers</p>
+</div>
+<i class="fa-solid fa-angle-right"></i>
+</a>
+</div>
+</footer>
+</div>
+<dialog id="pst-secondary-sidebar-modal"></dialog>
+<div class="bd-sidebar-secondary bd-toc" id="pst-secondary-sidebar"><div class="sidebar-secondary-items sidebar-secondary__inner">
+<div class="sidebar-secondary-item">
+<div class="page-toc tocsection onthispage" id="pst-page-navigation-heading-2">
+<i class="fa-solid fa-list"></i> On this page
+  </div>
+<nav aria-labelledby="pst-page-navigation-heading-2" class="page-toc" id="pst-page-toc-nav">
+<ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-import-and-preprocessing">Data import and preprocessing</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM"><code class="docutils literal notranslate"><span class="pre">DEM</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.get_elevation"><code class="docutils literal notranslate"><span class="pre">DEM.get_elevation()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.get_profile"><code class="docutils literal notranslate"><span class="pre">DEM.get_profile()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.reproject_dem"><code class="docutils literal notranslate"><span class="pre">DEM.reproject_dem()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.Properties"><code class="docutils literal notranslate"><span class="pre">DEM.Properties()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.file_path"><code class="docutils literal notranslate"><span class="pre">DEM.file_path</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.raster"><code class="docutils literal notranslate"><span class="pre">DEM.raster</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.no_dem"><code class="docutils literal notranslate"><span class="pre">DEM.no_dem</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.remove_nodata"><code class="docutils literal notranslate"><span class="pre">DEM.remove_nodata()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">DEM.get_elevation()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">DEM.get_profile()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.DEM.get_crs"><code class="docutils literal notranslate"><span class="pre">DEM.get_crs</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id2"><code class="docutils literal notranslate"><span class="pre">DEM.reproject_dem()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings"><code class="docutils literal notranslate"><span class="pre">Buildings</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings.get_gdf"><code class="docutils literal notranslate"><span class="pre">Buildings.get_gdf()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings.get_crs"><code class="docutils literal notranslate"><span class="pre">Buildings.get_crs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings.set_crs"><code class="docutils literal notranslate"><span class="pre">Buildings.set_crs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings.convert_to_points"><code class="docutils literal notranslate"><span class="pre">Buildings.convert_to_points()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Buildings.cluster_centers"><code class="docutils literal notranslate"><span class="pre">Buildings.cluster_centers()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads"><code class="docutils literal notranslate"><span class="pre">Roads</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads.get_nearest_point"><code class="docutils literal notranslate"><span class="pre">Roads.get_nearest_point()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads.get_gdf"><code class="docutils literal notranslate"><span class="pre">Roads.get_gdf()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads.get_crs"><code class="docutils literal notranslate"><span class="pre">Roads.get_crs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads.set_crs"><code class="docutils literal notranslate"><span class="pre">Roads.set_crs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.Roads.get_merged_roads"><code class="docutils literal notranslate"><span class="pre">Roads.get_merged_roads()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simplfy-graph">Simplfy Graph</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.simplify.simplify_graph"><code class="docutils literal notranslate"><span class="pre">simplify_graph()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.simplify.get_essential_nodes"><code class="docutils literal notranslate"><span class="pre">get_essential_nodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-connection-graph">Generate Connection Graph</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain"><code class="docutils literal notranslate"><span class="pre">ModelDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.pump_penalty"><code class="docutils literal notranslate"><span class="pre">ModelDomain.pump_penalty</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.create_unsimplified_graph"><code class="docutils literal notranslate"><span class="pre">ModelDomain.create_unsimplified_graph()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.connect_buildings"><code class="docutils literal notranslate"><span class="pre">ModelDomain.connect_buildings()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.add_node"><code class="docutils literal notranslate"><span class="pre">ModelDomain.add_node()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.connect_to_roadnetwork"><code class="docutils literal notranslate"><span class="pre">ModelDomain.connect_to_roadnetwork()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.generate_connection_graph"><code class="docutils literal notranslate"><span class="pre">ModelDomain.generate_connection_graph()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.add_sink"><code class="docutils literal notranslate"><span class="pre">ModelDomain.add_sink()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.reset_sinks"><code class="docutils literal notranslate"><span class="pre">ModelDomain.reset_sinks()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.set_sink_lowest"><code class="docutils literal notranslate"><span class="pre">ModelDomain.set_sink_lowest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.get_sinks"><code class="docutils literal notranslate"><span class="pre">ModelDomain.get_sinks()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.set_pump_penalty"><code class="docutils literal notranslate"><span class="pre">ModelDomain.set_pump_penalty()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.get_buildings"><code class="docutils literal notranslate"><span class="pre">ModelDomain.get_buildings()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pysewer.preprocessing.ModelDomain.connect_subgraphs"><code class="docutils literal notranslate"><span class="pre">ModelDomain.connect_subgraphs()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav></div>
+<div class="sidebar-secondary-item">
+<div class="tocsection sourcelink">
+<a href="../_sources/api_reference/preprocessing.rst.txt">
+<i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+</div>
+</div></div>
+</div>
+<footer class="bd-footer-content">
+</footer>
+</main>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script defer="" src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer="" src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+<footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+<div class="footer-items__start">
+<div class="footer-item">
+<p class="copyright">
+    
+      © Copyright 2022 - 2026, the pysewer developers from UFZ.
+      <br/>
+</p>
+</div>
+<div class="footer-item">
+<p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+</p>
+</div>
+</div>
+<div class="footer-items__end">
+<div class="footer-item">
+<p class="theme-version">
+<!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+</div>
+</div>
+</footer>
+</body>
+</html>
