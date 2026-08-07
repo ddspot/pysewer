@@ -172,7 +172,7 @@ def main():
     for cj in case_jsons:
         try:
             plot_case(cj)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"{cj.name}: plot failed — {type(exc).__name__}: {exc}")
 
 
