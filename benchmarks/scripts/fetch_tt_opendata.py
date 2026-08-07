@@ -131,15 +131,32 @@ def fetch_town(town, mosaic_path, max_buildings):
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"{slug}: geocoding + OSM download ...")
-    boundary = ox.geocode_to_gdf(town)
-    polygon = boundary.geometry.iloc[0]
+    try:
+        boundary = ox.geocode_to_gdf(town)
+        polygon = boundary.geometry.iloc[0]
+    except Exception:
+        # Nominatim has no polygon for some T&T settlements (e.g. Tobago
+        # towns): fall back to a 1.5 km buffer around the geocoded point
+        import geopandas as gpd
+        from shapely.geometry import Point
+
+        lat, lng = ox.geocoder.geocode(town)
+        boundary = gpd.GeoDataFrame(
+            geometry=[Point(lng, lat)], crs="EPSG:4326"
+        ).to_crs(UTM)
+        boundary["geometry"] = boundary.buffer(1500)
+        boundary = boundary.to_crs("EPSG:4326")
+        polygon = boundary.geometry.iloc[0]
+        print(f"{slug}: no boundary polygon — using 1.5 km point buffer")
 
     graph = ox.graph_from_polygon(polygon, network_type="drive", retain_all=True)
     roads = ox.graph_to_gdfs(graph, nodes=False)[["geometry"]].reset_index(drop=True)
     buildings = ox.features_from_polygon(polygon, tags={"building": True})
     buildings = buildings[buildings.geometry.notna()].copy()
+    # centroid in the projected CRS (geographic-CRS centroids are skewed)
+    buildings = buildings.to_crs(UTM)
     buildings["geometry"] = buildings.geometry.centroid
-    buildings = buildings[["geometry"]].reset_index(drop=True)
+    buildings = buildings[["geometry"]].reset_index(drop=True).to_crs("EPSG:4326")
 
     n_buildings = len(buildings)
     if n_buildings < 20:

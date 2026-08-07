@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: reviewer_full
 description: >
-  JOSS reviewer dataset, full extent (17k buildings — heavy; queued last).
-  Sink from the reviewer notebook.
+  JOSS reviewer dataset, full extent (heavy; queued last), clipped to the
+  DEM's valid-data footprint by stage_datasets.py. Sink from the reviewer
+  notebook.
 dem: data/from_reviewer/elevation.tif
-roads: data/from_reviewer/roads.geojson
-buildings: data/from_reviewer/buildings.geojson
+roads: work/benchmarks/reviewer/roads_full.gpkg
+buildings: work/benchmarks/reviewer/buildings_full.gpkg
 sink: [297022.3270521787, 5716792.940139463]
 design:
   diameters: [0.3, 0.4, 0.5]

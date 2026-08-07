@@ -16,7 +16,6 @@ from pathlib import Path
 
 import geopandas as gpd
 import rasterio
-from shapely.geometry import box
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORK = REPO_ROOT / "work" / "benchmarks"
@@ -24,22 +23,61 @@ WASWETA_SRC = Path("/Users/despot/Nextcloud/Shared with me/Wasweta_II_Test_Case"
 
 
 def stage_reviewer_reduced():
+    stage_reviewer(
+        dem="cropped_dem.tif", suffix="reduced", label="reviewer_reduced"
+    )
+
+
+def stage_reviewer_full():
+    stage_reviewer(dem="elevation.tif", suffix="full", label="reviewer_full")
+
+
+def valid_data_extent(dem_path, inner_buffer_m):
+    """Polygon of the DEM's valid (non-nodata) cells, shrunk inward so that
+    profile sampling near feature endpoints cannot step outside coverage."""
+    import numpy as np
+    from rasterio.features import shapes
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+
+    with rasterio.open(dem_path) as src:
+        data = src.read(1)
+        valid = np.isfinite(data)
+        if src.nodata is not None:
+            valid &= data != src.nodata
+        polys = [
+            shape(geom)
+            for geom, value in shapes(
+                valid.astype("uint8"), mask=valid, transform=src.transform
+            )
+            if value == 1
+        ]
+    return unary_union(polys).buffer(-inner_buffer_m)
+
+
+def stage_reviewer(dem, suffix, label):
     out = WORK / "reviewer"
     out.mkdir(parents=True, exist_ok=True)
-    roads_out = out / "roads_reduced.gpkg"
-    buildings_out = out / "buildings_reduced.gpkg"
+    roads_out = out / f"roads_{suffix}.gpkg"
+    buildings_out = out / f"buildings_{suffix}.gpkg"
     if roads_out.exists() and buildings_out.exists():
-        print("reviewer_reduced: already staged")
+        print(f"{label}: already staged")
         return
-    with rasterio.open(REPO_ROOT / "data/from_reviewer/cropped_dem.tif") as src:
-        extent = box(*src.bounds)
+    dem_path = REPO_ROOT / "data/from_reviewer" / dem
+    # 3-cell inner buffer (~77 m at 25.6 m resolution): keeps every staged
+    # feature well inside valid elevation coverage
+    extent = valid_data_extent(dem_path, inner_buffer_m=77)
     roads = gpd.read_file(REPO_ROOT / "data/from_reviewer/roads.geojson")
     buildings = gpd.read_file(REPO_ROOT / "data/from_reviewer/buildings.geojson")
-    gpd.clip(roads, extent).to_file(roads_out, driver="GPKG")
-    gpd.clip(buildings, extent).to_file(buildings_out, driver="GPKG")
+    gpd.clip(roads, extent).explode(index_parts=False).to_file(
+        roads_out, driver="GPKG"
+    )
+    clipped_buildings = gpd.clip(buildings, extent)
+    clipped_buildings = clipped_buildings[~clipped_buildings.geometry.is_empty]
+    clipped_buildings.to_file(buildings_out, driver="GPKG")
     print(
-        f"reviewer_reduced: staged {len(gpd.read_file(roads_out))} roads, "
-        f"{len(gpd.read_file(buildings_out))} buildings"
+        f"{label}: staged {len(gpd.read_file(roads_out))} roads, "
+        f"{len(clipped_buildings)} buildings"
     )
 
 
@@ -60,4 +98,5 @@ def stage_wasweta():
 
 if __name__ == "__main__":
     stage_reviewer_reduced()
+    stage_reviewer_full()
     stage_wasweta()
