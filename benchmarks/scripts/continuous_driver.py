@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 """Continuous benchmark driver: published pysewer (v0.1.20) vs current main
-across all cases — repo datasets, reviewer case, Wasweta II, the Elan
-French dataset, and Trinidad & Tobago open-data towns.
+across all cases — repo datasets, reviewer case, Wasweta II and the Elan
+French dataset, plus any locally generated cases dropped into
+work/benchmarks/cases_generated/ (e.g. open-data cases; not committed).
 
 Runs sequentially (fast cases first), survives per-case failures, and keeps
 a rolling log + report under work/benchmarks/results/. Intended to run in
@@ -74,14 +75,10 @@ def main():
             [py, str(SCRIPTS / "compare_versions.py"), str(case_path)],
         )
 
-    run_step(
-        "fetch Trinidad & Tobago open data",
-        [py, str(SCRIPTS / "fetch_tt_opendata.py")],
-    )
-
-    tt_cases = sorted(GENERATED.glob("tt_*.yaml"))
-    log(f"T&T cases ready: {[c.stem for c in tt_cases]}")
-    for case_path in tt_cases:
+    generated = sorted(GENERATED.glob("*.yaml"))
+    if generated:
+        log(f"generated cases: {[c.stem for c in generated]}")
+    for case_path in generated:
         run_step(
             f"compare {case_path.stem}",
             [py, str(SCRIPTS / "compare_versions.py"), str(case_path)],
