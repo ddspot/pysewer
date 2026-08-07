@@ -100,6 +100,37 @@ def main(spec_path):
                 "peak_flow_max_m3s": round(float(pipes["peak_flow"].max()), 6),
             }
         )
+
+        # geodata export for comparison plots: pipes + stations next to the
+        # result JSON (list-valued columns dropped — plots need attributes,
+        # not profiles)
+        import geopandas as gpd
+
+        geo_path = str(Path(spec["out"]).with_suffix("")) + ".gpkg"
+        keep = [
+            c
+            for c in ("geometry", "diameter", "pressurized", "peak_flow", "velocity", "d_over_D")
+            if c in pipes.columns
+        ]
+        pipes_out = pipes[keep].set_crs(roads.crs, allow_override=True)
+        pipes_out.to_file(geo_path, layer="pipes", driver="GPKG")
+        station_records = [
+            {"x": n[0], "y": n[1], "kind": kind}
+            for n, d in G.nodes(data=True)
+            for kind in ("pumping_station", "lifting_station")
+            if d.get(kind)
+        ]
+        if station_records:
+            stations = gpd.GeoDataFrame(
+                station_records,
+                geometry=gpd.points_from_xy(
+                    [r["x"] for r in station_records],
+                    [r["y"] for r in station_records],
+                ),
+                crs=roads.crs,
+            )
+            stations.to_file(geo_path, layer="stations", driver="GPKG")
+        result["geodata"] = geo_path
     except Exception as exc:
         result["error"] = f"{type(exc).__name__}: {exc}"
     result["runtime_s"] = round(time.time() - t0, 1)
