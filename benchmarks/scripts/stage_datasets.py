@@ -32,40 +32,43 @@ def stage_reviewer_full():
     stage_reviewer(dem="elevation.tif", suffix="full", label="reviewer_full")
 
 
+def stage_dem_nodata_fixed(src_path, out_path):
+    """Copy a DEM clearing a bogus nodata tag. The reviewer rasters declare
+    nodata=0.0, but the terrain legitimately spans -4..76 m, so sea-level
+    cells (exactly 0) were treated as holes — the source of the
+    'No Elevation Data' failures."""
+    if out_path.exists():
+        return out_path
+    with rasterio.open(src_path) as src:
+        meta = src.meta.copy()
+        meta.update(nodata=None)
+        with rasterio.open(out_path, "w", **meta) as dst:
+            dst.write(src.read())
+    return out_path
+
+
 def valid_data_extent(dem_path, inner_buffer_m):
-    """Polygon of the DEM's valid (non-nodata) cells, shrunk inward so that
-    profile sampling near feature endpoints cannot step outside coverage."""
-    import numpy as np
-    from rasterio.features import shapes
-    from shapely.geometry import shape
-    from shapely.ops import unary_union
+    """Polygon of the DEM extent, shrunk inward so that profile sampling
+    near feature endpoints cannot step outside coverage."""
+    from shapely.geometry import box
 
     with rasterio.open(dem_path) as src:
-        data = src.read(1)
-        valid = np.isfinite(data)
-        if src.nodata is not None:
-            valid &= data != src.nodata
-        polys = [
-            shape(geom)
-            for geom, value in shapes(
-                valid.astype("uint8"), mask=valid, transform=src.transform
-            )
-            if value == 1
-        ]
-    return unary_union(polys).buffer(-inner_buffer_m)
+        return box(*src.bounds).buffer(-inner_buffer_m)
 
 
 def stage_reviewer(dem, suffix, label):
     out = WORK / "reviewer"
     out.mkdir(parents=True, exist_ok=True)
+    dem_path = stage_dem_nodata_fixed(
+        REPO_ROOT / "data/from_reviewer" / dem, out / f"dem_{suffix}.tif"
+    )
     roads_out = out / f"roads_{suffix}.gpkg"
     buildings_out = out / f"buildings_{suffix}.gpkg"
     if roads_out.exists() and buildings_out.exists():
         print(f"{label}: already staged")
         return
-    dem_path = REPO_ROOT / "data/from_reviewer" / dem
     # 3-cell inner buffer (~77 m at 25.6 m resolution): keeps every staged
-    # feature well inside valid elevation coverage
+    # feature well inside elevation coverage
     extent = valid_data_extent(dem_path, inner_buffer_m=77)
     roads = gpd.read_file(REPO_ROOT / "data/from_reviewer/roads.geojson")
     buildings = gpd.read_file(REPO_ROOT / "data/from_reviewer/buildings.geojson")

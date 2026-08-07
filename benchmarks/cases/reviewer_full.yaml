@@ -5,7 +5,7 @@ description: >
   JOSS reviewer dataset, full extent (heavy; queued last), clipped to the
   DEM's valid-data footprint by stage_datasets.py. Sink from the reviewer
   notebook.
-dem: data/from_reviewer/elevation.tif
+dem: work/benchmarks/reviewer/dem_full.tif
 roads: work/benchmarks/reviewer/roads_full.gpkg
 buildings: work/benchmarks/reviewer/buildings_full.gpkg
 sink: [297022.3270521787, 5716792.940139463]

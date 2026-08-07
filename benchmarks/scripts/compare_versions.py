@@ -116,13 +116,25 @@ def run_worker(mode, case, sink, out_path, timeout_s):
     }
     spec_path = out_path.with_suffix(".spec.json")
     spec_path.write_text(json.dumps(spec, indent=2))
+    # remove any stale result: if the worker dies without writing (e.g. OOM
+    # kill), reading a leftover file would silently misreport the old run
+    out_path.unlink(missing_ok=True)
     try:
-        subprocess.run(
+        proc = subprocess.run(
             [sys.executable, str(WORKER), str(spec_path)],
             check=False,
             timeout=timeout_s,
             capture_output=True,
         )
+        if not out_path.exists():
+            out_path.write_text(
+                json.dumps(
+                    {
+                        "mode": mode,
+                        "error": f"worker died without result (exit {proc.returncode})",
+                    }
+                )
+            )
     except subprocess.TimeoutExpired:
         out_path.write_text(
             json.dumps({"mode": mode, "error": f"timeout after {timeout_s}s"})

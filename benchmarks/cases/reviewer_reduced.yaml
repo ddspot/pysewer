@@ -5,7 +5,7 @@ description: >
   JOSS reviewer dataset (UTM 31N), reduced to the cropped_dem extent
   (staged by stage_datasets.py from data/from_reviewer). Design settings
   from the reviewer's conf_settings.yaml.
-dem: data/from_reviewer/cropped_dem.tif
+dem: work/benchmarks/reviewer/dem_reduced.tif
 roads: work/benchmarks/reviewer/roads_reduced.gpkg
 buildings: work/benchmarks/reviewer/buildings_reduced.gpkg
 sink: lowest
