@@ -870,6 +870,12 @@ class ModelDomain:
         are no cluster centers, it connects the node to the road network.
 
         """
+        # A closest edge looked up in advance (get_closest_edge_multiple) is
+        # stale if an earlier insertion has split it; look it up again.
+        if closest_edge is not None and not self.connection_graph.has_edge(
+            *closest_edge.coords[:2]
+        ):
+            closest_edge = None
         # when called for single nodes, get closest edge:
         if closest_edge is None:
             edge_gdf = get_edge_gdf(self.connection_graph)
@@ -877,9 +883,15 @@ class ModelDomain:
             closest_edge = closest_edges([point], edge_gdf)[0]
         conn_point = nearest_points(closest_edge, point)[0]
         # disconnect edges from node
-        cluster_nodes = get_node_keys(
-            self.connection_graph, field="node_type", value="cluster_center"
-        )
+        # the point itself is never its own nearest cluster center (that made a
+        # self-loop and left the center without a road connection)
+        cluster_nodes = [
+            n
+            for n in get_node_keys(
+                self.connection_graph, field="node_type", value="cluster_center"
+            )
+            if n != (point.x, point.y)
+        ]
         if node_attributes is None:
             self.connection_graph.add_node((point.x, point.y), node_type=node_type)
         else:

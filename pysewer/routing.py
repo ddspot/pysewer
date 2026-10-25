@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 import itertools
+import warnings
 from collections.abc import Hashable
 from typing import Union
 
@@ -40,27 +41,60 @@ def rsph_tree_fast(
     """
     sewer_graph = nx.DiGraph(nx.create_empty_copy(connection_graph))
     terminals = get_node_keys(connection_graph, field="node_type", value=from_type)
-    subgraph_nodes = sink
-    while len(terminals) > 0:
-        try:
-            path = nx.dijkstra_path(
-                connection_graph, terminals[0], sink, weight="weight"
-            )
-            # add edges of path to sewer graph while keeping edge attributes
-            nx.add_path(sewer_graph, path)
-
-            edgesinpath = itertools.pairwise(path)
-            for e in edgesinpath:
-                nx.set_edge_attributes(
-                    sewer_graph,
-                    {(e[0], e[1]): connection_graph.get_edge_data(e[0], e[1])[0]},
-                )
-            subgraph_nodes = subgraph_nodes + path[1:-1]
-        except:
-            print("WARNING: no Path from Building " + str(terminals[0]) + "to sink")
-
-        terminals.remove(terminals[0])
+    # one sink node or a list of sink nodes
+    sinks = list(sink) if isinstance(sink, list) else [sink]
+    unrouted = []
+    for terminal in terminals:
+        # shortest path to the nearest reachable sink
+        path, cost = None, None
+        for s in sinks:
+            try:
+                p = nx.dijkstra_path(connection_graph, terminal, s, weight="weight")
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                continue
+            c = nx.path_weight(connection_graph, p, weight="weight")
+            if cost is None or c < cost:
+                path, cost = p, c
+        if path is None:
+            print("WARNING: no Path from Building " + str(terminal) + " to sink")
+            unrouted.append(terminal)
+            continue
+        # add edges of path to sewer graph while keeping edge attributes
+        nx.add_path(sewer_graph, path)
+        for e in itertools.pairwise(path):
+            data = connection_graph.get_edge_data(e[0], e[1])
+            if connection_graph.is_multigraph():
+                data = data[0]
+            nx.set_edge_attributes(sewer_graph, {(e[0], e[1]): data})
+    _report_unrouted(sewer_graph, unrouted, from_type, strict=False)
     return sewer_graph
+
+
+class UnroutedTerminalsError(ValueError):
+    """Raised by :func:`rsph_tree` with ``strict=True`` when terminals cannot reach a sink."""
+
+    def __init__(self, unrouted):
+        self.unrouted = list(unrouted)
+        super().__init__(
+            f"{len(self.unrouted)} terminal(s) cannot reach a sink: "
+            f"{self.unrouted[:5]}{' ...' if len(self.unrouted) > 5 else ''}"
+        )
+
+
+def _report_unrouted(sewer_graph, unrouted, from_type, strict):
+    """Store unrouted terminals in ``sewer_graph.graph`` and warn (or raise)."""
+    unrouted = sorted(set(unrouted), key=str)
+    sewer_graph.graph["unrouted_terminals"] = unrouted
+    if not unrouted:
+        return
+    if strict:
+        raise UnroutedTerminalsError(unrouted)
+    warnings.warn(
+        f"{len(unrouted)} {from_type} node(s) have no path to a sink and are not "
+        f"connected; they are listed in graph['unrouted_terminals']: "
+        f"{unrouted[:5]}{' ...' if len(unrouted) > 5 else ''}",
+        stacklevel=3,
+    )
 
 
 def rsph_tree(
@@ -68,6 +102,8 @@ def rsph_tree(
     sinks: list[NodeType],
     from_type: str = "building",
     skip_nodes: list[NodeType] | None = None,
+    *,
+    strict: bool = False,
 ) -> nx.DiGraph:
     """
     Returns the directed routed steiner tree that connects all terminal nodes to the sink using the repeated shortest path heuristic.
@@ -84,11 +120,17 @@ def rsph_tree(
         The type of the sink nodes, by default "wwtp".
     skip_nodes : List[NodeType], optional
         The nodes to skip in the routing, by default [].
+    strict : bool, optional, keyword-only
+        Raise :class:`UnroutedTerminalsError` (a ``ValueError``) if any terminal
+        cannot reach a sink, by default False.
 
     Returns
     -------
     nx.DiGraph
         The directed routed steiner tree that connects all terminal nodes to the sink using the repeated shortest path heuristic.
+        Terminals without a path to any sink stay in the graph as isolated
+        nodes; they are listed in ``graph["unrouted_terminals"]`` (empty list
+        if every terminal is connected) and a warning is issued.
     """
     # Create a new DiGraph with the same nodes and attributes as connection_graph
     if skip_nodes is None:
@@ -127,12 +169,16 @@ def rsph_tree(
     if len(subgraph_nodes) == 1:
         subgraph_nodes = subgraph_nodes * 2
 
-    # Ensure the graph is weakly connected
+    # Keep the components that contain a sink; terminals elsewhere cannot be
+    # routed and are reported instead of being dropped silently
+    unrouted = []
     if not nx.is_weakly_connected(connection_graph):
-        largest_wcc = max(nx.weakly_connected_components(connection_graph), key=len)
-        connection_graph = connection_graph.subgraph(largest_wcc).copy()
-        terminals = [t for t in terminals if t in largest_wcc]
-        subgraph_nodes = [s for s in subgraph_nodes if s in largest_wcc]
+        sink_set = set(sinks)
+        keep = set().union(*(c for c in wcc if c & sink_set))
+        connection_graph = connection_graph.subgraph(keep).copy()
+        unrouted = [t for t in terminals if t not in keep]
+        terminals = [t for t in terminals if t in keep]
+        subgraph_nodes = [s for s in subgraph_nodes if s in keep]
 
     all_paths = dict(nx.all_pairs_dijkstra_path(connection_graph))
     all_lengths = dict(nx.all_pairs_dijkstra_path_length(connection_graph))
@@ -146,6 +192,7 @@ def rsph_tree(
             )
         except ValueError as e:
             print(f"Error finding path: {e}")
+            unrouted.extend(terminals)
             break  # exit the loop if no viable terminal is found
 
         # Add edges of path to sewer graph while keeping edge attributes
@@ -176,6 +223,7 @@ def rsph_tree(
     print(f"Number of nodes in final sewer graph: {sewer_graph.number_of_nodes()}")
     print(f"Number of edges in final sewer graph: {sewer_graph.number_of_edges()}")
 
+    _report_unrouted(sewer_graph, unrouted, from_type, strict)
     return sewer_graph
 
 
@@ -186,16 +234,10 @@ def find_rsph_path(
     all_paths: dict,
     all_lengths: dict,
 ) -> list[NodeType]:
-    terminal_distances = []
-    closest_tree_node = []
+    # (distance, terminal, tree node) per terminal that reaches the tree;
+    # terminals that reach no tree node are skipped without shifting the others
+    candidates = []
     for terminal in terminals:
-        missing_nodes = [
-            node for node in subgraph_nodes if node not in all_lengths[terminal]
-        ]
-        if missing_nodes:
-            print(f"Terminal {terminal} missing distances to nodes: {missing_nodes}.")
-            continue
-
         distances = [
             all_lengths[terminal][node]
             for node in subgraph_nodes
@@ -215,17 +257,14 @@ def find_rsph_path(
                 )
             )
         ]
-        terminal_distances.append(min_dist)
-        closest_tree_node.append(tree_node)
+        candidates.append((min_dist, terminal, tree_node))
 
-    if not terminal_distances:
+    if not candidates:
         raise ValueError(
             f"No viable terminal found to connect to the subgraph nodes: {subgraph_nodes}."
         )
-    min_dist_global = min(terminal_distances)
-    result_index = terminal_distances.index(min_dist_global)
-    closest_terminal = terminals[result_index]
-    tree_node = closest_tree_node[result_index]
+    # first terminal with the smallest distance (same tie-break as before)
+    _, closest_terminal, tree_node = min(candidates, key=lambda c: c[0])
 
     if tree_node not in all_paths[closest_terminal]:
         raise ValueError(
