@@ -43,6 +43,12 @@ class TestOptimization:
 
     # test diameter using fast rsph
     def test_diameter_fast_rsph(self):
+        # every building is routed (the layout used to be empty)
+        assert self.layout_fast_rsph.graph["unrouted_terminals"] == []
+        assert self.layout_fast_rsph.number_of_edges() > 0
+        pysewer.estimate_peakflow(
+            self.layout_fast_rsph, inhabitants_dwelling=6, daily_wastewater_person=250
+        )
         self.sewer_graph = pysewer.calculate_hydraulic_parameters(
             self.layout_fast_rsph,
             sinks=[self.sink_coordinates],

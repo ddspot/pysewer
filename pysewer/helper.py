@@ -522,6 +522,10 @@ def get_sewer_info(G):
     dict
         A dictionary containing the following information:
         - Total Buildings: Total number of buildings in the network.
+        - Connected Buildings: Buildings connected to a sink.
+        - Unconnected Buildings: Buildings without a connection to a sink
+          (``graph["unrouted_terminals"]`` set by :func:`rsph_tree`, otherwise
+          buildings without any pipe).
         - Pressurized Sewer Length [m]: Total length of pressurized sewers in
           meters.
         - Gravity Sewer Length [m]: Total length of gravity sewers in meters.
@@ -534,6 +538,12 @@ def get_sewer_info(G):
     info = {}
     buildings = get_node_keys(G, field="node_type", value="building")
     info["Total Buildings"] = len(buildings)
+    if "unrouted_terminals" in G.graph:
+        unconnected = set(G.graph["unrouted_terminals"]) & set(buildings)
+    else:
+        unconnected = {n for n in buildings if G.degree(n) == 0}
+    info["Connected Buildings"] = len(buildings) - len(unconnected)
+    info["Unconnected Buildings"] = len(unconnected)
 
     # extract the presure and gravity sewer geodataframes
     p_sewer_gdf = get_edge_gdf(G, field="pressurized", value=True)

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `clustering: "centers"` no longer strands buildings. A cluster center
+  whose pre-computed closest road edge had already been split by an
+  earlier center failed to connect, linked to itself (self-loop) and,
+  with the buildings attached to it, formed an island without a road
+  link. `rsph_tree` then kept only the largest component and dropped
+  those buildings without a message (13 of 800 on the example data).
+  `add_node` now looks up a stale closest edge again and never treats a
+  node as its own nearest cluster center.
+- `rsph_tree` never drops terminals silently: buildings without a path
+  to a sink are listed in `graph["unrouted_terminals"]` with a warning,
+  and `strict=True` raises `UnroutedTerminalsError` (a `ValueError`).
+  It keeps every component that contains a sink instead of the largest
+  component, and `find_rsph_path` keeps terminals and distances aligned
+  when a terminal is skipped (previously the wrong terminal was chosen,
+  and with sinks in separate components nothing was routed).
+- `rsph_tree_fast` accepts a list of sinks as documented (it routed no
+  building at all for a list) and only treats a missing path as
+  unrouted; unrouted terminals are reported as in `rsph_tree`.
+
+### Added
+
+- `get_sewer_info` reports `Connected Buildings` and
+  `Unconnected Buildings` next to `Total Buildings`.
+
 ### Changed
 
 - Release workflow: a version tag now also creates the GitHub release
