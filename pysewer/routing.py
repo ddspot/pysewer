@@ -7,6 +7,7 @@ from collections.abc import Hashable
 from typing import Union
 
 import networkx as nx
+import numpy as np
 
 from .helper import get_node_keys
 
@@ -180,20 +181,36 @@ def rsph_tree(
         terminals = [t for t in terminals if t in keep]
         subgraph_nodes = [s for s in subgraph_nodes if s in keep]
 
-    all_paths = dict(nx.all_pairs_dijkstra_path(connection_graph))
-    all_lengths = dict(nx.all_pairs_dijkstra_path_length(connection_graph))
+    # Distances are only ever needed *from* terminals: one single-source
+    # Dijkstra per terminal, kept as a float64 row (T x V x 8 bytes) instead of
+    # all-pairs paths and lengths over every node (V^2 Python objects). The
+    # numbers are the ones all_pairs_dijkstra_path_length returns (it calls the
+    # same function per node), and the chosen path is recomputed with
+    # nx.dijkstra_path, which returns the same path as the all-pairs run, so the
+    # layout is identical to the all-pairs implementation (see
+    # tests/test_rsph_memory.py).
+    index, rows = _terminal_distance_rows(connection_graph, terminals)
+    node_at = list(index)
+    row_of = {t: r for r, t in enumerate(terminals)}
+    in_tree = np.zeros(len(index), dtype=bool)
+    in_tree[[index[n] for n in subgraph_nodes]] = True
+    # best[r]: distance from terminal r to the nearest tree node so far
+    best = rows[:, in_tree].min(axis=1) if rows.size else np.empty(0)
 
     print(f"Number of terminals (buildings) to process: {len(terminals)}")
 
     while terminals:
-        try:
-            path = find_rsph_path(
-                connection_graph, subgraph_nodes, terminals, all_paths, all_lengths
+        selected = _select_rsph_path(
+            connection_graph, subgraph_nodes, terminals, row_of, rows, best, in_tree, index, node_at
+        )
+        if selected is None:
+            print(
+                "Error finding path: No viable terminal found to connect to the "
+                f"subgraph nodes: {subgraph_nodes}."
             )
-        except ValueError as e:
-            print(f"Error finding path: {e}")
             unrouted.extend(terminals)
             break  # exit the loop if no viable terminal is found
+        path = selected
 
         # Add edges of path to sewer graph while keeping edge attributes
         # and propagate sink node in sewer graph attributes (edges and nodes)
@@ -218,6 +235,10 @@ def rsph_tree(
             )
         subgraph_nodes.extend(path[1:-1])
         subgraph_nodes = list(set(subgraph_nodes))  # Remove duplicates
+        new_nodes = [index[n] for n in path[1:-1]]
+        if new_nodes:
+            in_tree[new_nodes] = True
+            np.minimum(best, rows[:, new_nodes].min(axis=1), out=best)
         terminals.remove(path[0])
 
     print(f"Number of nodes in final sewer graph: {sewer_graph.number_of_nodes()}")
@@ -225,6 +246,39 @@ def rsph_tree(
 
     _report_unrouted(sewer_graph, unrouted, from_type, strict)
     return sewer_graph
+
+
+def _terminal_distance_rows(connection_graph, terminals, weight="weight"):
+    """``(index, rows)``: node -> column, and the shortest-path length from each
+    terminal (row, in ``terminals`` order) to every node (``inf`` = unreachable)."""
+    index = {n: i for i, n in enumerate(connection_graph.nodes)}
+    rows = np.full((len(terminals), len(index)), np.inf)
+    for r, terminal in enumerate(terminals):
+        lengths = nx.single_source_dijkstra_path_length(connection_graph, terminal, weight=weight)
+        rows[r, [index[n] for n in lengths]] = list(lengths.values())
+    return index, rows
+
+
+def _select_rsph_path(
+    connection_graph, subgraph_nodes, terminals, row_of, rows, best, in_tree, index, node_at
+):
+    """Next RSPH path, with the tie-breaks of :func:`find_rsph_path`: the first
+    terminal (in ``terminals`` order) with the smallest distance to the tree, to
+    the first tree node (in ``subgraph_nodes`` order) at that distance. ``None``
+    when no terminal reaches the tree."""
+    distances = best[[row_of[t] for t in terminals]]
+    if not np.isfinite(distances).any():
+        return None
+    k = int(np.argmin(distances))  # first occurrence of the minimum
+    terminal, min_dist = terminals[k], distances[k]
+    row = rows[row_of[terminal]]
+    at_min = np.flatnonzero((row == min_dist) & in_tree)
+    if len(at_min) == 1:  # the usual case: no tie, no scan
+        tree_node = node_at[int(at_min[0])]
+    else:
+        columns = set(at_min.tolist())
+        tree_node = next(n for n in subgraph_nodes if index[n] in columns)
+    return nx.dijkstra_path(connection_graph, terminal, tree_node, weight="weight")
 
 
 def find_rsph_path(
