@@ -3,7 +3,7 @@
 
 [project]
 name = "pysewer"
-version = "0.3.0"
+version = "0.3.1"
 description = "A Python package for automated routing and optimization of sewer networks"
 readme = "README.md"
 requires-python = ">=3.10"
