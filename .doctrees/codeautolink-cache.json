@@ -1,0 +1,124 @@
+{
+  "about/index": [],
+  "api_reference/config_settings": [
+    {
+      "source": "pysewer.set_custom_config(custom_path=\"my_settings.yaml\")  # 1st\nmd = pysewer.ModelDomain(dem, roads, buildings)            # 2nd",
+      "names": [],
+      "example": {
+        "document": "api_reference/config_settings",
+        "ref_id": "configuration-setting",
+        "headings": [
+          "Configuration Setting"
+        ]
+      },
+      "doc_lineno": 9
+    }
+  ],
+  "api_reference/export": [],
+  "api_reference/index": [],
+  "api_reference/optimization": [
+    {
+      "source": "Hydraulic Design and Optimisation\n================================",
+      "names": [],
+      "example": {
+        "document": "api_reference/optimization",
+        "ref_id": "hydraulic-design-and-optimisation",
+        "headings": [
+          "Hydraulic Design and Optimisation"
+        ]
+      },
+      "doc_lineno": null
+    },
+    {
+      "source": "Calibration tip\n--------------",
+      "names": [],
+      "example": {
+        "document": "api_reference/optimization",
+        "ref_id": "returns",
+        "headings": [
+          "Hydraulic Design and Optimisation",
+          "Notes",
+          "Notes"
+        ]
+      },
+      "doc_lineno": null
+    },
+    {
+      "source": "Calibration tip\n--------------",
+      "names": [],
+      "example": {
+        "document": "api_reference/optimization",
+        "ref_id": "returns",
+        "headings": [
+          "Hydraulic Design and Optimisation",
+          "Notes",
+          "Notes"
+        ]
+      },
+      "doc_lineno": null
+    }
+  ],
+  "api_reference/preprocessing": [
+    {
+      "source": "Methods:\n-------",
+      "names": [],
+      "example": {
+        "document": "api_reference/preprocessing",
+        "ref_id": "methods",
+        "headings": [
+          "Preprocessing",
+          "Data import and preprocessing",
+          "Methods:"
+        ]
+      },
+      "doc_lineno": null
+    },
+    {
+      "source": ">>> G = nx.Graph()\n>>> G.add_node(1, road_network=True)\n>>> G.add_node(2, road_network=True)\n>>> G.add_node(3, road_network=False)\n>>> G.add_node(4, connection_node=True)\n>>> G.add_node(5, connection_node=False)\n>>> G.add_edge(1, 2)\n>>> G.add_edge(2, 3)\n>>> G.add_edge(2, 4)\n>>> G.add_edge(4, 5)\n>>> get_essential_nodes(G)\n[1, 2, 3, 5]",
+      "names": [],
+      "example": {
+        "document": "api_reference/preprocessing",
+        "ref_id": "simplfy-graph",
+        "headings": [
+          "Preprocessing",
+          "Simplfy Graph"
+        ]
+      },
+      "doc_lineno": 10
+    },
+    {
+      "source": ">>> network = Network()\n>>> network.connect_buildings(max_connection_length=50, clustering=\"centers\")",
+      "names": [],
+      "example": {
+        "document": "api_reference/preprocessing",
+        "ref_id": "generate-connection-graph",
+        "headings": [
+          "Preprocessing",
+          "Generate Connection Graph",
+          "Notes",
+          "Notes"
+        ]
+      },
+      "doc_lineno": 19
+    }
+  ],
+  "api_reference/routing_solver": [],
+  "api_reference/utilities": [
+    {
+      "source": ">>> get_path_distance([(0, 0), (3, 4), (7, 1)])\n9.848857801796104",
+      "names": [],
+      "example": {
+        "document": "api_reference/utilities",
+        "ref_id": "utilities",
+        "headings": [
+          "Utilities"
+        ]
+      },
+      "doc_lineno": 10
+    }
+  ],
+  "api_reference/visualisation": [],
+  "examples/index": [],
+  "index": [],
+  "install": []
+}
