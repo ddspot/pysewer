@@ -5,8 +5,8 @@ message: >-
   If you use this software, please cite both the software itself and the
   JOSS article (see preferred-citation).
 type: software
-version: 0.3.0
-date-released: "2026-10-21"
+version: 0.3.1
+date-released: "2026-10-25"
 title: "pysewer: A Python Library for Sewer Network Generation in Data Scarce Regions"
 abstract: >-
   Pysewer is a sewer network generator for planning wastewater collection

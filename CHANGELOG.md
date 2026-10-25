@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-25
+
+Bug-fix release: buildings are no longer left unconnected without a
+message.
+
 ### Fixed
 
 - `clustering: "centers"` no longer strands buildings. A cluster center
