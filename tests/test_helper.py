@@ -64,8 +64,8 @@ def test_remove_third_dimension():
     p = Point(0, 0, 1)
     assert remove_third_dimension(p).wkt == "POINT (0 0)"
 
-    l = LineString([(0, 0, 1), (1, 1, 2)])
-    assert remove_third_dimension(l).wkt == "LINESTRING (0 0, 1 1)"
+    line = LineString([(0, 0, 1), (1, 1, 2)])
+    assert remove_third_dimension(line).wkt == "LINESTRING (0 0, 1 1)"
 
     poly = Polygon([(0, 0, 1), (1, 1, 2), (2, 0, 3)])
     assert remove_third_dimension(poly).wkt == "POLYGON ((0 0, 1 1, 2 0, 0 0))"

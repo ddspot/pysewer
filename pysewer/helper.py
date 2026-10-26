@@ -13,8 +13,19 @@ import numpy as np
 import pandas as pd
 import shapely
 from scipy.spatial import cKDTree, distance
-from shapely.geometry import *
-from shapely.geometry import LineString, Point
+
+# star import kept so names such as pysewer.box stay available via `from .helper import *`
+from shapely.geometry import *  # noqa: F403
+from shapely.geometry import (
+    GeometryCollection,
+    LinearRing,
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 
 
 def get_upstream_nodes(G: nx.DiGraph, start_node, field: str, value: str) -> list:
@@ -249,12 +260,13 @@ def get_edge_gdf(
     if not edges:
         return gpd.GeoDataFrame()
 
+    crs = G.graph.get("crs")
     data = [G[edge[0]][edge[1]] for edge in edges]
 
     if detailed:
-        return gpd.GeoDataFrame(data)
+        return gpd.GeoDataFrame(data, crs=crs)
     else:
-        return gpd.GeoDataFrame(geometry=[LineString(e) for e in edges])
+        return gpd.GeoDataFrame(geometry=[LineString(e) for e in edges], crs=crs)
 
 
 def get_node_gdf(G: nx.Graph, field=None, value=None) -> gpd.GeoDataFrame:
@@ -291,7 +303,9 @@ def get_node_gdf(G: nx.Graph, field=None, value=None) -> gpd.GeoDataFrame:
     try:
         x, y = zip(*coord_tuples, strict=False)
         data = [G.nodes(data=True)[n] for n in coord_tuples]
-        gdf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(x, y))
+        gdf = gpd.GeoDataFrame(
+            data, geometry=gpd.points_from_xy(x, y), crs=G.graph.get("crs")
+        )
         if "geometry" not in gdf.columns:
             raise ValueError("No geometry column found in the GeoDataFrame.")
 
@@ -508,6 +522,17 @@ def is_valid_geometry(geometry):
     return geometry.is_valid and not geometry.is_empty
 
 
+def _edge_length(G: nx.Graph, u, v) -> float:
+    """Length of edge (u, v) along its ``geometry``; the straight line if it has none."""
+    data = G.get_edge_data(u, v)
+    if G.is_multigraph():
+        data = next(iter(data.values()))
+    geometry = data.get("geometry")
+    if isinstance(geometry, LineString):
+        return geometry.length
+    return math.dist(u, v)
+
+
 def get_sewer_info(G):
     """
     Returns a dictionary with information about the sewer network.
@@ -527,8 +552,9 @@ def get_sewer_info(G):
           (``graph["unrouted_terminals"]`` set by :func:`rsph_tree`, otherwise
           buildings without any pipe).
         - Pressurized Sewer Length [m]: Total length of pressurized sewers in
-          meters.
-        - Gravity Sewer Length [m]: Total length of gravity sewers in meters.
+          meters, measured along the pipes.
+        - Gravity Sewer Length [m]: Total length of gravity sewers in meters,
+          measured along the pipes.
         - Lifting Stations: Total number of lifting stations in the network.
         - Pumping Stations: Total number of pumping stations in the network
           (excluding those located in buildings).
@@ -545,15 +571,15 @@ def get_sewer_info(G):
     info["Connected Buildings"] = len(buildings) - len(unconnected)
     info["Unconnected Buildings"] = len(unconnected)
 
-    # extract the presure and gravity sewer geodataframes
-    p_sewer_gdf = get_edge_gdf(G, field="pressurized", value=True)
-    g_sewer_gdf = get_edge_gdf(G, field="pressurized", value=False)
-    info["Pressurized Sewer Length [m]"] = (
-        round(p_sewer_gdf.geometry.length.sum()) if not p_sewer_gdf.empty else 0
-    )
-    info["Gravity Sewer Length [m]"] = (
-        round(g_sewer_gdf.geometry.length.sum()) if not g_sewer_gdf.empty else 0
-    )
+    # lengths along each pipe's geometry (the road it follows), not the
+    # straight line between its end nodes
+    def _length(field_value):
+        return round(
+            sum(_edge_length(G, u, v) for u, v in get_edge_keys(G, "pressurized", field_value))
+        )
+
+    info["Pressurized Sewer Length [m]"] = _length(True)
+    info["Gravity Sewer Length [m]"] = _length(False)
 
     # extract the number of lifting and pumping stations
     pumps = get_node_keys(G, field="pumping_station", value=True)

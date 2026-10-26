@@ -2,16 +2,18 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 import itertools
+import logging
 import warnings
 from collections.abc import Hashable
-from typing import Union
 
 import networkx as nx
 import numpy as np
 
 from .helper import get_node_keys
 
-NodeType = Union[int, str, Hashable]
+logger = logging.getLogger(__name__)
+
+NodeType = int | str | Hashable
 
 NodeType_t = tuple[float, float]
 
@@ -57,7 +59,7 @@ def rsph_tree_fast(
             if cost is None or c < cost:
                 path, cost = p, c
         if path is None:
-            print("WARNING: no Path from Building " + str(terminal) + " to sink")
+            logger.debug("No path from building %s to a sink", terminal)
             unrouted.append(terminal)
             continue
         # add edges of path to sewer graph while keeping edge attributes
@@ -143,7 +145,7 @@ def rsph_tree(
 
     # Print number of weakly connected components
     wcc = list(nx.weakly_connected_components(connection_graph))
-    print(f"Number of weakly connected components: {len(wcc)}")
+    logger.info("Weakly connected components: %d", len(wcc))
 
     # TODO: add virtual path, adressing the issue of multiple components in the graph slows down the computation, especially for larger networks. need to be tested
     # If there are multiple components, try to connect them
@@ -197,16 +199,15 @@ def rsph_tree(
     # best[r]: distance from terminal r to the nearest tree node so far
     best = rows[:, in_tree].min(axis=1) if rows.size else np.empty(0)
 
-    print(f"Number of terminals (buildings) to process: {len(terminals)}")
+    logger.info("Terminals (buildings) to route: %d", len(terminals))
 
     while terminals:
         selected = _select_rsph_path(
             connection_graph, subgraph_nodes, terminals, row_of, rows, best, in_tree, index, node_at
         )
         if selected is None:
-            print(
-                "Error finding path: No viable terminal found to connect to the "
-                f"subgraph nodes: {subgraph_nodes}."
+            logger.debug(
+                "No remaining terminal can reach the tree; %d left unrouted", len(terminals)
             )
             unrouted.extend(terminals)
             break  # exit the loop if no viable terminal is found
@@ -241,8 +242,11 @@ def rsph_tree(
             np.minimum(best, rows[:, new_nodes].min(axis=1), out=best)
         terminals.remove(path[0])
 
-    print(f"Number of nodes in final sewer graph: {sewer_graph.number_of_nodes()}")
-    print(f"Number of edges in final sewer graph: {sewer_graph.number_of_edges()}")
+    logger.info(
+        "Sewer graph: %d nodes, %d edges",
+        sewer_graph.number_of_nodes(),
+        sewer_graph.number_of_edges(),
+    )
 
     _report_unrouted(sewer_graph, unrouted, from_type, strict)
     return sewer_graph

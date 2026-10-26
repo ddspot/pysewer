@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 
+import logging
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -11,6 +13,8 @@ from rasterio.plot import plotting_extent
 
 from .config.manager import get_config
 from .helper import get_edge_gdf, get_node_gdf
+
+logger = logging.getLogger(__name__)
 
 
 def _hillshade(arr: np.ndarray, azimuth: float = 30, altitude: float = 30):
@@ -152,8 +156,7 @@ def plot_model_domain(
     if plot_sewer:
         # check if the field for the sewer graph prvided is not empty
         if get_node_gdf(sewer_graph, field="pumping_station", value=True).empty:
-            print("No pumping station in the sewer graph")
-            print("Plotting sewer graph without pumping station")
+            logger.info("No pumping station in the sewer graph; plotting without one")
             get_edge_gdf(sewer_graph, detailed=True).plot(
                 ax=ax, color="b", markersize=50, zorder=5, label="Sewer Layout"
             )

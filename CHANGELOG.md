@@ -13,6 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Dijkstra per terminal and gives the same layout as 0.3.1, 20–40×
   faster and with a small fraction of the memory (Chaguanas 14.3 →
   0.3 GB).
+- pysewer logs instead of printing. Messages go to the `pysewer.*`
+  loggers: run summaries at INFO, the per-edge pump/gravity lines
+  (one per connection-graph edge) at DEBUG, problems at WARNING. Use
+  `logging.basicConfig(level=logging.INFO)` to see the summaries.
+- `get_sewer_info` measures gravity and pressurized lengths along each
+  pipe's geometry instead of the straight line between its end nodes.
+  The network does not change, but the reported lengths grow: gravity
+  by 0.6–1.8 % on the benchmark cases, Couva's pressurized mains by
+  13 %.
+
+### Added
+
+- Graphs from `ModelDomain` carry the input CRS in `graph["crs"]`, and
+  routing keeps it. `get_edge_gdf` and `get_node_gdf` return
+  GeoDataFrames with that CRS, and `write_gdf_to_gpkg`,
+  `write_gdf_to_shp` and `export_sewer_network` write it to the file
+  (0.3.1 wrote GeoPackage and Shapefile layers without a CRS).
 
 ### Fixed
 

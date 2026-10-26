@@ -11,6 +11,7 @@ The option saving the data as a parquet file is added.
 """
 
 import json
+import logging
 
 import fiona
 import geopandas as gpd
@@ -18,6 +19,8 @@ import pandas.api.types as ptypes
 from fiona.collection import CRS
 
 from .config.manager import get_config
+
+logger = logging.getLogger(__name__)
 
 
 def map_dtype_to_fiona(dtype):
@@ -106,6 +109,15 @@ def generate_schema(gdf: gpd.GeoDataFrame):
     return schema
 
 
+def _to_wkt(crs) -> str | None:
+    """WKT for a pyproj/fiona CRS, an EPSG code or string, or None."""
+    if crs is None:
+        return None
+    if hasattr(crs, "to_wkt"):
+        return crs.to_wkt()
+    return CRS.from_user_input(crs).to_wkt()
+
+
 def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=None, crs: CRS | None=None):
     """
     Write a GeoDataFrame to a GeoPackage (GPKG) file using Fiona, converting lists of tuples to JSON strings.
@@ -119,7 +131,7 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
     layer: str (optional)
         The layer name inside the GPKG file. If no layer name is specified the file name is used.
     crs: CRS (optional)
-        The layer CRS
+        The layer CRS. Defaults to the CRS of ``gdf``.
 
     Returns
     -------
@@ -143,7 +155,11 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
     schema = generate_schema(gdf)
 
     # Open a new GPKG file in write mode
-    with fiona.open(filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs=crs) as dst:
+    crs = crs if crs is not None else gdf.crs
+    crs_wkt = _to_wkt(crs)
+    with fiona.open(
+        filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs_wkt=crs_wkt
+    ) as dst:
         for _, row in gdf.iterrows():
             feature = {
                 "geometry": row["geometry"].__geo_interface__,
@@ -185,7 +201,10 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
     schema = generate_schema(gdf)
 
     # Open a new SHP file in write mode
-    with fiona.open(filepath, mode="w", driver="ESRI Shapefile", schema=schema) as dst:
+    crs_wkt = _to_wkt(gdf.crs)
+    with fiona.open(
+        filepath, mode="w", driver="ESRI Shapefile", schema=schema, crs_wkt=crs_wkt
+    ) as dst:
         for _, row in gdf.iterrows():
             feature = {
                 "geometry": row["geometry"].__geo_interface__,
@@ -196,7 +215,7 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
             try:
                 dst.write(feature)
             except Exception as e:
-                print(f"Error writing feature to SHP file: {e}")
+                logger.warning("Error writing feature to SHP file: %s", e)
 
 
 def export_sewer_network(
@@ -243,4 +262,4 @@ def export_sewer_network(
         gdf.to_parquet(
             filepath, index=False
         )  # index set false to avoid AttributeError: module 'pandas' has no attribute 'Int64Index'
-    print(f"Successfully exported sewer network to {filepath}.")
+    logger.info("Exported sewer network to %s", filepath)

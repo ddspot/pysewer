@@ -3,11 +3,11 @@
 
 # Importing everything allows to use "import pysewer" and then access all functions on the same level e.g. pysewer.ModelDomain()
 from .config.manager import get_config, set_config
-from .export import *
-from .helper import *
-from .optimization import *
-from .preprocessing import *
-from .routing import *
+from .export import *  # noqa: F403
+from .helper import *  # noqa: F403
+from .optimization import *  # noqa: F403
+from .preprocessing import *  # noqa: F403
+from .routing import *  # noqa: F403
 
 
 def __getattr__(name):
