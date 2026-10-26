@@ -10,8 +10,10 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import rasterio as rio
+import rasterio.warp
 import shapely
 from pyproj.crs import CRS
+from rasterio.io import MemoryFile
 from shapely.geometry import (
     LineString,
     MultiLineString,
@@ -74,6 +76,9 @@ class DEM:
     file_path: str | None = None
     raster: rio.DatasetReader = field(init=False, default=None)
     no_dem: bool = field(init=False, default=True)
+    # in-memory copy that self.raster reads from once the DEM has been edited;
+    # the file at file_path is never written
+    _memfile: MemoryFile | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
         if self.file_path:
@@ -86,6 +91,8 @@ class DEM:
     def remove_nodata(self, fill_value: float = 0):
         """
         Removes or replaces nodata values in the DEM raster.
+
+        The result is kept in memory; the file at ``file_path`` is not changed.
 
         Parameters
         ----------
@@ -100,25 +107,26 @@ class DEM:
         if self.no_dem:
             raise ValueError("No DEM loaded, cannot remove nodata values")
 
-        with rio.open(self.file_path) as src:
-            data = src.read(1)
-            nodata = src.nodata
+        src = self.raster
+        nodata = src.nodata
+        if nodata is None:
+            return
+        data = src.read()
+        data[data == nodata] = fill_value
+        kwargs = src.meta.copy()
+        kwargs.update({"nodata": fill_value})
+        self._load_in_memory(data, kwargs)
 
-            if nodata is not None:
-                data[data == nodata] = fill_value
-
-                kwargs = src.meta.copy()
-                kwargs.update(
-                    {
-                        "nodata": fill_value,
-                    }
-                )
-
-                with rio.open(self.file_path, "w", **kwargs) as dst:
-                    dst.write(data, 1)
-
-        # Reload the raster
-        self.raster = rio.open(self.file_path)
+    def _load_in_memory(self, data, kwargs):
+        """Point ``self.raster`` at an in-memory raster holding ``data``."""
+        memfile = MemoryFile()
+        with memfile.open(**kwargs) as dst:
+            dst.write(data)
+        self.raster.close()
+        if self._memfile is not None:
+            self._memfile.close()
+        self._memfile = memfile
+        self.raster = memfile.open()
 
     def get_elevation(self, point: shapely.geometry.Point):
         """
@@ -212,6 +220,8 @@ class DEM:
         """
         Reprojects the DEM raster to the given CRS.
 
+        The result is kept in memory; the file at ``file_path`` is not changed.
+
         Parameters
         ----------
         crs : CRS
@@ -225,36 +235,33 @@ class DEM:
         if self.no_dem:
             raise ValueError("No DEM loaded, cannot reproject DEM")
 
-        with rio.open(self.file_path) as src:
-            transform, width, height = rio.warp.calculate_default_transform(
-                src.crs, crs, src.width, src.height, *src.bounds
+        src = self.raster
+        transform, width, height = rio.warp.calculate_default_transform(
+            src.crs, crs, src.width, src.height, *src.bounds
+        )
+        kwargs = src.meta.copy()
+        kwargs.update(
+            {
+                "crs": crs,
+                "transform": transform,
+                "width": width,
+                "height": height,
+                "nodata": 0,
+            }
+        )
+        data = np.zeros((src.count, height, width), dtype=src.dtypes[0])
+        for i in range(src.count):
+            rio.warp.reproject(
+                source=rio.band(src, i + 1),
+                destination=data[i],
+                src_transform=src.transform,
+                src_crs=src.crs,
+                dst_transform=transform,
+                dst_crs=crs,
+                dst_nodata=0,
+                resampling=rio.warp.Resampling.nearest,
             )
-            kwargs = src.meta.copy()
-            kwargs.update(
-                {
-                    "crs": crs,
-                    "transform": transform,
-                    "width": width,
-                    "height": height,
-                    "nodata": 0,
-                }
-            )
-
-            # create a new file or overwrite the exisiting DEM with reprojected crs
-            with rio.open(self.file_path, "w", **kwargs) as dst:
-                for i in range(1, src.count + 1):
-                    rio.warp.reproject(
-                        source=rio.band(src, i),
-                        destination=rio.band(dst, i),
-                        src_transform=src.transform,
-                        src_crs=src.crs,
-                        dst_transform=transform,
-                        dst_crs=crs,
-                        resampling=rio.warp.Resampling.nearest,
-                    )
-
-        # reload the raster
-        self.raster = rio.open(self.file_path)
+        self._load_in_memory(data, kwargs)
 
 
 class Roads:
@@ -934,18 +941,15 @@ class ModelDomain:
             new_node (NodeTpye): The new node to be connected to the road network.
             conn_point (pysewer.Point): The point where the new node will be connected to the road network.
             closest_edge (pysewer.Edge): The closest edge to the new node.
-            add_private_sewer (bool, optional): Whether to add a private sewer between the new node and the connection point. Defaults to True.
+            add_private_sewer (bool, optional): Ignored. The building is always
+                linked to the road by an edge flagged ``private_sewer=True``, since
+                without it the building cannot be routed.
+                ``preprocessing.add_private_sewer`` only decides whether
+                ``calculate_hydraulic_parameters`` designs these edges.
 
         Returns:
             bool: True if the connection was successful, False otherwise.
         """
-        config = get_config()
-        add_private_sewer = (
-            config.preprocessing.add_private_sewer
-            if add_private_sewer is None
-            else add_private_sewer
-        )
-
         u = closest_edge.coords[0]
         v = closest_edge.coords[1]
         # inserts new connection point on a edge and adjusts edges
@@ -958,12 +962,11 @@ class ModelDomain:
         # add edges
         G.add_edge(u, (conn_point.x, conn_point.y))
         G.add_edge((conn_point.x, conn_point.y), v)
-        if add_private_sewer:
-            G.add_edge(
-                (new_node.x, new_node.y),
-                (conn_point.x, conn_point.y),
-                private_sewer=True,
-            )
+        G.add_edge(
+            (new_node.x, new_node.y),
+            (conn_point.x, conn_point.y),
+            private_sewer=True,
+        )
         return True
 
     def generate_connection_graph(self) -> nx.MultiDiGraph:

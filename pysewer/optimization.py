@@ -180,10 +180,10 @@ def reverse_bfs(G, sink: str, include_private_sewer: bool = True):
         A tuple representing an edge in the graph, in the form (source, target)
     """
     if not include_private_sewer:
-        # reduce graph
-        buildings = get_node_keys(G, field="node_type", value="building")
-        # remove buildings
-        G.remove_nodes_from(buildings)
+        # skip buildings (and with them the private sewers) in a view; removing
+        # them from G deleted the buildings from the caller's network
+        buildings = set(get_node_keys(G, field="node_type", value="building"))
+        G = G.subgraph(n for n in G.nodes if n not in buildings)
     # We start from the sink in reversed graph direction
     bfs_edges = list(nx.edge_bfs(G, sink, orientation="reverse"))
     # We then flip the list and return the reversed edges to start from sources
@@ -281,6 +281,13 @@ def calculate_hydraulic_parameters(
     nx.set_edge_attributes(G, False, name="pressurized")
     edge_counter = 0
     buildings = get_node_keys(G, field="node_type", value="building")
+    if not include_private_sewer:
+        # house connections are not designed: pressurized=None keeps them out
+        # of the gravity and pressurized sewer lengths and plots
+        building_set = set(buildings)
+        for u, v in G.edges():
+            if u in building_set or v in building_set:
+                G.edges[u, v]["pressurized"] = None
     onsite_nodes = [n for n in G.nodes() if G.degree(n) == 0 and n in buildings]
     print(len(onsite_nodes))
     node_attrs = {n: {"onsite": True} for n in onsite_nodes}
