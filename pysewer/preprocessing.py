@@ -12,7 +12,14 @@ import numpy as np
 import rasterio as rio
 import shapely
 from pyproj.crs import CRS
-from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
+from shapely.geometry import (
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 from shapely.ops import nearest_points
 from sklearn.cluster import AgglomerativeClustering
 

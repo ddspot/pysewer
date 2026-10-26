@@ -63,5 +63,5 @@ def test_building_exactly_at_max_connection_length():
 
 @pytest.mark.parametrize("points", [[], [(0, 5)], [(0, 100)]])
 def test_fewer_than_two_far_buildings(points):
-    centers = _buildings(points + [(200, 5)]).cluster_centers(MAX_LEN)
+    centers = _buildings([*points, (200, 5)]).cluster_centers(MAX_LEN)
     assert len(centers) == 0
