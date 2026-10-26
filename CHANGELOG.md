@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `rsph_tree` no longer computes all-pairs shortest paths. It runs one
+  Dijkstra per terminal and gives the same layout as 0.3.1, 20–40×
+  faster and with a small fraction of the memory (Chaguanas 14.3 →
+  0.3 GB).
+
+### Fixed
+
+- `clustering: "centers"` makes one center per cluster of two or more
+  buildings, at the mean of its buildings. `Buildings.cluster_centers`
+  looped over buildings instead of clusters: a cluster of n buildings
+  got n copies of its center, and a building alone in its cluster added
+  another copy of the previous cluster's center (Arima: 233 centers, 61
+  distinct). Centers of clusters with 3 or more buildings were the
+  centroid of a polygon drawn through the points in table order, which
+  can cross itself and put the center away from the buildings. A
+  building exactly `max_connection_length` from a road raised a
+  length-mismatch error. Networks built with `"centers"` can change;
+  `"none"` is unaffected.
+
 ## [0.3.1] - 2026-10-25
 
 Bug-fix release: buildings are no longer left unconnected without a

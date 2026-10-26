@@ -12,7 +12,14 @@ import numpy as np
 import rasterio as rio
 import shapely
 from pyproj.crs import CRS
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.geometry import (
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 from shapely.ops import nearest_points
 from sklearn.cluster import AgglomerativeClustering
 
@@ -500,35 +507,26 @@ class Buildings:
         ]
         # -1 marks "no cluster"; clustering labels are >= 0
         self.gdf["cluster"] = -1
-        c_buildings_coords = []
-        for b in self.gdf.loc[
-            self.gdf["distance"] > max_connection_length
-        ].geometry:  # for first feature/row
-            coords = np.dstack(b.coords.xy).tolist()[0][0]
-            c_buildings_coords.append(coords)
-            # Run Scipy Clustering
-        try:
-            clustering = AgglomerativeClustering(
-                n_clusters=None, distance_threshold=max_connection_length
-            ).fit(c_buildings_coords)
-        except:
+        # one mask for both the clustering input and the label write-back, so
+        # the two always have the same length
+        far = self.gdf["distance"] > max_connection_length
+        if far.sum() < 2:
             return gpd.GeoDataFrame(geometry=[])
-        self.gdf.loc[self.gdf["distance"] >= max_connection_length, "cluster"] = (
-            clustering.labels_
-        )  # Find Centroid of Clusters
+        c_buildings_coords = [(g.x, g.y) for g in self.gdf.loc[far].geometry]
+        clustering = AgglomerativeClustering(
+            n_clusters=None, distance_threshold=max_connection_length
+        ).fit(c_buildings_coords)
+        self.gdf.loc[far, "cluster"] = clustering.labels_
+        # one center per cluster: the mean of its building points. A building
+        # alone in its cluster gets no center and connects on its own.
         cluster_centers = []
-        for cluster_id in clustering.labels_:
+        for cluster_id in np.unique(clustering.labels_):
             building_points = self.gdf.loc[
                 self.gdf["cluster"] == cluster_id
             ].geometry.tolist()
-            if len(building_points) == 2:
-                P = LineString(building_points)
-            if len(building_points) > 2:
-                P = Polygon(building_points)
-            if "P" in locals():
-                cluster_centers.append(
-                    P.centroid
-                )  # sort by distance and connect from close to far away to keep flow direction
+            if len(building_points) >= 2:
+                cluster_centers.append(MultiPoint(building_points).centroid)
+        # sort by distance and connect from close to far away to keep flow direction
         cluster_centers = gpd.GeoDataFrame(geometry=cluster_centers)
         merged_roads = self.roads_obj.get_merged_roads()
         cluster_centers["distance"] = [
