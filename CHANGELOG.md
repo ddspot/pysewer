@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   building exactly `max_connection_length` from a road raised a
   length-mismatch error. Networks built with `"centers"` can change;
   `"none"` is unaffected.
+- pysewer no longer writes to the DEM file. `DEM` (and so `ModelDomain`)
+  filled declared nodata cells by overwriting the input file, and
+  `DEM.reproject_dem` overwrote it with the reprojected raster while it
+  was still reading from it. Both now keep the result in memory; the
+  elevations pysewer works with are unchanged.
+- `add_private_sewer: False` no longer gives an empty network. Buildings
+  were not linked to the road at all, so none could be routed, and the
+  design step then removed every building from the network
+  (`get_sewer_info` reported 0 buildings). Buildings are now always
+  linked; with `False` the house connections are routed but not
+  designed: they get `pressurized=None` and are left out of the sewer
+  lengths, plots and private pumps. `reverse_bfs` no longer removes
+  nodes from the graph it is given. The default (`True`) is unaffected.
 
 ## [0.3.1] - 2026-10-25
 
