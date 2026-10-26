@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 import itertools
+import logging
 import os
 import warnings
 from dataclasses import dataclass, field
@@ -39,6 +40,8 @@ from .helper import (
 )
 from .optimization import needs_pump
 from .simplify import simplify_graph
+
+logger = logging.getLogger(__name__)
 
 # Ignore the specific RuntimeWarning
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -425,7 +428,7 @@ class Buildings:
         if "geometry" in self.gdf.columns and not self.gdf.empty:
             self.gdf = gpd.GeoDataFrame(self.gdf, geometry="geometry", crs=original_crs)
         else:
-            print("Error: GeoDataFrame is not valid after processing.")
+            logger.warning("GeoDataFrame is not valid after processing.")
 
         # ensure that crs is set
         if self.gdf.crs is None:
@@ -619,21 +622,20 @@ class ModelDomain:
         if self.buildings.get_crs().to_epsg() is None:
             self.buildings.set_crs(dem_epsg)
 
-        # print(self.roads.get_crs())
-        # print(self.buildings.get_crs())
-        # print(self.dem.get_crs)
-
         # Check for coordinate system
         assert (
             self.roads.get_crs().to_epsg() == self.buildings.get_crs().to_epsg()
             and self.dem.get_crs == self.roads.get_crs().to_epsg()
         ), "CRS of input Data does not match"
         assert self.roads.get_crs().is_projected
+        # carried on every graph (graph["crs"]) so exported layers know their CRS
+        self.crs = self.roads.get_crs()
 
         # create unsilplified graph
         self.connection_graph = self.create_unsimplified_graph(self.roads.get_gdf())
 
         self.connection_graph = nx.Graph(self.connection_graph)
+        self.connection_graph.graph["crs"] = self.crs
 
         # connecting subgraphs if there are any
         sub_graphs = list(
@@ -643,7 +645,7 @@ class ModelDomain:
             
         )
         if len(sub_graphs) > 1:
-            print("connecting subgraphs")
+            logger.info("Connecting %d road network components", len(sub_graphs))
             self.connect_subgraphs()
 
         # set pump penalty (None → resolved lazily from the current config)
@@ -825,7 +827,7 @@ class ModelDomain:
                     try:
                         self.add_node(center, "cluster_center", closest_edges_cc[k])
                     except Exception as e:
-                        print(f"Error adding cluster center {center}: {e}")
+                        logger.warning("Error adding cluster center %s: %s", center, e)
                         self.add_node(center, "cluster_center")
 
             # closest edges to buildings
@@ -846,7 +848,7 @@ class ModelDomain:
                 if is_valid_geometry(i.geometry):
                     self.add_node(i.geometry, "building", node_attributes=i.to_dict())
                 else:
-                    print(f"Invalid geometry for building {i}")
+                    logger.warning("Invalid geometry for building %s", i)
 
     def add_node(self, point, node_type, closest_edge=None, node_attributes=None):
         """
@@ -981,11 +983,12 @@ class ModelDomain:
         nx.MultiDiGraph
             A directed graph representing the connections between the different points in the network.
         """
-        print(f"\nGenerating connection graph with pump penalty: {self.pump_penalty}")
+        logger.info("Generating connection graph with pump penalty %s", self.pump_penalty)
         config = get_config()
         simplified_graph = simplify_graph(self.connection_graph)
         self.junction_graph = simplified_graph
         connection_digraph = nx.MultiDiGraph(simplified_graph)
+        connection_digraph.graph["crs"] = self.crs
         # remove any self loops
         connection_digraph.remove_edges_from(
             list(nx.selfloop_edges(connection_digraph))
@@ -1054,20 +1057,22 @@ class ModelDomain:
                     if connection_digraph[u][v][0]["needs_pump"]:
                         edges_needing_pumps += 1
                         connection_digraph[u][v][0]["weight"] = dist * self.pump_penalty
-                        print(
-                            f"Edge {u}->{v} needs pump. Distance: {dist:.2f}m, Weight: {dist * self.pump_penalty:.2f}"
+                        logger.debug(
+                            "Edge %s->%s needs pump. Distance: %.2f m, weight: %.2f",
+                            u, v, dist, dist * self.pump_penalty,
                         )
                     else:
                         connection_digraph[u][v][0]["weight"] = dist
-                        print(
-                            f"Edge {u}->{v} gravity flow. Distance: {dist:.2f}m, Weight: {dist:.2f}"
+                        logger.debug(
+                            "Edge %s->%s gravity flow. Distance: %.2f m, weight: %.2f",
+                            u, v, dist, dist,
                         )
 
-        print("\nSummary:")
-        print(f"Total edges: {total_edges}")
-        print(f"Edges needing pumps: {edges_needing_pumps}")
-        print(
-            f"Percentage of edges needing pumps: {(edges_needing_pumps/total_edges)*100:.1f}%"
+        logger.info(
+            "Connection graph: %d edges, %d need a pump (%.1f%%)",
+            total_edges,
+            edges_needing_pumps,
+            100 * edges_needing_pumps / total_edges if total_edges else 0.0,
         )
 
         for n in connection_digraph.nodes():

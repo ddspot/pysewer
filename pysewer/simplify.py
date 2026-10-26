@@ -2,11 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 import itertools
+import logging
 
 import networkx as nx
 from shapely.geometry import LineString, Point
 
 from .helper import dedupe_coords
+
+logger = logging.getLogger(__name__)
 
 ## Code Adapted from:
 # Boeing, G. 2017. "OSMnx: New Methods for Acquiring, Constructing, Analyzing, and Visualizing Complex Street Networks." Computers, Environment and Urban Systems 65, 126-139. doi:10.1016/j.compenvurbsys.2017.05.004
@@ -116,7 +119,7 @@ def simplify_graph(
         f"Simplified graph: {initial_node_count} to {len(G)} nodes, "
         f"{initial_edge_count} to {len(G.edges)} edges"
     )
-    print(msg)
+    logger.info(msg)
     return G
 
 
@@ -254,7 +257,7 @@ def get_essential_nodes(G):
     contract_nodes = [
         n for n in G.nodes if G.degree(n) == 2 and n not in connection_nodes
     ]
-    print(len(G.nodes))
+    logger.debug("%d nodes before contraction", len(G.nodes))
     de_nodes = [
         x
         for x, y in G.nodes(data="road_network", default=False)
@@ -262,6 +265,6 @@ def get_essential_nodes(G):
     ]
 
     essential_nodes = [n for n in G.nodes if n not in contract_nodes] + de_nodes
-    print(len(essential_nodes))
+    logger.debug("%d essential nodes", len(essential_nodes))
 
     return essential_nodes

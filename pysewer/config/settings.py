@@ -317,7 +317,7 @@ def dict_to_config(settings_dict: dict) -> Config:
             export=export_config,
         )
     except TypeError as e:
-        raise ValueError(f"Invalid settings structure: {e!s}")
+        raise ValueError(f"Invalid settings structure: {e!s}") from e
 
 
 def load_config(

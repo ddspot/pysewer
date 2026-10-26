@@ -4,7 +4,6 @@
 import logging
 import math
 from collections.abc import Hashable
-from typing import Union
 
 import networkx as nx
 import numpy as np
@@ -14,7 +13,7 @@ from .helper import get_mean_slope, get_node_keys, get_upstream_nodes
 
 logger = logging.getLogger(__name__)
 
-NodeType = Union[str, int, Hashable, None]
+NodeType = str | int | Hashable | None
 
 
 def place_lifting_station(G, node):
@@ -77,7 +76,7 @@ def place_pump(G, node):
         The graph with the pump placed at the specified node and downstream edges "pressurized" attribute set.
     """
     if G.out_degree(node) != 1:
-        print(node)
+        logger.warning("Pump placed at %s, which has %d outgoing edges", node, G.out_degree(node))
     node_attrs = {node: {"pumping_station": True}}
     nx.set_node_attributes(G, node_attrs)
     downstream = next(G.neighbors(node))
@@ -251,7 +250,7 @@ def calculate_hydraulic_parameters(
      combined system (e.g., legacy network capacity), you can iteratively adjust
      `combined_sewer_factor`:
 
-     1. Choose an initial value (e.g., 1–10).
+     1. Choose an initial value (e.g., 1-10).
      2. Run `estimate_peakflow` (dry-weather) and then this function with that factor.
      3. Compute a comparison metric (e.g., sum of edge design flows at a key cross-section,
          maximum trunk flow, or total storage/throughput proxy) and compare to the reference.
@@ -259,7 +258,7 @@ def calculate_hydraulic_parameters(
          factor_new = factor_old * (ReferenceValue / ModeledValue), and iterate until within tolerance.
 
      This approach scales the design flows uniformly and is a coarse substitute for a
-     full hydrologic rainfall–runoff model when only reference totals are available.
+     full hydrologic rainfall-runoff model when only reference totals are available.
     """
     config = get_config()
     pressurized_diameter = (
@@ -289,12 +288,12 @@ def calculate_hydraulic_parameters(
             if u in building_set or v in building_set:
                 G.edges[u, v]["pressurized"] = None
     onsite_nodes = [n for n in G.nodes() if G.degree(n) == 0 and n in buildings]
-    print(len(onsite_nodes))
+    logger.debug("%d buildings without a sewer connection (onsite)", len(onsite_nodes))
     node_attrs = {n: {"onsite": True} for n in onsite_nodes}
     nx.set_node_attributes(G, node_attrs)
     for sink in sinks:
         if sink not in G:
-            print(f"Sink {sink} not in graph")
+            logger.warning("Sink %s not in graph", sink)
         for edge in reverse_bfs(G, sink, include_private_sewer=include_private_sewer):
             # Node Values for trench depths cant be clearly defined for pumps and lifting stations because they have seperate incoming and outcoming values
             pressurized = False
@@ -752,8 +751,8 @@ def select_diameter(
     while flow <= target_flow:
         try:
             selected_diameter = diameters.pop(0)
-        except Exception:
-            raise ValueError("Maximum Diameter insufficient to reach target flow")
+        except IndexError:
+            raise ValueError("Maximum Diameter insufficient to reach target flow") from None
         flow = mannings_equation(selected_diameter, roughness, slope)
     return selected_diameter
 
