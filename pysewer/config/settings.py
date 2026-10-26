@@ -348,11 +348,11 @@ def load_config(
     config = dict_to_config(merged_settings)
     validate_config_values(config)
 
-    logger.info("Settings loaded:")
-    logger.info(f"  tmax: {config.optimization.tmax}")
-    logger.info(f"  tmin: {config.optimization.tmin}")
-    logger.info(f"  min_slope: {config.optimization.min_slope}")
-    logger.info(f"  pump_penalty: {config.preprocessing.pump_penalty}")
+    logger.debug("Settings loaded:")
+    logger.debug(f"  tmax: {config.optimization.tmax}")
+    logger.debug(f"  tmin: {config.optimization.tmin}")
+    logger.debug(f"  min_slope: {config.optimization.min_slope}")
+    logger.debug(f"  pump_penalty: {config.preprocessing.pump_penalty}")
 
     return config
 

@@ -5,6 +5,9 @@
 from .config.manager import get_config, set_config
 from .export import *  # noqa: F403
 from .helper import *  # noqa: F403
+from .logs import CapturedLog as CapturedLog
+from .logs import capture_log as capture_log
+from .logs import show_progress as show_progress
 from .optimization import *  # noqa: F403
 from .preprocessing import *  # noqa: F403
 from .routing import *  # noqa: F403

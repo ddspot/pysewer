@@ -220,15 +220,37 @@ pysewer.export_sewer_network(sewer_network_gdf, "sewer_network.gpkg")
 ```
 
 Supported formats are GeoPackage (`gpkg`, default), ESRI Shapefile (`shp`)
-and GeoParquet (`parquet`). Multi-layer GeoPackages with an explicit layer
-name and CRS can be written with `pysewer.write_gdf_to_gpkg(gdf, path,
-layer=..., crs=...)`.
+and GeoParquet (`parquet`). The files carry the CRS of the input data.
+Multi-layer GeoPackages with an explicit layer name can be written with
+`pysewer.write_gdf_to_gpkg(gdf, path, layer=...)`.
 
 Float attributes are rounded on export to keep the files free of floating
 point noise, controlled by `export.round_decimals` in the settings
 (`default: 3` decimal places for all float columns and profile tuples,
 `peak_flow: 6` since it is in m³/s, `slope: 5`; set to `null` to disable
 and export raw values).
+
+## Messages: seeing what pysewer does
+
+pysewer is quiet by default and only shows problems (as warnings). Two
+helpers show more, with no setup of Python's `logging` needed:
+
+```python
+pysewer.show_progress()          # print progress and summaries as pysewer works
+pysewer.show_progress("debug")   # ... and every pipe decision (long)
+pysewer.show_progress(False)     # quiet again
+
+with pysewer.capture_log() as log:   # collect messages instead of printing
+    tree = pysewer.rsph_tree(G, sinks)
+print(log.tail())                    # the last lines
+log.warnings                         # only the problems
+log.save("run.log")                  # keep them in a file
+```
+
+`capture_log` also collects Python warnings raised inside the block, and
+prints one line at the end if there were any (`report=False` turns that
+off). Under the hood the messages go to the `pysewer` logger, so the
+standard `logging` configuration works too.
 
 ## Default parameters
 
