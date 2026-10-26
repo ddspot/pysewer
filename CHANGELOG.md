@@ -22,6 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The network does not change, but the reported lengths grow: gravity
   by 0.6–1.8 % on the benchmark cases, Couva's pressurized mains by
   13 %.
+- Buildings connect to the street, never through a neighbour's house
+  connection. A building whose nearest road edge had already been split
+  by an earlier building looked for the nearest edge of any kind, and in
+  34–44 % of cases that was a neighbour's house connection, so buildings
+  chained through each other depending on which came first in the file.
+  House connections now grow 20–45 % (every building has its own), the
+  street network changes by about 1 %, and some stations change
+  (Chaguanas: 32 → 35 lifting stations and no pressurized main; Couva:
+  6 → 4 pumping stations, 1 → 6 private pumps).
+- Roads and buildings are put in a fixed order (by coordinates) when
+  they are read, so the network no longer depends on the row order of
+  the input files (shuffled Arima rows gave 41.2–42.8 km and 21–23
+  lifting stations). `Roads.get_gdf()` and `Buildings.get_gdf()` return
+  the rows in that order, with a fresh index.
 
 ### Added
 
@@ -57,6 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   designed: they get `pressurized=None` and are left out of the sewer
   lengths, plots and private pumps. `reverse_bfs` no longer removes
   nodes from the graph it is given. The default (`True`) is unaffected.
+- Both halves of a split house connection keep `private_sewer=True`,
+  and the link from a building to its cluster center is flagged too
+  (both were unflagged before).
+- `connect_buildings` uses the nearest road edges it looks up in
+  advance. A list was indexed with a table row, which always failed and
+  fell back to a fresh search per building.
 
 ## [0.3.1] - 2026-10-25
 

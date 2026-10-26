@@ -43,6 +43,20 @@ from .simplify import simplify_graph
 
 logger = logging.getLogger(__name__)
 
+
+def canonical_order(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Sort rows by geometry so results do not depend on the input file's row order.
+
+    Rows are ordered by their bounding box (minx, miny, maxx, maxy), ties by
+    their WKB. The index is reset.
+    """
+    if gdf.empty:
+        return gdf
+    key = gdf.geometry.bounds.reset_index(drop=True)
+    key["wkb"] = gdf.geometry.to_wkb().to_numpy()
+    order = key.sort_values(list(key.columns), kind="stable").index
+    return gdf.iloc[order].reset_index(drop=True)
+
 # Ignore the specific RuntimeWarning
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -303,6 +317,7 @@ class Roads:
 
         # remove the third dimension from the geometry if present
         self.gdf["geometry"] = [remove_third_dimension(g) for g in self.gdf["geometry"]]
+        self.gdf = canonical_order(self.gdf)
         self.merged_roads = self.gdf.union_all()
 
     def get_nearest_point(self, point):
@@ -433,6 +448,8 @@ class Buildings:
         # ensure that crs is set
         if self.gdf.crs is None:
             self.gdf.crs = original_crs
+
+        self.gdf = canonical_order(self.gdf)
 
         self.roads_obj = roads_obj
 
@@ -821,7 +838,7 @@ class ModelDomain:
 
                 # closest edges to cluster centers
                 closest_edges_cc = get_closest_edge_multiple(
-                    self.connection_graph, cluster_centers
+                    self._road_edges(), cluster_centers
                 )
                 for k, center in enumerate(cluster_centers):
                     try:
@@ -831,16 +848,17 @@ class ModelDomain:
                         self.add_node(center, "cluster_center")
 
             # closest edges to buildings
-            closest_edges_b = get_closest_edge_multiple(
-                self.connection_graph, building_points
+            closest_edges_b = dict(
+                zip(
+                    building_points,
+                    get_closest_edge_multiple(self._road_edges(), building_points),
+                    strict=False,
+                )
             )
             for _, i in building_gdf.iterrows():
-                try:
-                    self.add_node(
-                        i.geometry, "building", closest_edges_b[i], i.to_dict()
-                    )
-                except:
-                    self.add_node(i.geometry, "building", node_attributes=i.to_dict())
+                self.add_node(
+                    i.geometry, "building", closest_edges_b.get(i.geometry), i.to_dict()
+                )
 
         else:
             # directly add each building to the graph
@@ -849,6 +867,18 @@ class ModelDomain:
                     self.add_node(i.geometry, "building", node_attributes=i.to_dict())
                 else:
                     logger.warning("Invalid geometry for building %s", i)
+
+    def _road_edges(self) -> nx.Graph:
+        """View of the connection graph without house connections.
+
+        Buildings and cluster centers attach to these edges only. Attaching to
+        another building's house connection made buildings chain through their
+        neighbours, depending on which building came first in the input.
+        """
+        G = self.connection_graph
+        return G.edge_subgraph(
+            (u, v) for u, v, private in G.edges(data="private_sewer") if not private
+        )
 
     def add_node(self, point, node_type, closest_edge=None, node_attributes=None):
         """
@@ -885,7 +915,7 @@ class ModelDomain:
             closest_edge = None
         # when called for single nodes, get closest edge:
         if closest_edge is None:
-            edge_gdf = get_edge_gdf(self.connection_graph)
+            edge_gdf = get_edge_gdf(self._road_edges())
             edge_gdf["closest_edge"] = edge_gdf.geometry.to_list()
             closest_edge = closest_edges([point], edge_gdf)[0]
         conn_point = nearest_points(closest_edge, point)[0]
@@ -919,7 +949,9 @@ class ModelDomain:
                 )
             else:
                 self.connection_graph.add_edge(
-                    (point.x, point.y), (next_cluster_center.x, next_cluster_center.y)
+                    (point.x, point.y),
+                    (next_cluster_center.x, next_cluster_center.y),
+                    private_sewer=True,
                 )
 
         else:
@@ -957,13 +989,16 @@ class ModelDomain:
         # inserts new connection point on a edge and adjusts edges
         # Find Edge intersecting conn_point
 
+        # both halves of a split house connection stay house connections
+        private = G.edges[u, v].get("private_sewer", False)
         G.remove_edge(u, v)
 
         G.add_node((conn_point.x, conn_point.y), connection_node=True)
 
         # add edges
-        G.add_edge(u, (conn_point.x, conn_point.y))
-        G.add_edge((conn_point.x, conn_point.y), v)
+        halves = {"private_sewer": True} if private else {}
+        G.add_edge(u, (conn_point.x, conn_point.y), **halves)
+        G.add_edge((conn_point.x, conn_point.y), v, **halves)
         G.add_edge(
             (new_node.x, new_node.y),
             (conn_point.x, conn_point.y),
