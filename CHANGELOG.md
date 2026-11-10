@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.3 GB).
 - pysewer logs instead of printing. Messages go to the `pysewer.*`
   loggers: run summaries at INFO, the per-edge pump/gravity lines
-  (one per connection-graph edge) at DEBUG, problems at WARNING. Use
-  `logging.basicConfig(level=logging.INFO)` to see the summaries.
+  (one per connection-graph edge) and the per-building and
+  per-profile-segment details at DEBUG, problems at WARNING. Use
+  `pysewer.show_progress()` (below) to see the summaries.
 - `get_sewer_info` measures gravity and pressurized lengths along each
   pipe's geometry instead of the straight line between its end nodes.
   The network does not change, but the reported lengths grow: gravity
@@ -30,8 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GeoDataFrames with that CRS, and `write_gdf_to_gpkg`,
   `write_gdf_to_shp` and `export_sewer_network` write it to the file
   (0.3.1 wrote GeoPackage and Shapefile layers without a CRS).
+- `pysewer.show_progress()` prints pysewer's messages as it works
+  (`"debug"` for every pipe decision, `False` to stop), and
+  `with pysewer.capture_log() as log:` collects them, together with any
+  warnings, into `log.lines`, `log.warnings`, `log.tail()` and
+  `log.save(path)`, printing one line at the end if there were problems.
+  No knowledge of Python's `logging` module needed.
 
 ### Fixed
+
+- Reading buildings no longer warns "Geometry column does not contain
+  geometry" on every run.
 
 - `clustering: "centers"` makes one center per cluster of two or more
   buildings, at the mean of its buildings. `Buildings.cluster_centers`

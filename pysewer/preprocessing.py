@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 import geopandas as gpd
 import networkx as nx
 import numpy as np
+import pandas as pd
 import rasterio as rio
 import rasterio.warp
 import shapely
@@ -418,11 +419,13 @@ class Buildings:
                         )
             self.gdf["geometry"] = self.gdf["geometry"].apply(convert)
 
-        # apply the conversion function to each geometry in the gdf
-        self.gdf["geometry"] = self.gdf["geometry"].apply(self.convert_to_points)
-
-        # flatten the list of points into individual rows
-        self.gdf = self.gdf.explode("geometry").reset_index(drop=True)
+        # convert each geometry to a list of points and flatten the lists into
+        # rows; done in a plain DataFrame, since a geometry column holding lists
+        # made geopandas warn "Geometry column does not contain geometry"
+        points = [self.convert_to_points(g) for g in self.gdf.geometry]
+        frame = pd.DataFrame(self.gdf.drop(columns="geometry"))
+        frame["geometry"] = points
+        self.gdf = frame.explode("geometry").reset_index(drop=True)
 
         # Ensure that the GeoDataFrame is valid, the geometry column is set and reassign the crs
         if "geometry" in self.gdf.columns and not self.gdf.empty:

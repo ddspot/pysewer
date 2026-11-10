@@ -589,7 +589,7 @@ def estimate_peakflow(
         The graph with updated node attributes: peak_flow, average_daily_flow,
         upstream_pe and the applied peak_factor.
     """
-    logger.info("\n=== Dry Weather Flow  Estimation ===")
+    logger.info("Estimating dry-weather flow")
 
     config = get_config()
     inhabitants_dwelling_attribute_name = (
@@ -618,7 +618,7 @@ def estimate_peakflow(
 
     for n in G.nodes():
         upstream_buildings = get_upstream_nodes(G, n, "node_type", "building")
-        logger.info(f"  Building node {n}: upstream_buildings={upstream_buildings}")
+        logger.debug(f"  Building node {n}: upstream_buildings={upstream_buildings}")
         total_population = 0
         # Sum up populations from each upstream building/block
         for building in upstream_buildings:
@@ -629,13 +629,13 @@ def estimate_peakflow(
             # 3. number_of_dwellings * inhabitants_dwelling
             # 4. fallback to single dwelling with inhabitants_dwelling
             if inhabitants_dwelling_attribute_name != "":
-                logger.info(f"  Using custom attribute name '{inhabitants_dwelling_attribute_name}'")
+                logger.debug(f"  Using custom attribute name '{inhabitants_dwelling_attribute_name}'")
                 block_pop = float(building_data[inhabitants_dwelling_attribute_name])
             elif "block_population" in building_data:
-                logger.info("  Using block_population")
+                logger.debug("  Using block_population")
                 block_pop = float(building_data["block_population"])
             elif "number_of_dwellings" in building_data:
-                logger.info("  Using number_of_dwellings")
+                logger.debug("  Using number_of_dwellings")
                 block_pop = (
                     float(building_data["number_of_dwellings"]) * inhabitants_dwelling
                 )
@@ -657,9 +657,9 @@ def estimate_peakflow(
         # only: Q_peak = PF*PG + I  (the "4(DWF-I)+I" form)
         infiltration_daily = infiltration_fraction * upstream_daily
         peak_flow = (pf * upstream_daily + infiltration_daily) / 86400.0
-        logger.info(f"  Peak flow: {peak_flow:.6f} m³/s (PF={pf:.2f})")
-        logger.info(f"  Average daily flow: {upstream_daily:.6f} m³/s")
-        logger.info(f"  Upstream peak flow: {upstream_pe:.6f} people")
+        logger.debug(f"  Peak flow: {peak_flow:.6f} m³/s (PF={pf:.2f})")
+        logger.debug(f"  Average daily flow: {upstream_daily:.6f} m³/s")
+        logger.debug(f"  Upstream peak flow: {upstream_pe:.6f} people")
 
         atr = {
             n: {
@@ -1009,28 +1009,28 @@ def needs_pump(
     x, y = zip(*profile, strict=False)
     if inflow_trench_depth == 0:
         inflow_trench_depth = tmin
-        logger.info(f"  Using tmin as inflow_trench_depth: {inflow_trench_depth}")
+        logger.debug(f"  Using tmin as inflow_trench_depth: {inflow_trench_depth}")
 
     trench_depth = [0] * len(x)
     # adjust inflow trenchdepth
     trench_depth[0] = np.array(y)[0] - inflow_trench_depth
-    logger.info(f"  Initial trench depth: {trench_depth[0]}")
+    logger.debug(f"  Initial trench depth: {trench_depth[0]}")
 
     for i in range(len(x) - 1):
         dx = x[i + 1] - x[i]
         next_min_elevation = dx * min_slope + trench_depth[i]
-        logger.info(f"\nChecking segment {i} to {i+1}:")
-        logger.info(f"  Distance: {dx}")
-        logger.info(f"  Current elevation: {y[i]}")
-        logger.info(f"  Next elevation: {y[i+1]}")
-        logger.info(f"  Required next_min_elevation: {next_min_elevation}")
-        logger.info(f"  Max allowed depth: {y[i+1] - tmax}")
-        logger.info(f"  Min allowed depth: {y[i+1] - tmin}")
+        logger.debug(f"Checking segment {i} to {i+1}:")
+        logger.debug(f"  Distance: {dx}")
+        logger.debug(f"  Current elevation: {y[i]}")
+        logger.debug(f"  Next elevation: {y[i+1]}")
+        logger.debug(f"  Required next_min_elevation: {next_min_elevation}")
+        logger.debug(f"  Max allowed depth: {y[i+1] - tmax}")
+        logger.debug(f"  Min allowed depth: {y[i+1] - tmin}")
         ## Case 1: to achieve the min slope we would need to dig a trench deeper than tmax -> needs pump
         if next_min_elevation < y[i + 1] - tmax:
-            logger.info("  CASE 1: Pump needed - trench would be too deep")
-            logger.info(f"  Would need depth: {y[i+1] - next_min_elevation}")
-            logger.info(f"  Max allowed: {tmax}")
+            logger.debug("  CASE 1: Pump needed - trench would be too deep")
+            logger.debug(f"  Would need depth: {y[i+1] - next_min_elevation}")
+            logger.debug(f"  Max allowed: {tmax}")
             return (
                 True,
                 0,
@@ -1051,7 +1051,7 @@ def needs_pump(
         ##case 3: min slope point is higher than min trenchdepth: set to tmin
         elif next_min_elevation >= y[i + 1] - tmin:
             trench_depth[i + 1] = y[i + 1] - tmin
-    logger.info("\nFinal result: No pump needed")
-    logger.info(f"  Final trench depth: {trench_depth[-1]}")
-    logger.info(f"  Final elevation difference: {y[-1] - trench_depth[-1]}")
+    logger.debug("Final result: No pump needed")
+    logger.debug(f"  Final trench depth: {trench_depth[-1]}")
+    logger.debug(f"  Final elevation difference: {y[-1] - trench_depth[-1]}")
     return (False, y[-1] - trench_depth[-1], list(zip(x, trench_depth, strict=False)))
