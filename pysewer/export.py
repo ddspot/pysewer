@@ -15,6 +15,8 @@ import logging
 
 import fiona
 import geopandas as gpd
+import numpy as np
+import pandas as pd
 import pandas.api.types as ptypes
 from fiona.collection import CRS
 
@@ -109,6 +111,96 @@ def generate_schema(gdf: gpd.GeoDataFrame):
     return schema
 
 
+def _is_missing(value) -> bool:
+    """True for None and NaN-like scalars; lists and other containers are never missing."""
+    if isinstance(value, (list, tuple, dict, np.ndarray)):
+        return False
+    try:
+        return bool(pd.isna(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def _field_type(values: list) -> str:
+    """Fiona field type for the non-missing values of a column."""
+    if values and all(isinstance(v, (bool, np.bool_)) for v in values):
+        return "bool"
+    numbers = [v for v in values if not isinstance(v, (bool, np.bool_))]
+    if values and len(numbers) == len(values):
+        if all(isinstance(v, (int, np.integer)) for v in values):
+            return "int"
+        if all(isinstance(v, (int, float, np.integer, np.floating)) for v in values):
+            return "float"
+    return "str"
+
+
+def _properties(gdf: gpd.GeoDataFrame, decimals: int | None = None) -> tuple[dict, dict]:
+    """Attribute values and field types ready for fiona.
+
+    A column's type comes from its non-missing values, so a column of
+    ``True`` and NaN is a bool column. Missing values are written as NULL
+    (not as the string "nan"), and lists (profiles, violation lists) as JSON.
+
+    Returns
+    -------
+    tuple of dict
+        ``{column: list of values}`` and ``{column: fiona type}``.
+    """
+    values, types = {}, {}
+    for col in gdf.columns:
+        if col == gdf.geometry.name:
+            continue
+        column = gdf[col].tolist()
+        present = [v for v in column if not _is_missing(v)]
+        if present and all(isinstance(v, (list, tuple)) for v in present):
+            kind = "str"
+        else:
+            kind = _field_type(present)
+
+        def convert(v, kind=kind):
+            if _is_missing(v):
+                return None
+            if isinstance(v, (list, tuple)):
+                return tuple_list_to_json(v, decimals=decimals)
+            return {"bool": bool, "int": int, "float": float, "str": str}[kind](v)
+
+        values[col] = [convert(v) for v in column]
+        types[col] = kind
+    return values, types
+
+
+def _mixed_lists_to_text(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Columns mixing lists and scalars (e.g. road attributes of merged edges)
+    as text, lists as JSON; Parquet cannot store such a column."""
+    for col in gdf.columns:
+        if col == gdf.geometry.name or gdf[col].dtype != "object":
+            continue
+        present = [v for v in gdf[col] if not _is_missing(v)]
+        lists = [isinstance(v, (list, tuple)) for v in present]
+        if any(lists) and not all(lists):
+            gdf[col] = [
+                None if _is_missing(v)
+                else json.dumps(v, default=str) if isinstance(v, (list, tuple))
+                else str(v)
+                for v in gdf[col]
+            ]
+    return gdf
+
+
+def _write_features(dst, gdf: gpd.GeoDataFrame, values: dict, skip_errors: bool = False):
+    for i, geom in enumerate(gdf.geometry):
+        feature = {
+            "geometry": geom.__geo_interface__,
+            "properties": {col: column[i] for col, column in values.items()},
+        }
+        try:
+            dst.write(feature)
+        except Exception as e:
+            if not skip_errors:
+                raise
+            logger.warning("Error writing feature to SHP file: %s", e)
+
+
 def _to_wkt(crs) -> str | None:
     """WKT for a pyproj/fiona CRS, an EPSG code or string, or None."""
     if crs is None:
@@ -144,30 +236,15 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
     """
     gdf = round_float_columns(gdf.copy())
     profile_decimals = (get_config().export.round_decimals or {}).get("default")
-    # Convert only columns with list of tuples to JSON strings
-    for col in gdf.columns:
-        if gdf[col].dtype == "object" and (
-            is_list_of_tuples(gdf[col]) or is_list(gdf[col])
-        ):
-            gdf[col] = gdf[col].apply(tuple_list_to_json, decimals=profile_decimals)
+    values, types = _properties(gdf, profile_decimals)
 
-    # Define the schema based on the GeoDataFrame
-    schema = generate_schema(gdf)
-
-    # Open a new GPKG file in write mode
+    schema = {"geometry": gdf.geometry.type.iloc[0], "properties": types}
     crs = crs if crs is not None else gdf.crs
     crs_wkt = _to_wkt(crs)
     with fiona.open(
         filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs_wkt=crs_wkt
     ) as dst:
-        for _, row in gdf.iterrows():
-            feature = {
-                "geometry": row["geometry"].__geo_interface__,
-                "properties": {
-                    col: row[col] for col in gdf.columns if col != "geometry"
-                },
-            }
-            dst.write(feature)
+        _write_features(dst, gdf, values)
 
 
 def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
@@ -192,30 +269,13 @@ def write_gdf_to_shp(gdf: gpd.GeoDataFrame, filepath: str):
     """
     gdf = round_float_columns(gdf.copy())
     profile_decimals = (get_config().export.round_decimals or {}).get("default")
-    # Convert only columns with list of tuples to JSON strings
-    for col in gdf.columns:
-        if gdf[col].dtype == "object" and is_list_of_tuples(gdf[col]):
-            gdf[col] = gdf[col].apply(tuple_list_to_json, decimals=profile_decimals)
-
-    # Define the schema based on the GeoDataFrame
-    schema = generate_schema(gdf)
-
-    # Open a new SHP file in write mode
+    values, types = _properties(gdf, profile_decimals)
+    schema = {"geometry": gdf.geometry.type.iloc[0], "properties": types}
     crs_wkt = _to_wkt(gdf.crs)
     with fiona.open(
         filepath, mode="w", driver="ESRI Shapefile", schema=schema, crs_wkt=crs_wkt
     ) as dst:
-        for _, row in gdf.iterrows():
-            feature = {
-                "geometry": row["geometry"].__geo_interface__,
-                "properties": {
-                    col: row[col] for col in gdf.columns if col != "geometry"
-                },
-            }
-            try:
-                dst.write(feature)
-            except Exception as e:
-                logger.warning("Error writing feature to SHP file: %s", e)
+        _write_features(dst, gdf, values, skip_errors=True)
 
 
 def export_sewer_network(
@@ -258,7 +318,7 @@ def export_sewer_network(
     elif file_format == "shp":
         write_gdf_to_shp(gdf, filepath)
     elif file_format == "parquet":
-        gdf = round_float_columns(gdf.copy())
+        gdf = _mixed_lists_to_text(round_float_columns(gdf.copy()))
         gdf.to_parquet(
             filepath, index=False
         )  # index set false to avoid AttributeError: module 'pandas' has no attribute 'Int64Index'

@@ -3,6 +3,7 @@
 
 import itertools
 import logging
+import math
 
 import networkx as nx
 from shapely.geometry import LineString, Point
@@ -81,14 +82,7 @@ def simplify_graph(
                     edge_attributes[key] = [edge[key]]
 
         for key in edge_attributes:
-            # don't touch the length attribute, we'll sum it at the end
-            if len(set(edge_attributes[key])) == 1 and key != "length":
-                # if there's only 1 unique value in this attribute list,
-                # consolidate it to the single value (the zero-th)
-                edge_attributes[key] = edge_attributes[key][0]
-            elif key != "length":
-                # otherwise, if there are multiple values, keep one of each value
-                edge_attributes[key] = list(set(edge_attributes[key]))
+            edge_attributes[key] = _consolidate(edge_attributes[key])
 
         # construct the geometry and sum the lengths of the segments; drop
         # float-noise near-duplicate / zero-length vertices so curvilinear
@@ -107,7 +101,7 @@ def simplify_graph(
     # for each edge to add in the list we assembled, create a new edge between
     # the origin and destination
     for edge in all_edges_to_add:
-        G.add_edge(edge["origin"], edge["destination"])
+        G.add_edge(edge["origin"], edge["destination"], **edge["attr_dict"])
 
     # finally remove all the interstitial nodes between the new edges
     G.remove_nodes_from(set(all_nodes_to_remove))
@@ -121,6 +115,30 @@ def simplify_graph(
     )
     logger.info(msg)
     return G
+
+
+def _consolidate(values: list):
+    """One value for a merged edge from the values of its pieces.
+
+    Missing values (None, NaN) are dropped. A single distinct value is kept
+    as is; several are kept as a list in the order the pieces were met.
+    """
+    present = []
+    for v in values:
+        if v is None or (isinstance(v, float) and math.isnan(v)):
+            continue
+        if not any(v is p or _same(v, p) for p in present):
+            present.append(v)
+    if not present:
+        return values[0]
+    return present[0] if len(present) == 1 else present
+
+
+def _same(a, b) -> bool:
+    try:
+        return bool(a == b)
+    except (TypeError, ValueError):  # e.g. arrays
+        return False
 
 
 def _get_paths_to_simplify(G):
