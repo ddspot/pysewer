@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
+Networks change: buildings connect to the street instead of chaining
+through their neighbours, cluster centers are computed correctly, and
+results no longer depend on the row order of the input files. Routing is
+20–40× faster and needs a fraction of the memory, so towns of several
+thousand buildings run on a laptop.
+
+Upgrading from 0.3:
+
+- Expect different networks with default settings: house connections
+  grow 20–45 %, the street network changes by about 1 %, and some
+  stations move. Reported lengths are measured along the pipes, so they
+  grow too.
+- pysewer no longer prints. Call `pysewer.show_progress()` to see its
+  messages, or `with pysewer.capture_log() as log:` to collect them.
+- In exported files `private_sewer` is a true/false column (NULL for
+  street pipes), not text, and layers carry their CRS.
+- The DEM file is no longer modified, so copying it before a run is not
+  needed any more.
+
 ### Changed
 
 - `rsph_tree` no longer computes all-pairs shortest paths. It runs one
@@ -56,7 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reading buildings no longer warns "Geometry column does not contain
   geometry" on every run.
-
+- No pandas 3.1 deprecation warning about `sort_values(inplace=True)`
+  when clustering buildings.
 - `clustering: "centers"` makes one center per cluster of two or more
   buildings, at the mean of its buildings. `Buildings.cluster_centers`
   looped over buildings instead of clusters: a cluster of n buildings
@@ -81,9 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   designed: they get `pressurized=None` and are left out of the sewer
   lengths, plots and private pumps. `reverse_bfs` no longer removes
   nodes from the graph it is given. The default (`True`) is unaffected.
-- Both halves of a split house connection keep `private_sewer=True`,
-  and the link from a building to its cluster center is flagged too
-  (both were unflagged before).
+- The link from a building to its cluster center is flagged
+  `private_sewer=True` like every other house connection.
 - `connect_buildings` uses the nearest road edges it looks up in
   advance. A list was indexed with a table row, which always failed and
   fell back to a fresh search per building.
@@ -98,9 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its values and missing values as NULL. A column with gaps was written
   as text: `private_sewer` came out as the strings `"1"` and `"nan"`
   (both of which read back as true), and list columns with gaps as
-  Python repr.
-  Lists are now always JSON. Parquet export writes columns that mix
-  lists and single values as text.
+  Python repr. Lists are now always JSON. Parquet export writes columns
+  that mix lists and single values as text.
 
 ## [0.3.1] - 2026-10-25
 

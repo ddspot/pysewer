@@ -108,7 +108,7 @@ def test_pipeline_export_flags_house_connections(tmp_path):
         (tuple(g.coords[0]) in buildings or tuple(g.coords[-1]) in buildings)
         for g in pipes.geometry
     ]
-    flagged = pipes["private_sewer"].fillna(False).astype(bool).tolist()
+    flagged = pipes["private_sewer"].eq(1).tolist()  # NULL (NaN) is False
     assert all(f for f, b in zip(flagged, at_building, strict=True) if b)
     assert not any(isinstance(v, str) for v in pipes["private_sewer"])
 

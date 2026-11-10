@@ -28,6 +28,7 @@ def test_import_without_matplotlib():
 
 
 def test_plotting_available_lazily():
+    pytest.importorskip("matplotlib")  # optional extra: pysewer[plot]
     import pysewer
 
     assert callable(pysewer.plot_model_domain)
