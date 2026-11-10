@@ -108,6 +108,18 @@ def roads():
     return pysewer.Roads(Path("tests") / "test_data" / "roads_clipped.shp")
 
 
+def _node_near(G, xy, tol=1e-3):
+    """The node within ``tol`` m of ``xy`` (split points carry float noise)."""
+    return next(n for n in G.nodes if abs(n[0] - xy[0]) < tol and abs(n[1] - xy[1]) < tol)
+
+
+def _test_edge(G):
+    return (
+        _node_near(G, (691535.5977087952, 2553057.6150246616)),
+        _node_near(G, (691567.7330147347, 2552952.9508892866)),
+    )
+
+
 # for testing the connection graph
 @pytest.fixture
 def connection_graph():
@@ -157,14 +169,12 @@ def test_connectivity(connection_graph):
 
 
 def test_edge_data_geometry(connection_graph):
-    test_u = (691535.5977087952, 2553057.6150246616)
-    test_v = (691567.7330147347, 2552952.9508892866)
+    test_u, test_v = _test_edge(connection_graph)
     assert isinstance(connection_graph[test_u][test_v][0]["geometry"], LineString)
 
 
 def test_edge_data_profile(connection_graph):
-    test_u = (691535.5977087952, 2553057.6150246616)
-    test_v = (691567.7330147347, 2552952.9508892866)
+    test_u, test_v = _test_edge(connection_graph)
     profile = [
         (0.0, 143.33679),
         (10.0, 143.68501),
@@ -194,8 +204,7 @@ def _pump_edge(connection_graph):
 
 
 def test_edge_data_needs_pump(connection_graph):
-    test_u = (691535.5977087952, 2553057.6150246616)
-    test_v = (691567.7330147347, 2552952.9508892866)
+    test_u, test_v = _test_edge(connection_graph)
     assert not connection_graph[test_u][test_v][0]["needs_pump"]
     _pump_edge(connection_graph)  # the test terrain has uphill edges
 
