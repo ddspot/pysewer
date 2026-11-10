@@ -87,6 +87,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `connect_buildings` uses the nearest road edges it looks up in
   advance. A list was indexed with a table row, which always failed and
   fell back to a fresh search per building.
+- Pipes keep the attributes of the roads they follow, and house
+  connections keep `private_sewer`. `simplify_graph` collected the
+  attributes of the pieces it merged and then dropped them, and
+  splitting a road edge for a house connection dropped them from both
+  halves, so most pipes had none. Where merged pieces differ, the value
+  is a list in the order the pieces were met. `simplify_graph` no longer
+  adds a `length` attribute (`distance` is the pipe length).
+- GeoPackage and Shapefile exports write each column with the type of
+  its values and missing values as NULL. A column with gaps was written
+  as text: `private_sewer` came out as the strings `"1"` and `"nan"`
+  (both of which read back as true), and list columns with gaps as
+  Python repr.
+  Lists are now always JSON. Parquet export writes columns that mix
+  lists and single values as text.
 
 ## [0.3.1] - 2026-10-25
 
