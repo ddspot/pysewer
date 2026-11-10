@@ -84,13 +84,12 @@ def simplify_graph(
         for key in edge_attributes:
             edge_attributes[key] = _consolidate(edge_attributes[key])
 
-        # construct the geometry and sum the lengths of the segments; drop
+        # construct the geometry (its length is set later as "distance"); drop
         # float-noise near-duplicate / zero-length vertices so curvilinear
         # distance along the geometry is strictly increasing (issue #4).
         edge_attributes["geometry"] = LineString(
             [Point(node) for node in dedupe_coords(path)]
         )
-        edge_attributes["length"] = edge_attributes["geometry"].length
 
         # add the nodes and edges to their lists for processing at the end
         all_nodes_to_remove.extend(path[1:-1])

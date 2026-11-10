@@ -11,7 +11,7 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pytest
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 import pysewer
 from pysewer.export import export_sewer_network, write_gdf_to_gpkg, write_gdf_to_shp
@@ -111,3 +111,34 @@ def test_pipeline_export_flags_house_connections(tmp_path):
     flagged = pipes["private_sewer"].fillna(False).astype(bool).tolist()
     assert all(f for f, b in zip(flagged, at_building, strict=True) if b)
     assert not any(isinstance(v, str) for v in pipes["private_sewer"])
+
+
+def test_split_road_edge_keeps_road_attributes():
+    md = pysewer.ModelDomain(
+        TEST_DATA / "dem.tif",
+        TEST_DATA / "roads_clipped.shp",
+        TEST_DATA / "buildings_clipped.shp",
+        connect_buildings=False,
+    )
+    G = nx.Graph()
+    G.add_edge((0.0, 0.0), (10.0, 0.0), ROADNO="R1", geometry=LineString([(0, 0), (10, 0)]))
+    md.connect_to_roadnetwork(G, Point(5, 3), Point(5, 0), LineString([(0, 0), (10, 0)]))
+    for half in [((0.0, 0.0), (5.0, 0.0)), ((5.0, 0.0), (10.0, 0.0))]:
+        assert G.edges[half]["ROADNO"] == "R1"
+        assert "geometry" not in G.edges[half]
+
+
+def test_road_pipes_keep_road_attributes(tmp_path):
+    shutil.copy(TEST_DATA / "dem.tif", tmp_path / "dem.tif")
+    md = pysewer.ModelDomain(
+        tmp_path / "dem.tif",
+        TEST_DATA / "roads_clipped.shp",
+        TEST_DATA / "buildings_clipped.shp",
+    )
+    md.add_sink(SINK)
+    tree = rsph_tree(md.generate_connection_graph(), [SINK])
+    pipes = get_edge_gdf(tree, detailed=True)
+    road = pipes[pipes["private_sewer"].isna()]
+    assert len(road) > 0
+    assert road["ROADNO"].notna().all()
+    assert "length" not in pipes.columns
