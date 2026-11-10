@@ -992,14 +992,14 @@ class ModelDomain:
         # inserts new connection point on a edge and adjusts edges
         # Find Edge intersecting conn_point
 
-        # both halves of a split house connection stay house connections
-        private = G.edges[u, v].get("private_sewer", False)
+        # both halves keep the split edge's attributes (road attributes, the
+        # private_sewer flag); their geometry is rebuilt from the new nodes
+        halves = {k: val for k, val in G.edges[u, v].items() if k != "geometry"}
         G.remove_edge(u, v)
 
         G.add_node((conn_point.x, conn_point.y), connection_node=True)
 
         # add edges
-        halves = {"private_sewer": True} if private else {}
         G.add_edge(u, (conn_point.x, conn_point.y), **halves)
         G.add_edge((conn_point.x, conn_point.y), v, **halves)
         G.add_edge(
