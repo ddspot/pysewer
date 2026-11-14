@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-11-10
+## [0.4.0] - 2026-11-14
 
 Networks change: buildings connect to the street instead of chaining
 through their neighbours, cluster centers are computed correctly, and
