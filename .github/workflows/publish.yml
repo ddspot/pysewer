@@ -33,7 +33,9 @@ jobs:
       - run: uvx twine check --strict dist/*
       - name: Install the wheel in a clean venv and import it
         run: |
-          uv venv /tmp/clean
+          # Python 3.13: ubuntu-latest (26.04) ships 3.14, for which fiona has
+          # no wheels yet, so pip would try to compile it against GDAL
+          uv venv --python 3.13 /tmp/clean
           uv pip install --python /tmp/clean/bin/python dist/*.whl
           /tmp/clean/bin/python -c "import pysewer; from importlib.metadata import version; print('pysewer', version('pysewer'))"
       - uses: actions/upload-artifact@v4
