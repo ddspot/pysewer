@@ -562,7 +562,7 @@ class Buildings:
         cluster_centers["distance"] = [
             g.distance(merged_roads) for g in cluster_centers.geometry
         ]
-        cluster_centers.sort_values(by="distance", inplace=True)
+        cluster_centers = cluster_centers.sort_values(by="distance")
         return cluster_centers
 
 
