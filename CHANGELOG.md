@@ -32,12 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   station and lifting station. `graph["station_aware"]` holds the
   results of each iteration.
 
-  Results with the default `station_cost` (200 m):
+  Results with the default `station_cost` (200 m), with the
+  `needs_pump` change below:
 
   | case | stations | pipe length |
   |---|---|---|
-  | Wasweta II | 78 → 59 | +2.9 % |
-  | Arima | 22 → 19 | +1.1 % |
+  | Wasweta II | 81 → 60 | +3.2 % |
+  | Arima | 23 → 20 | +1.1 % |
   | example | 24 → 22 | +0.5 % |
   | Chaguanas (flat) | 35 → 35 | 0 % |
   | London (flat) | 5 → 5 | 0 % |
@@ -45,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Only lifting stations decrease. The terrain sets the pumping stations.
   On flat terrain the gain is small or zero. A higher `station_cost`
   removes more stations and adds more pipe (at 500 m: Wasweta II
-  78 → 43 stations, +7.4 %; Chaguanas 35 → 31, +2.1 %). Each iteration takes
+  81 → 46 stations, +7.6 %; Chaguanas 35 → 31, +2.1 %). Each iteration takes
   the time of one routing and one design step.
 
 - Config settings `optimization.station_cost` (default 200, metres of

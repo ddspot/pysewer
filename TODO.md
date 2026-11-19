@@ -163,7 +163,8 @@ The open items above stay open. These items are new.
       2. Add the trench depth to the edge weight. For example, add an
          excavation cost for the trench depth that an edge causes
          downstream. This option includes the trench depth only in part.
-      3. **(Recommended next.)** Use a loop:
+      3. **Done (!21, 2026-11-19): `pysewer.route_and_design`.** Use a
+         loop:
          1. Route the network.
          2. Do the design step.
          3. Increase the weights of the edges near each station.
@@ -174,7 +175,20 @@ The open items above stay open. These items are new.
 
       For each option, add a regression test on a case with loops (for
       example, Arima). In this test, a higher pump penalty must decrease
-      the number of stations or the pressurized length.
+      the number of stations or the pressurized length. For option 3, the
+      test is in `tests/test_route_and_design.py` (example data).
+
+      Related: `needs_pump` on the connection graph used `min_slope`
+      (1:100), but the design step uses the self-cleansing slope (1:222 or
+      flatter). Thus the pump penalty applied to edges that the design
+      step builds as gravity pipes (Chaguanas: 42 of 53 edges). !22 fixes
+      this. The fix does not decrease the number of stations.
+
+      Still open:
+      1. `route_and_design` is optional. Decide before 0.5 if it becomes
+         the default.
+      2. Correct the statement about the pump penalty in the next message
+         to ELAN.
 
 - [ ] **Issue #4, root cause.** In `connect_to_roadnetwork`, connect the
       building to the existing vertex. Do not split the road edge.
