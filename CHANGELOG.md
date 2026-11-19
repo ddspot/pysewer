@@ -53,6 +53,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (default 8). Only `route_and_design` uses them. The value 200 m is a
   proxy. Set it from local costs.
 
+### Changed
+
+- `needs_pump` on the connection graph uses the minimum slope of the
+  design step. With `min_slope_model: "self_cleansing"` (the default),
+  the design step uses the self-cleansing slope of the pipe diameter
+  (1:222 for DN200, flatter for larger pipes). `needs_pump` used
+  `min_slope` (1:100). Thus the routing put the pump penalty on edges
+  that the design step builds as gravity pipes (Chaguanas: 42 of 53
+  edges). The diameter is not known before routing, so `needs_pump` now
+  uses the slope of the smallest diameter. With `min_slope_model:
+  "uniform"`, `needs_pump` uses `min_slope`, as before.
+
+  Some networks change:
+
+  | case | edges with `needs_pump` | stations | pipe length |
+  |---|---|---|---|
+  | Chaguanas | 53 → 11 | 35 → 35 | 0 % |
+  | Wasweta II | 68 → 42 | 78 → 81 | −0.5 % |
+  | Arima | 114 → 95 | 22 → 23 | −0.5 % |
+  | example | 33 → 31 | 24 → 24 | 0 % |
+  | London | 1 → 1 | 5 → 5 | 0 % |
+
+  The number of stations does not decrease. The routing weight does not
+  include the trench depth that causes most lifting stations. To reroute
+  the network around the stations, use `route_and_design`.
+
 ## [0.4.0] - 2026-11-14
 
 Networks change: buildings connect to the street instead of chaining
