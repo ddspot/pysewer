@@ -85,6 +85,11 @@ class Optimization:
     # Constructability floor magnitude (positive) for the self-cleansing model:
     # a laid slope never goes flatter than this regardless of diameter.
     min_slope_abs: float = 0.0005
+    # Station-aware routing (route_and_design): the cost of one pumping or
+    # lifting station in metres of gravity pipe, and the maximum number of
+    # routings. Only route_and_design uses these settings.
+    station_cost: float = 200.0
+    station_max_iterations: int = 8
 
 
 @dataclass
@@ -245,6 +250,12 @@ def validate_config_values(config: "Config") -> None:
             "Butler / BS EN 752 capacity limit of 0.75; pipes will be sized "
             "with no reserve below full-bore flow.",
             stacklevel=2,
+        )
+    if opt.station_cost < 0:
+        raise ValueError(f"optimization.station_cost ({opt.station_cost}) must be >= 0")
+    if opt.station_max_iterations < 1:
+        raise ValueError(
+            f"optimization.station_max_iterations ({opt.station_max_iterations}) must be >= 1"
         )
     if opt.min_slope_model not in ("uniform", "self_cleansing"):
         raise ValueError(

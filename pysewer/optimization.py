@@ -9,7 +9,8 @@ import networkx as nx
 import numpy as np
 
 from .config.manager import get_config
-from .helper import get_mean_slope, get_node_keys, get_upstream_nodes
+from .helper import get_mean_slope, get_node_keys, get_sewer_info, get_upstream_nodes
+from .routing import rsph_tree
 
 logger = logging.getLogger(__name__)
 
@@ -505,6 +506,137 @@ def calculate_hydraulic_parameters(
         data.pop("needs_pump", None)
 
     return G
+
+
+def route_and_design(
+    connection_graph: nx.MultiDiGraph,
+    sinks: list,
+    station_cost: float | None = None,
+    max_iterations: int | None = None,
+    *,
+    strict: bool = False,
+    **design_kwargs,
+) -> nx.DiGraph:
+    """
+    Route and design the sewer network, and reroute to avoid stations.
+
+    The routing weight of an edge is its length, multiplied by
+    ``pump_penalty`` when the edge has ``needs_pump``. The design step
+    places most stations for a different reason: the trench depth along
+    the route becomes more than ``tmax``. The routing weight does not
+    include this trench depth. This function adds it in a loop:
+
+    1. Route the network (:func:`~pysewer.routing.rsph_tree`).
+    2. Do the design step (:func:`estimate_peakflow` and
+       :func:`calculate_hydraulic_parameters`).
+    3. Add ``station_cost`` to the weight of each edge that starts at a
+       new pumping station or lifting station.
+    4. Route the network again.
+
+    The loop stops when the design step places no station on a new edge,
+    or after ``max_iterations`` routings. The function returns the
+    designed network with the lowest cost::
+
+        cost = gravity length + pressurized length
+               + station_cost * (pumping stations + lifting stations)
+
+    The number of stations can increase between iterations, so the best
+    network is not always the last one. Private pumps are not in the cost.
+
+    Parameters
+    ----------
+    connection_graph : nx.MultiDiGraph
+        The connection graph from ``ModelDomain.generate_connection_graph``.
+        The function does not change it.
+    sinks : list
+        The sink nodes.
+    station_cost : float, optional
+        The cost of one station, in metres of gravity pipe. If None, the
+        value of ``optimization.station_cost`` in the config (default 200).
+        This is a proxy: set it from local construction and operation costs.
+    max_iterations : int, optional
+        The maximum number of routings. If None, the value of
+        ``optimization.station_max_iterations`` in the config (default 8).
+        With 1, the result is the same as without this function.
+    strict : bool, optional, keyword-only
+        Passed to :func:`~pysewer.routing.rsph_tree`.
+    **design_kwargs
+        Passed to :func:`calculate_hydraulic_parameters`.
+
+    Returns
+    -------
+    nx.DiGraph
+        The designed network with the lowest cost.
+        ``graph["station_aware"]["iterations"]`` holds one record per
+        iteration: ``iteration``, ``pumping_stations``, ``lifting_stations``,
+        ``length`` [m] and ``cost`` [m]. ``graph["station_aware"]["best"]``
+        is the number of the returned iteration.
+    """
+    config = get_config()
+    station_cost = config.optimization.station_cost if station_cost is None else station_cost
+    max_iterations = (
+        config.optimization.station_max_iterations if max_iterations is None else max_iterations
+    )
+    if station_cost < 0:
+        raise ValueError(f"station_cost must be >= 0, got {station_cost}")
+    if max_iterations < 1:
+        raise ValueError(f"max_iterations must be >= 1, got {max_iterations}")
+
+    # Change the weights of a copy only. The copy shares the edge profiles
+    # and geometries with the input graph, but has its own attribute dicts.
+    graph = connection_graph.copy()
+    penalized = set()
+    records = []
+    best = None
+    for iteration in range(max_iterations):
+        tree = rsph_tree(graph, sinks, strict=strict)
+        designed = calculate_hydraulic_parameters(
+            estimate_peakflow(tree), sinks=sinks, **design_kwargs
+        )
+        info = get_sewer_info(designed)
+        length = info["Gravity Sewer Length [m]"] + info["Pressurized Sewer Length [m]"]
+        n_stations = info["Pumping Stations"] + info["Lifting Stations"]
+        record = {
+            "iteration": iteration,
+            "pumping_stations": info["Pumping Stations"],
+            "lifting_stations": info["Lifting Stations"],
+            "length": length,
+            "cost": length + station_cost * n_stations,
+        }
+        records.append(record)
+        logger.info(
+            "Station-aware routing, iteration %d: %d pumping stations, "
+            "%d lifting stations, %.0f m of sewer, cost %.0f m",
+            iteration, record["pumping_stations"], record["lifting_stations"],
+            length, record["cost"],
+        )
+        if best is None or record["cost"] < best[0]["cost"]:
+            best = (record, designed)
+
+        buildings = set(get_node_keys(designed, field="node_type", value="building"))
+        new_edges = [
+            (u, v)
+            for u, v in designed.edges()
+            if u not in buildings
+            and (designed.nodes[u].get("pumping_station") or designed.nodes[u].get("lifting_station"))
+            and (u, v) not in penalized
+            and graph.has_edge(u, v)
+        ]
+        if not new_edges:
+            break
+        for u, v in new_edges:
+            for data in graph[u][v].values():
+                data["weight"] += station_cost
+        penalized.update(new_edges)
+
+    record, designed = best
+    designed.graph["station_aware"] = {"iterations": records, "best": record["iteration"]}
+    logger.info(
+        "Station-aware routing: iteration %d has the lowest cost (%d pumping stations, "
+        "%d lifting stations)",
+        record["iteration"], record["pumping_stations"], record["lifting_stations"],
+    )
+    return designed
 
 
 def peak_factor_for_population(
