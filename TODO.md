@@ -205,8 +205,8 @@ The open items above stay open. These items are new.
         email. Some data is not cleared for public release.
 
       Next steps:
-      1. Send the reply on the issue.
-      2. Send the instances by email.
+      1. Send the reply on the issue. (Done 2026-11-19.)
+      2. Send the instances by email. (Done 2026-11-19.)
       3. Compare RSPH with SteinerPy on all seven cases. Compare the cost
          and the design result (stations, pressurized length).
       4. If the difference is large, add SteinerPy as an optional backend
