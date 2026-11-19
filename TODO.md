@@ -127,3 +127,88 @@ uv+mamba two-layer env).
       EVE job via `bin/bootstrap_env.sh` + SLURM (high-mem node). While
       there, profile connection-graph memory — the ceiling is shared by
       v0.1.20 and current, so it's a scalability limit, not a regression
+
+## After 0.4.0 (2026-11-19)
+
+The open items above stay open. These items are new.
+
+- [ ] **The pump penalty has almost no effect on the routed network.**
+      Results on 0.4.0 with pump penalty 1, 1,000 and 1,000,000:
+      - Test data: the network does not change. The road graph has one
+        loop. All 7 edges with `needs_pump` are bridges.
+      - Arima (603 buildings, 248 loops): 10 of approximately 1,320 pipes
+        change. Lifting stations go from 23 to 22. There are no pumping
+        stations. Pump penalty 1,000 and 1,000,000 give the same network.
+
+      Cause: the pump penalty applies only to edges with `needs_pump`. An
+      edge has `needs_pump` when it cannot drain by gravity from a minimum
+      trench. In Arima, 103 of 2,465 edges have `needs_pump`, and 46 of
+      them are bridges. With pump penalty 1, the routed network uses only
+      5 of them. The design step places the stations. It places a station
+      where the trench depth along the route becomes more than `tmax`. The
+      routing weight does not include this trench depth.
+
+      The tests in `tests/test_pump_penalty_routing.py` set the weights
+      manually. No test shows that the pump penalty changes a real network.
+
+      The response to ELAN (work/2026-08-05_pysewer_response_to_elan.md)
+      says that the pump penalty "now actually steers the routing". This
+      is correct, but the effect is small. Correct this in the next
+      message to ELAN.
+
+      Options, from least work to most work:
+      1. Document the limit. The pump penalty applies only to edges with
+         `needs_pump`. The design step places the stations from the
+         trench depth.
+      2. Add the trench depth to the edge weight. For example, add an
+         excavation cost for the trench depth that an edge causes
+         downstream. This option includes the trench depth only in part.
+      3. **(Recommended next.)** Use a loop:
+         1. Route the network.
+         2. Do the design step.
+         3. Increase the weights of the edges near each station.
+         4. Route the network again.
+         5. Stop when the number of stations does not decrease.
+      4. Include the station cost in the routing problem. This option is
+         the most correct. It is a research task.
+
+      For each option, add a regression test on a case with loops (for
+      example, Arima). In this test, a higher pump penalty must decrease
+      the number of stations or the pressurized length.
+
+- [ ] **Issue #4, root cause.** In `connect_to_roadnetwork`, connect the
+      building to the existing vertex. Do not split the road edge.
+      This change is on hold. The building becomes a node with two edges,
+      and `simplify_graph` removes these nodes. On the test data, the
+      number of connected buildings goes from 57 to 45. Before the change:
+      1. Get the dataset of the issue reporter.
+      2. Make sure that each removed building keeps its house connection
+         and its population.
+
+      The geometry fix (`dedupe_coords`) is in 0.3.0.
+
+- [ ] **reviewer_full: run on the laptop first.** In 0.4.0, `rsph_tree`
+      does not calculate all-pairs shortest paths. On Chaguanas, the
+      memory goes from 14.3 GB to 0.3 GB. Run the case on the laptop
+      again. If it fails, use the EVE job.
+
+- [ ] **SteinerPy (ddspot/pysewer#12).** Berend Markhorst offers SteinerPy
+      as an optional routing backend. SteinerPy solves the directed
+      Steiner tree problem to the optimum.
+      - First result on Arima: SteinerPy finds the optimum in 39 s. The
+        RSPH cost is 0.8 % more than the optimum. With the optimum
+        network, the design step places 19 lifting stations, not 22.
+      - `benchmarks/scripts/export_steiner_instances.py` writes the seven
+        benchmark cases as JSON instances. The instances are in
+        work/benchmarks/pysewer_steiner_instances.zip.
+      - Do not attach the instances to the public issue. Send them by
+        email. Some data is not cleared for public release.
+
+      Next steps:
+      1. Send the reply on the issue.
+      2. Send the instances by email.
+      3. Compare RSPH with SteinerPy on all seven cases. Compare the cost
+         and the design result (stations, pressurized length).
+      4. If the difference is large, add SteinerPy as an optional backend
+         (`pysewer[steiner]`).
+      5. Share the Amman case when the stormwater repository is public.
