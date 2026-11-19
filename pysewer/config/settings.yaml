@@ -101,6 +101,17 @@ optimization:
   # survey/laying tolerance dominates. Kept separate from dts_min_gradient
   # (1:150) so it does not clamp the flatter large-diameter grades.
   min_slope_abs: 0.0005
+  # Station-aware routing (pysewer.route_and_design only). The routing
+  # weight does not include the trench depth that causes most lifting
+  # stations. route_and_design routes, designs, adds station_cost to the
+  # edges that start at a station, and routes again.
+  # station_cost: the cost of one pumping or lifting station, in metres of
+  # gravity pipe. 200 m is a proxy (a lifting station of approximately
+  # EUR 100,000 and a gravity sewer of approximately EUR 500/m). Set it from
+  # local costs.
+  station_cost: 200.0
+  # station_max_iterations: the maximum number of routings.
+  station_max_iterations: 8
 
 plotting:
   plot_connection_graph: false
