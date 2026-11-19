@@ -39,7 +39,7 @@ from .helper import (
     is_valid_geometry,
     remove_third_dimension,
 )
-from .optimization import needs_pump
+from .optimization import min_self_cleansing_slope, needs_pump
 from .simplify import simplify_graph
 
 logger = logging.getLogger(__name__)
@@ -1033,6 +1033,20 @@ class ModelDomain:
         )
         nx.set_node_attributes(connection_digraph, 0, name="trench_depth")
 
+        # Use the minimum slope of the design step, so that needs_pump agrees
+        # with the pumps that calculate_hydraulic_parameters places. With
+        # min_slope_model "self_cleansing", the design step uses the slope of
+        # the pipe diameter. The diameter is not known before routing, so use
+        # the smallest diameter. Its slope is the steepest that the design
+        # step uses. Thus, when inflow_trench_depth and min_trench_depth are
+        # equal (the default), each edge on which the design step places a
+        # pump also has needs_pump.
+        opt = config.optimization
+        if opt.min_slope_model == "self_cleansing" and opt.diameters:
+            routing_min_slope = min_self_cleansing_slope(min(opt.diameters))
+        else:
+            routing_min_slope = opt.min_slope
+
         # Count edges that need pumps
         edges_needing_pumps = 0
         total_edges = 0
@@ -1057,7 +1071,7 @@ class ModelDomain:
                     # Check if a pump is needed
                     needs_pump_flag, height, trench_depth = needs_pump(
                         profile=connection_digraph[u][v][0]["profile"],
-                        min_slope=config.optimization.min_slope,
+                        min_slope=routing_min_slope,
                         tmax=config.optimization.tmax,
                         tmin=config.optimization.tmin,
                         inflow_trench_depth=config.optimization.inflow_trench_depth,
