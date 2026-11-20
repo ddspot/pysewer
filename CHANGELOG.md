@@ -56,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `import pysewer` loads the submodules `viz`, `bundle`, `metrics`,
+  `compare`, `sources`, `pipeline`, `cli` and `plotting` only when you
+  use them. Thus `import pysewer` does not load matplotlib or other
+  optional dependencies. If an optional dependency is missing, the error
+  message tells which extra to install.
+
 - `needs_pump` on the connection graph uses the minimum slope of the
   design step. With `min_slope_model: "self_cleansing"` (the default),
   the design step uses the self-cleansing slope of the pipe diameter
