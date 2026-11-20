@@ -529,7 +529,9 @@ def quality_checks(
                     "value": np.nan,
                     "limit": np.nan,
                     "unit": "",
-                    "message": [f"The design engine reported {i}." for _, i in eng],
+                    "message": [
+                        f"The design engine flagged: {_engine_text(i)}." for _, i in eng
+                    ],
                 },
                 columns=list(QUALITY_COLUMNS),
             )
@@ -573,6 +575,28 @@ def quality_checks(
         columns="_sev"
     )
     return out.reset_index(drop=True)
+
+
+# Plain-language text for the violation names of the design engine.
+_ENGINE_TEXT = {
+    "max_slope": "the slope is steeper than the maximum slope",
+    "min_slope": "the slope is less than the minimum slope",
+    "min_cover": "the cover is less than the minimum cover (engine check)",
+    "min_pipe_length": "the pipe is shorter than the minimum length (engine check)",
+    "velocity_min": "the velocity is below the minimum (engine check)",
+    "velocity_max": "the velocity is above the maximum (engine check)",
+    "depth_ratio": "the filling ratio d/D is above the target (engine check)",
+    "no_diameter_meets_depth_ratio": (
+        "no available diameter keeps the filling ratio d/D within the target"
+    ),
+    "gradient_below_dts": (
+        "the gradient is below the minimum gradient for small flows"
+    ),
+}
+
+
+def _engine_text(item: str) -> str:
+    return _ENGINE_TEXT.get(item, f"the design engine reported {item}")
 
 
 _CHECK_TEXT = {
@@ -630,7 +654,7 @@ def summarize_findings(
                 "the invert, so the cover is tmin minus the diameter."
             )
         elif check.startswith("engine:"):
-            msg = f"{n} {noun}: the design engine reported {check[7:]}."
+            msg = f"{n} {noun}: {_engine_text(check[7:])}."
         else:
             msg = f"{n} {noun}: {_CHECK_TEXT.get(check, check)}."
         out.append({"check": check, "severity": severity, "count": n, "message": msg})

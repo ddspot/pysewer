@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `quality_checks` and `summarize_findings` give the design engine
+  findings in plain words, for example "the slope is steeper than the
+  maximum slope". The check names do not change.
+
 - In the longitudinal profile, a pressure main follows the terrain.
   pysewer keeps only the invert at the two ends of a pressure main. The
   profile now calculates the depth at the two ends, interpolates it
