@@ -822,12 +822,18 @@ class NetworkBundle:
         logger.info("Wrote bundle %s to %s", self.name, path)
         return path
 
-    def to_geojson_dict(self) -> dict:
+    def to_geojson_dict(self, *, rounding: bool = True) -> dict:
         """
         Return the GeoJSON content as plain, strict-JSON Python objects.
 
         Same content as :meth:`to_geojson` (EPSG:4326, lon/lat, RFC 7946,
         7 coordinate decimals, same rounding and column types).
+
+        Parameters
+        ----------
+        rounding : bool, optional
+            If False, attribute columns and profiles are not rounded (the
+            coordinates keep 7 decimals). Default True.
 
         Returns
         -------
@@ -858,7 +864,10 @@ class NetworkBundle:
         )
 
         wgs = self.to_wgs84()
-        pipe_dec, node_dec, digits = self._table_decimals()
+        if rounding:
+            pipe_dec, node_dec, digits = self._table_decimals()
+        else:
+            pipe_dec, node_dec, digits = {}, {}, None
 
         def collection(gdf, decimals, dtypes, geometry_type):
             gdf = round_float_columns(gdf, decimals)
@@ -873,7 +882,11 @@ class NetworkBundle:
                     **GEOJSON_OPEN_OPTIONS,
                 ) as dst:
                     _write_features(dst, gdf, values)
-                return json.loads(mem.read().decode("utf-8"))
+                fc = json.loads(mem.read().decode("utf-8"))
+            # GDAL names the collection after the random MemoryFile; drop it
+            # so the same bundle always gives the same output.
+            fc.pop("name", None)
+            return fc
 
         meta = wgs.metadata
         meta["counts"] = {"pipes": len(self.pipes), "nodes": len(self.nodes)}

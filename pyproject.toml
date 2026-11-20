@@ -83,6 +83,7 @@ include = ["pysewer*"]
 
 [tool.setuptools.package-data]
 "pysewer.config" = ["*.yaml"]
+"pysewer.viz.report" = ["*.html", "*.js", "*.css"]
 
 [tool.pytest.ini_options]
 # keep collection out of work/ scratch (e.g. the benchmark baseline

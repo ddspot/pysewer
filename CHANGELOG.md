@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.viz.report.build_report` writes one HTML file for a network.
+  The file shows the network on a web map, the key numbers, the
+  findings of the quality check and a longitudinal profile. Click a
+  node on the map to show its profile to the sink. The file loads
+  MapLibre GL and Plotly.js from a CDN (with integrity hashes) and the
+  basemap from OpenFreeMap. All network data is in the file. It has a
+  light and a dark theme and works on a phone.
+- `NetworkBundle.to_geojson_dict(rounding=False)` gives the GeoJSON
+  without rounding.
+
 - `quality_checks` and `summarize_findings` give the design engine
   findings in plain words, for example "the slope is steeper than the
   maximum slope". The check names do not change.
