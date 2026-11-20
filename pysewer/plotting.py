@@ -5,12 +5,14 @@
 import logging
 import warnings
 
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import rasterio.plot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from rasterio.plot import plotting_extent
+from shapely.geometry import Point
 
 from .config.manager import get_config
 from .helper import get_edge_gdf, get_node_gdf
@@ -349,14 +351,21 @@ def plot_connection_graph(model_domain, fig_size=(10, 10)):
     node_gdf = get_node_gdf(model_domain.connection_graph)
     node_gdf.plot(ax=ax, color="red", markersize=20, zorder=4, label="Nodes")
 
-    # Highlight nodes that need pumps
-    pump_nodes = [
-        node
-        for node, data in model_domain.connection_graph.nodes(data=True)
-        if data.get("needs_pump", False)
-    ]
+    # Highlight nodes that need pumps (needs_pump is an edge attribute;
+    # the upstream node of the edge hosts the pump)
+    graph = model_domain.connection_graph
+    pump_nodes = list(
+        dict.fromkeys(
+            u
+            for u, _, data in graph.edges(data=True)
+            if data.get("needs_pump", False)
+        )
+    )
     if pump_nodes:
-        pump_gdf = get_node_gdf(model_domain.connection_graph, value=pump_nodes)
+        pump_gdf = gpd.GeoDataFrame(
+            geometry=[Point(n[0], n[1]) for n in pump_nodes],
+            crs=graph.graph.get("crs"),
+        )
         pump_gdf.plot(
             ax=ax, color="yellow", markersize=30, zorder=5, label="Pump Needed"
         )

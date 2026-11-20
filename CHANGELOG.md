@@ -86,6 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The junction graph does not exist. The function now plots the
   connection graph and shows a `DeprecationWarning`.
 
+- `plot_connection_graph` now marks the nodes that need a pump.
+  `needs_pump` is an edge attribute. The function now marks the
+  upstream node of each edge with `needs_pump`. Before, it read
+  `needs_pump` from the nodes and marked no node.
+
 ## [0.4.0] - 2026-11-14
 
 Networks change: buildings connect to the street instead of chaining
