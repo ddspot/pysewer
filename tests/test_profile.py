@@ -167,8 +167,10 @@ def test_ground_global_chainage(prof):
 def test_invert_global_chainage(prof):
     _assert_pts(prof.segments[0].invert, [(0, 108.5), (50, 107.5), (100, 106.5)])
     _assert_pts(prof.segments[1].invert, [(100, 106.5), (200, 104.5)])
-    # pressurised: exactly two invert points
-    _assert_pts(prof.segments[2].invert, [(200, 105.5), (400, 107.0)])
+    # pressurised: one invert point per ground vertex (200, 300, 400).
+    # end depths: 106 - 105.5 = 0.5 up, 108 - 107.0 = 1.0 down; at s=300 the
+    # depth is 0.75, so invert = 107 - 0.75 = 106.25
+    _assert_pts(prof.segments[2].invert, [(200, 105.5), (300, 106.25), (400, 107.0)])
     _assert_pts(prof.segments[3].invert, [(400, 106.5), (500, 105.5)])
     _assert_pts(prof.segments[4].invert, [(500, 105.5), (650, 104.0)])
 
@@ -178,8 +180,8 @@ def test_crown_is_invert_plus_diameter(prof):
     _assert_pts(prof.segments[0].crown, [(0, 108.7), (50, 107.7), (100, 106.7)])
     # P2: +0.3 -> 106.8, 104.8
     _assert_pts(prof.segments[1].crown, [(100, 106.8), (200, 104.8)])
-    # P3: +0.1 -> 105.6, 107.1
-    _assert_pts(prof.segments[2].crown, [(200, 105.6), (400, 107.1)])
+    # P3: +0.1 -> 105.6, 106.25 + 0.1 = 106.35, 107.1
+    _assert_pts(prof.segments[2].crown, [(200, 105.6), (300, 106.35), (400, 107.1)])
     # P4: +0.4 -> 106.9, 105.9
     _assert_pts(prof.segments[3].crown, [(400, 106.9), (500, 105.9)])
     # P5: +0.4 -> 105.9, 104.4
@@ -256,7 +258,8 @@ def test_start_mid_path(b):
     assert p.total_length == pytest.approx(450.0, abs=1e-9)
     assert p.markers[0].kind == "start"  # start wins over lifting_station
     assert p.markers[0].chainage == 0.0
-    _assert_pts(p.segments[0].invert, [(0, 105.5), (200, 107.0)])
+    # local s 0, 100, 200; depth 0.5 -> 0.75 -> 1.0, invert = ground - depth
+    _assert_pts(p.segments[0].invert, [(0, 105.5), (100, 106.25), (200, 107.0)])
 
 
 def test_start_is_sink_gives_empty_profile(b):
@@ -453,7 +456,12 @@ def test_to_dict_schema_and_json_safe(prof):
         "velocity": "m/s",
         "d_over_D": "1",
     }
-    assert d["params"] == {"drop_threshold": 0.05, "lift_tol": 1e-6}
+    assert d["params"] == {
+        "drop_threshold": 0.05,
+        "lift_tol": 1e-6,
+        "pressurized_invert": "ground_minus_interpolated_end_depth",
+        "tmin": 0.25,  # config optimization.tmin in settings.yaml
+    }
     assert d["start"] == "N000001" and d["sink"] == "N000006"
     assert d["total_length"] == pytest.approx(650.0, abs=1e-9)
     assert d["node_ids"] == prof.node_ids and d["pipe_ids"] == prof.pipe_ids
@@ -798,10 +806,16 @@ def test_real_profile_n000115_total_length(real):
 # ------------------------------------------------------------------ params, wgs84
 def test_params_reflect_custom_drop_threshold(b):
     p = longitudinal_profile(b, "N000001", drop_threshold=0.3)
-    assert p.params == {"drop_threshold": 0.3, "lift_tol": 1e-6}
+    want = {
+        "drop_threshold": 0.3,
+        "lift_tol": 1e-6,
+        "pressurized_invert": "ground_minus_interpolated_end_depth",
+        "tmin": 0.25,
+    }
+    assert p.params == want
     d = json.loads(json.dumps(p.to_dict(), allow_nan=False))
-    assert d["params"] == {"drop_threshold": 0.3, "lift_tol": 1e-6}
-    assert Profile.from_dict(d).params == {"drop_threshold": 0.3, "lift_tol": 1e-6}
+    assert d["params"] == want
+    assert Profile.from_dict(d).params == want
     assert Profile.from_dict(d) == p
 
 
@@ -814,3 +828,126 @@ def test_profile_from_wgs84_bundle_equals_projected(b):
     assert pw.total_length == pytest.approx(650.0, abs=1e-9)
     assert pw.node_ids == pp.node_ids
     assert pw.to_dict() == pp.to_dict()
+
+
+# ------------------------------------------------------------------ pressurised invert
+def _main(ground, invert, pressurized=True):
+    """One 100 m pipe building -> wwtp with the given ground/invert pairs."""
+    a, c = (700000, 5000000), (700100, 5000000)
+    G = nx.DiGraph(crs=CRS("EPSG:32633"))
+    G.add_node(a, node_type="building", elevation=ground[0][1])
+    G.add_node(c, node_type="wwtp", elevation=ground[-1][1])
+    _edge(G, a, c, ground, invert, 0.1, 1.0, pressurized=pressurized)
+    return NetworkBundle.from_graph(G, name="main")
+
+
+def _inv_z(p):
+    return [z for _, z in p.segments[0].invert]
+
+
+def test_pressurized_follows_dipping_terrain():
+    # ground 100, 95, 100; depth 0.25 at both ends -> 0.25 everywhere
+    # invert = 100 - 0.25 = 99.75; 95 - 0.25 = 94.75; 99.75.
+    # The engine line (99.75 -> 99.75) would sit above the ground at s=50.
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, 99.75), (100, 99.75)])
+    seg = longitudinal_profile(b, "N000001").segments[0]
+    _assert_pts(seg.invert, [(0, 99.75), (50, 94.75), (100, 99.75)])
+    # crown = invert + 0.1
+    _assert_pts(seg.crown, [(0, 99.85), (50, 94.85), (100, 99.85)])
+    assert seg.water == []
+    for (_, g), (_, z) in zip(seg.ground, seg.invert, strict=True):
+        assert z < g
+
+
+def test_pressurized_unequal_end_depths_interpolate_linearly():
+    # depth_up = 100 - 99.75 = 0.25, depth_down = 100 - 98.75 = 1.25
+    # s=50 is halfway: depth 0.75 -> invert 95 - 0.75 = 94.25
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, 99.75), (100, 98.75)])
+    seg = longitudinal_profile(b, "N000001").segments[0]
+    _assert_pts(seg.invert, [(0, 99.75), (50, 94.25), (100, 98.75)])
+    depths = [g - z for (_, g), (_, z) in zip(seg.ground, seg.invert, strict=True)]
+    assert depths == pytest.approx([0.25, 0.75, 1.25], abs=1e-9)
+
+
+def test_pressurized_uneven_vertex_spacing_uses_chainage_not_index():
+    # vertices at s = 0, 20, 100; depth 0.25 -> 1.25; at s=20 frac = 0.2,
+    # depth = 0.25 + 0.2 * 1.0 = 0.45; invert = 90 - 0.45 = 89.55
+    b = _main([(0, 100), (20, 90), (100, 100)], [(0, 99.75), (100, 98.75)])
+    seg = longitudinal_profile(b, "N000001").segments[0]
+    _assert_pts(seg.invert, [(0, 99.75), (20, 89.55), (100, 98.75)])
+
+
+def test_pressurized_end_inverts_equal_bundle_exactly(b):
+    # synthetic chain: P3 stored inverts 105.5 and 107.0
+    p = longitudinal_profile(b, "N000001")
+    inv = p.segments[2].invert
+    row = b.pipes.set_index("pipe_id").loc["P000003"]
+    assert inv[0][1] == row["invert_up"] == 105.5
+    assert inv[-1][1] == row["invert_down"] == 107.0
+    # markers read the same values
+    assert (p.markers[2].invert_out, p.markers[3].invert_in) == (105.5, 107.0)
+
+
+def test_gravity_invert_unchanged_by_pressurized_rule():
+    # same dip, gravity: the stored invert points are kept as they are
+    b = _main(
+        [(0, 100), (50, 95), (100, 100)],
+        [(0, 99.75), (100, 99.75)],
+        pressurized=False,
+    )
+    seg = longitudinal_profile(b, "N000001").segments[0]
+    _assert_pts(seg.invert, [(0, 99.75), (100, 99.75)])
+
+
+def test_pressurized_nonfinite_end_invert_falls_back_to_tmin():
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, float("nan")), (100, 99.0)])
+    b.metadata["config"]["optimization"]["tmin"] = 0.4
+    p = longitudinal_profile(b, "N000001")
+    # depth_up = tmin = 0.4, depth_down = 100 - 99.0 = 1.0, mid = 0.7
+    # invert = 99.6, 95 - 0.7 = 94.3, 99.0
+    _assert_pts(p.segments[0].invert, [(0, 99.6), (50, 94.3), (100, 99.0)])
+    assert p.params["tmin"] == 0.4
+
+
+def test_pressurized_both_ends_nonfinite_uses_tmin_everywhere():
+    nan = float("nan")
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, nan), (100, nan)])
+    b.metadata["config"]["optimization"]["tmin"] = 0.5
+    p = longitudinal_profile(b, "N000001")
+    # depth 0.5 at both ends: 99.5, 94.5, 99.5
+    _assert_pts(p.segments[0].invert, [(0, 99.5), (50, 94.5), (100, 99.5)])
+
+
+def test_pressurized_nonfinite_and_no_tmin_keeps_two_point_invert():
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, float("nan")), (100, 99.0)])
+    del b.metadata["config"]["optimization"]["tmin"]
+    p = longitudinal_profile(b, "N000001")
+    inv = p.segments[0].invert
+    assert [s for s, _ in inv] == [0.0, 100.0]  # engine 2-point, no vertex at 50
+    assert math.isnan(inv[0][1]) and inv[1][1] == 99.0
+    assert p.params["tmin"] is None
+    json.dumps(p.to_dict(), allow_nan=False)
+
+
+def test_pressurized_no_config_at_all_still_works_for_finite_ends():
+    b = _main([(0, 100), (50, 95), (100, 100)], [(0, 99.75), (100, 99.75)])
+    b.metadata.pop("config")
+    p = longitudinal_profile(b, "N000001")
+    _assert_pts(p.segments[0].invert, [(0, 99.75), (50, 94.75), (100, 99.75)])
+    assert p.params["tmin"] is None
+
+
+def test_real_n000115_pressurized_depth_is_tmin(real):
+    p = longitudinal_profile(real, "N000115")
+    n_press = 0
+    for seg in p.segments:
+        for (_, g), (_, z) in zip(seg.ground, seg.invert, strict=True):
+            assert z <= g  # no vertex above the ground
+        if seg.pipe_type != "pressurized":
+            continue
+        n_press += 1
+        assert len(seg.invert) == len(seg.ground) >= 2
+        for (sg, g), (si, z) in zip(seg.ground, seg.invert, strict=True):
+            assert si == pytest.approx(sg, abs=1e-9)
+            assert g - z == pytest.approx(0.25, abs=1e-9)  # config tmin 0.25
+    assert n_press > 0

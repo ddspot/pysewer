@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- In the longitudinal profile, a pressure main follows the terrain.
+  pysewer keeps only the invert at the two ends of a pressure main. The
+  profile now calculates the depth at the two ends, interpolates it
+  along the pipe and subtracts it from the ground. Before, the profile
+  drew a straight line between the two ends. That line can go above the
+  ground where the terrain goes down. The levels at the two ends do not
+  change. `Profile.params` gives the rule (`pressurized_invert`) and
+  `tmin`.
+
 - `pysewer.compare.compare` compares two or more variants of a network.
   It gives the metrics of each variant and the difference to a base
   variant, the configuration values that are different, the pipe length

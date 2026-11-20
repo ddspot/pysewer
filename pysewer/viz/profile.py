@@ -12,6 +12,19 @@ The module has no plotting dependency. ``Profile.to_dict`` is the JSON
 contract (schema ``profile/1``) used by the HTML report.
 
 Elevations are metres a.s.l., chainage and diameter are metres.
+
+Pressurised pipes: the engine stores two invert points (a straight line between
+the end inverts), which can pass above the ground where the terrain dips. The
+profile shows a display derivation instead: the invert follows the terrain at
+the end depths: ``invert(s) = ground(s) - depth(s)`` at every ground vertex,
+with ``depth`` interpolated linearly in chainage between ``depth_up = ground_up
+- invert_up`` and ``depth_down = ground_down - invert_down``. For engine data
+both depths equal ``tmin``, so the invert is ``ground - tmin``. The end
+inverts always equal the stored ones, so markers do not change. This is a
+display derivation, not engine data; the engine result and the bundle columns
+are unchanged. If an end depth is not finite, ``tmin`` from
+``bundle.metadata["config"]["optimization"]["tmin"]`` is used; if that is
+missing too, the engine's two-point invert is kept.
 """
 
 from __future__ import annotations
@@ -74,8 +87,11 @@ class ProfileSegment:
 
     Chainages ``s`` are global, measured from the start node. ``ground``,
     ``invert`` and ``crown`` are lists of ``(s, z)``; gravity pipes share the
-    chainages of the DEM profile, pressurised pipes have two invert and crown
-    points. ``water`` is empty for pressurised pipes and when ``d_over_D`` is
+    chainages of the DEM profile. A pressurised invert follows the ground
+    at the end depths (``ground - depth(s)`` at every ground vertex, depth
+    interpolated between the end depths; a display derivation, not engine
+    data), so it has the same chainages as the ground. ``water`` is empty for
+    pressurised pipes and when ``d_over_D`` is
     missing.
     """
 
@@ -193,7 +209,10 @@ class Profile:
     ``start``, also if it is a station (its ``role`` keeps the station).
     ``crs_wkt`` is the projected CRS of the network, also if the profile was
     built from a WGS84 bundle. ``params`` holds the marker rules
-    (``drop_threshold``, ``lift_tol``) so that other clients can check them.
+    (``drop_threshold``, ``lift_tol``) and the pressurised-invert rule
+    (``pressurized_invert`` = ``"ground_minus_interpolated_end_depth"``,
+    ``tmin`` in m from the config, None if missing) so that other clients can check
+    them.
     """
 
     node_ids: list[str]
@@ -251,8 +270,8 @@ class Profile:
         Return plotting arrays with NaN separators between pipes.
 
         Each segment is resampled on the union of its ground and invert
-        chainages (linear interpolation, exact for the straight pressurised
-        invert). One NaN row separates two segments, so every pipe is its own
+        chainages (linear interpolation). One NaN row separates two segments, so every
+        pipe is its own
         polyline and a station jump shows as a gap. ``water`` is NaN for
         pressurised pipes. ``segment`` holds the segment index (-1 on
         separators) and ``pressurized`` is a bool array.
@@ -328,6 +347,42 @@ def _resolve_node(bundle: NetworkBundle, ref: Any, what: str) -> str:
     return str(nodes["node_id"].iloc[int(d.argmin())])
 
 
+def _tmin_from_metadata(metadata: Any) -> float:
+    """Return ``config.optimization.tmin`` from bundle metadata, else NaN."""
+    try:
+        return _f(metadata["config"]["optimization"]["tmin"])
+    except (KeyError, TypeError):
+        return _NAN
+
+
+def _pressurized_invert(
+    ground: list[Point], inv: list[Point], c0: float, tmin: float
+) -> list[Point]:
+    """
+    Return the display invert of a pressurised pipe, ``ground - depth(s)``.
+
+    ``depth`` is interpolated between the end depths of the stored invert; a
+    non-finite end depth uses ``tmin``; without ``tmin`` the stored invert is
+    returned unchanged.
+    """
+    depth_up = ground[0][1] - inv[0][1]
+    depth_down = ground[-1][1] - inv[-1][1]
+    if not math.isfinite(depth_up):
+        depth_up = tmin
+    if not math.isfinite(depth_down):
+        depth_down = tmin
+    if not (math.isfinite(depth_up) and math.isfinite(depth_down)):
+        return inv
+    length = ground[-1][0] - c0
+    out: list[Point] = []
+    for s, z in ground:
+        if not math.isfinite(z):
+            continue
+        frac = (s - c0) / length if length > 0 else 0.0
+        out.append((s, z - (depth_up + (depth_down - depth_up) * frac)))
+    return out
+
+
 def _station_kind(node: Any) -> str | None:
     if bool(node.get("pumping_station", False)):
         return "pumping_station"
@@ -360,6 +415,19 @@ def longitudinal_profile(
     drop_threshold : float, optional
         Smallest invert step in m (``invert_in - invert_out``) at a manhole
         that is marked as ``drop``. Default 0.05 m.
+
+    Notes
+    -----
+    The invert of a pressurised pipe is drawn at ``ground(s) - depth(s)`` at
+    every ground vertex instead of the engine's straight two-point line.
+    ``depth`` is interpolated linearly in chainage between the end depths
+    ``ground - invert`` of the stored inverts (both equal ``tmin`` for engine
+    data), so the end inverts and the markers equal the stored values. A
+    non-finite end depth falls back to ``tmin`` from
+    ``bundle.metadata["config"]["optimization"]["tmin"]``; if that is missing,
+    the two-point invert is kept. This is a display derivation; the engine data
+    and the bundle are unchanged. The rule and ``tmin`` are recorded in
+    ``Profile.params``.
 
     Returns
     -------
@@ -405,6 +473,7 @@ def longitudinal_profile(
         raise ValueError(f"flow path from {start} ends at {end}, not at {sink_id}")
 
     profiles = bundle.profiles
+    tmin_cfg = _tmin_from_metadata(bundle.metadata)
     segments: list[ProfileSegment] = []
     c0 = 0.0
     for row in path_rows:
@@ -427,6 +496,8 @@ def longitudinal_profile(
             ]
             ground = [p for p in ground if math.isfinite(p[1])]
             inv = [p for p in inv if math.isfinite(p[1])]
+        if ptype == "pressurized" and len(ground) >= 2 and inv:
+            inv = _pressurized_invert(ground, inv, c0, tmin_cfg)
         crown = [(s, z + diameter) for s, z in inv]
         d_over_D = _f(row["d_over_D"])
         water: list[Point] = []
@@ -500,5 +571,10 @@ def longitudinal_profile(
         ),
         start=start,
         sink=end,
-        params={"drop_threshold": float(drop_threshold), "lift_tol": _LIFT_TOL},
+        params={
+            "drop_threshold": float(drop_threshold),
+            "lift_tol": _LIFT_TOL,
+            "pressurized_invert": "ground_minus_interpolated_end_depth",
+            "tmin": _out(tmin_cfg),
+        },
     )
