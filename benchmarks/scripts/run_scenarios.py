@@ -22,8 +22,9 @@ import geopandas as gpd
 import yaml
 
 import pysewer
+from pysewer.bundle import NetworkBundle
 from pysewer.config.manager import reset_config, set_config
-from pysewer.helper import get_edge_gdf
+from pysewer.metrics import network_metrics
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCENARIO_DIR = Path(__file__).resolve().parent.parent / "scenarios"
@@ -89,41 +90,26 @@ def run_scenario(scenario):
     sewer = pysewer.estimate_peakflow(layout)
     G = pysewer.calculate_hydraulic_parameters(sewer, sinks=[sink])
 
-    pipes = get_edge_gdf(G, detailed=True)
-    gravity = pipes[~pipes["pressurized"]]
-    violations = pipes["hydraulic_violations"].explode().dropna()
+    m = network_metrics(NetworkBundle.from_graph(G, name=scenario["name"]))
     # d_over_D is the true proportional flow depth (Butler's d/D). A max
     # well below max_depth_ratio (0.75) means every pipe runs far below
     # capacity, so the smallest available diameter governs — sizing is
     # floor-limited, not capacity-limited.
-    max_fill = float(gravity["d_over_D"].max()) if len(gravity) else 0.0
+    max_fill = m["max_d_over_D_gravity"] or 0.0
     return {
         "scenario": scenario["name"],
         "description": scenario.get("description", ""),
         "config_overrides": scenario.get("config", {}),
-        "n_pipes": len(pipes),
-        "total_length_m": round(float(pipes.geometry.length.sum()), 1),
-        "pressurized_length_m": round(
-            float(pipes[pipes["pressurized"]].geometry.length.sum()), 1
-        ),
-        "n_pumping_stations": sum(
-            1 for _, d in G.nodes(data=True) if d.get("pumping_station")
-        ),
-        "n_lifting_stations": sum(
-            1 for _, d in G.nodes(data=True) if d.get("lifting_station")
-        ),
-        "diameter_distribution": {
-            str(k): int(v)
-            for k, v in sorted(pipes["diameter"].value_counts().items())
-        },
-        "diameter_distribution_gravity": {
-            str(k): int(v)
-            for k, v in sorted(gravity["diameter"].value_counts().items())
-        },
-        "hydraulic_violations": {
-            str(k): int(v) for k, v in violations.value_counts().items()
-        },
-        "peak_flow_max_m3s": round(float(pipes["peak_flow"].max()), 6),
+        "n_pipes": m["n_pipes"],
+        "total_length_m": round(m["total_length_m"], 1),
+        "pressurized_length_m": round(m["pressurized_length_m"], 1),
+        # the node flag "pumping_station" also marks private pumps
+        "n_pumping_stations": m["n_pumping_stations"] + m["n_private_pumps"],
+        "n_lifting_stations": m["n_lifting_stations"],
+        "diameter_distribution": m["diameter_count"],
+        "diameter_distribution_gravity": m["diameter_count_gravity"],
+        "hydraulic_violations": m["hydraulic_violations"],
+        "peak_flow_max_m3s": round(m["peak_flow_max_m3s"] or 0.0, 6),
         "max_capacity_ratio_gravity": round(max_fill, 4),
     }
 

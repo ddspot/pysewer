@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.metrics` gives key numbers and a quality check for a
+  network. `network_metrics` returns lengths by pipe type, station
+  counts, diameters, trench depths, an excavation proxy, hydraulic
+  values and graph values. `quality_checks` returns one row for each
+  problem on a pipe or node, with a severity. `summarize_findings`
+  returns one line for each type of problem.
+- `quality_checks` measures the cover over the pipe crown. pysewer
+  measures `tmin` to the pipe invert. Thus with the default `tmin` of
+  0.25 m, a pipe with a diameter of 0.2 m has 0.05 m of cover. The check
+  shows this as a warning.
+
 - `NetworkBundle` can write and read a network as a GeoPackage
   (`to_gpkg`), a GeoJSON directory (`to_geojson`) or a GeoParquet
   directory (`to_parquet`). Use `NetworkBundle.read(path)` to read it
