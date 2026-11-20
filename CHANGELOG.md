@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `NetworkBundle` can write and read a network as a GeoPackage
+  (`to_gpkg`), a GeoJSON directory (`to_geojson`) or a GeoParquet
+  directory (`to_parquet`). Use `NetworkBundle.read(path)` to read it
+  again. The GeoJSON files are in EPSG:4326 (RFC 7946). GeoParquet keeps
+  all values without rounding. Use `to_geojson_dict()` to get the
+  GeoJSON content without files.
+- `export_sewer_network` can write GeoJSON (`file_format="geojson"`).
+
 - `pysewer.bundle.NetworkBundle` holds a designed network as a pipe
   table, a node table, metadata and profiles. Use
   `NetworkBundle.from_graph(G)` to make it. The pipe table gives the

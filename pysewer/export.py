@@ -65,16 +65,22 @@ def tuple_list_to_json(tuple_list, decimals: int | None = None):
     return json.dumps(tuple_list)
 
 
-def round_float_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def round_float_columns(
+    gdf: gpd.GeoDataFrame, decimals: dict | None = None
+) -> gpd.GeoDataFrame:
     """
     Round float attribute columns according to ``export.round_decimals``.
+
+    ``decimals`` overrides the configuration: a ``{column: digits}`` dict with
+    an optional "default" entry (``{}`` disables rounding).
 
     The "default" entry covers columns without an explicit setting; a
     null/None config disables rounding entirely. Keeps exported files free of
     float noise (7+ decimal places) that downstream tools such as Elan would
     otherwise have to clean up themselves.
     """
-    decimals = get_config().export.round_decimals or {}
+    if decimals is None:
+        decimals = get_config().export.round_decimals or {}
     default = decimals.get("default")
     for col in gdf.columns:
         if col == "geometry":
@@ -134,12 +140,18 @@ def _field_type(values: list) -> str:
     return "str"
 
 
-def _properties(gdf: gpd.GeoDataFrame, decimals: int | None = None) -> tuple[dict, dict]:
+def _properties(
+    gdf: gpd.GeoDataFrame,
+    decimals: int | None = None,
+    field_types: dict | None = None,
+) -> tuple[dict, dict]:
     """Attribute values and field types ready for fiona.
 
     A column's type comes from its non-missing values, so a column of
     ``True`` and NaN is a bool column. Missing values are written as NULL
     (not as the string "nan"), and lists (profiles, violation lists) as JSON.
+    ``field_types`` overrides the inferred type per column (for example
+    "float" for a column that only holds NaN).
 
     Returns
     -------
@@ -156,6 +168,8 @@ def _properties(gdf: gpd.GeoDataFrame, decimals: int | None = None) -> tuple[dic
             kind = "str"
         else:
             kind = _field_type(present)
+        if field_types and col in field_types:
+            kind = field_types[col]
 
         def convert(v, kind=kind):
             if _is_missing(v):
@@ -210,7 +224,16 @@ def _to_wkt(crs) -> str | None:
     return CRS.from_user_input(crs).to_wkt()
 
 
-def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=None, crs: CRS | None=None):
+def write_gdf_to_gpkg(
+    gdf: gpd.GeoDataFrame,
+    filepath: str,
+    layer: str | None = None,
+    crs: CRS | None = None,
+    *,
+    decimals: dict | None = None,
+    field_types: dict | None = None,
+    geometry_type: str | None = None,
+):
     """
     Write a GeoDataFrame to a GeoPackage (GPKG) file using Fiona, converting lists of tuples to JSON strings.
 
@@ -224,6 +247,14 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
         The layer name inside the GPKG file. If no layer name is specified the file name is used.
     crs: CRS (optional)
         The layer CRS. Defaults to the CRS of ``gdf``.
+    decimals : dict, optional
+        Rounding override, see :func:`round_float_columns` (``{}`` disables
+        rounding). Default: ``export.round_decimals``.
+    field_types : dict, optional
+        ``{column: fiona type}`` overriding the inferred field types.
+    geometry_type : str, optional
+        Layer geometry type (for example "LineString"). Required for an
+        empty ``gdf``; default is the type of the first geometry.
 
     Returns
     -------
@@ -234,15 +265,81 @@ def write_gdf_to_gpkg(gdf: gpd.GeoDataFrame, filepath: str, layer: str | None=No
     This function converts any columns with list of tuples to JSON strings before writing to the GPKG file.
     Float columns and profile tuples are rounded according to ``export.round_decimals``.
     """
-    gdf = round_float_columns(gdf.copy())
-    profile_decimals = (get_config().export.round_decimals or {}).get("default")
-    values, types = _properties(gdf, profile_decimals)
+    gdf = round_float_columns(gdf.copy(), decimals)
+    values, types = _properties(gdf, _profile_decimals(decimals), field_types)
 
-    schema = {"geometry": gdf.geometry.type.iloc[0], "properties": types}
+    schema = {
+        "geometry": geometry_type or gdf.geometry.type.iloc[0],
+        "properties": types,
+    }
     crs = crs if crs is not None else gdf.crs
     crs_wkt = _to_wkt(crs)
     with fiona.open(
         filepath, mode="w", driver="GPKG", schema=schema, layer=layer, crs_wkt=crs_wkt
+    ) as dst:
+        _write_features(dst, gdf, values)
+
+
+def _profile_decimals(decimals: dict | None) -> int | None:
+    """Digits for list-valued columns: the "default" entry of the rounding dict."""
+    if decimals is None:
+        decimals = get_config().export.round_decimals or {}
+    return decimals.get("default")
+
+
+# fiona options for RFC 7946 GeoJSON. Shared by write_gdf_to_geojson and
+# NetworkBundle.to_geojson_dict so that files and in-memory output agree.
+GEOJSON_OPEN_OPTIONS = {
+    "driver": "GeoJSON",
+    "crs": "EPSG:4326",
+    "RFC7946": "YES",
+    "COORDINATE_PRECISION": 7,
+}
+
+
+def write_gdf_to_geojson(
+    gdf: gpd.GeoDataFrame,
+    filepath: str,
+    *,
+    decimals: dict | None = None,
+    field_types: dict | None = None,
+    geometry_type: str | None = None,
+):
+    """
+    Write a GeoDataFrame to an RFC 7946 GeoJSON file in EPSG:4326 (lon, lat).
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        The GeoDataFrame to write. It is reprojected to EPSG:4326.
+    filepath : str
+        The file path of the GeoJSON file (overwritten).
+    decimals, field_types, geometry_type
+        As in :func:`write_gdf_to_gpkg`.
+
+    Raises
+    ------
+    ValueError
+        If ``gdf`` has no CRS.
+
+    Notes
+    -----
+    Missing values are written as null, lists as JSON strings. Coordinates
+    have 7 decimals (about 1 cm).
+    """
+    if gdf.crs is None:
+        raise ValueError("The GeoDataFrame has no CRS; cannot write GeoJSON.")
+    gdf = round_float_columns(gdf.to_crs(4326), decimals)
+    values, types = _properties(gdf, _profile_decimals(decimals), field_types)
+    schema = {
+        "geometry": geometry_type or gdf.geometry.type.iloc[0],
+        "properties": types,
+    }
+    with fiona.open(
+        filepath,
+        mode="w",
+        schema=schema,
+        **GEOJSON_OPEN_OPTIONS,
     ) as dst:
         _write_features(dst, gdf, values)
 
@@ -294,7 +391,7 @@ def export_sewer_network(
         The path to the file to which the sewer network should be exported.
     file_format : str
         The file format to which the sewer network should be exported. Default is 'gpkg' (GeoPackage).
-        Currently supported formats are 'gpkg' (GeoPackage), 'shp' (ESRI Shapefile) and Geoparquet 'parquet'.
+        Currently supported formats are 'gpkg' (GeoPackage), 'shp' (ESRI Shapefile), 'geojson' (RFC 7946, EPSG:4326) and Geoparquet 'parquet'.
 
     Raises
     ------
@@ -309,7 +406,7 @@ def export_sewer_network(
     if file_format is None:
         file_format = config.export.file_format
 
-    supported_formats = ["gpkg", "shp", "parquet"]
+    supported_formats = ["gpkg", "shp", "parquet", "geojson"]
     if file_format not in supported_formats:
         raise ValueError(f"File format {file_format} is not supported.")
 
@@ -317,6 +414,8 @@ def export_sewer_network(
         write_gdf_to_gpkg(gdf, filepath)
     elif file_format == "shp":
         write_gdf_to_shp(gdf, filepath)
+    elif file_format == "geojson":
+        write_gdf_to_geojson(gdf, filepath)
     elif file_format == "parquet":
         gdf = _mixed_lists_to_text(round_float_columns(gdf.copy()))
         gdf.to_parquet(

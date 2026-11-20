@@ -61,8 +61,10 @@ from __future__ import annotations
 import copy
 import dataclasses
 import datetime
+import json
 import logging
 import math
+import re
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -74,6 +76,7 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pandas as pd
+from pyproj import CRS
 from shapely.geometry import Point
 
 from pysewer.config import manager
@@ -180,6 +183,18 @@ _UNITS = {
 }
 
 _NAN = float("nan")
+
+FORMATS = ("gpkg", "geojson", "parquet")
+# Columns that share the rounding of another column (export.round_decimals).
+_DECIMAL_ALIAS = {"invert_slope": "slope", "ground_slope": "slope"}
+_FIONA_TYPES = {
+    "str": "str",
+    "float64": "float",
+    "bool": "bool",
+    "int64": "int",
+    "Int64": "int",
+}
+_METADATA_LAYER = "pysewer_metadata"
 
 
 def _is_missing(value: Any) -> bool:
@@ -485,6 +500,121 @@ def _node_frame(
     return gpd.GeoDataFrame(df, geometry="geometry", crs=crs), pop_attr
 
 
+def _finite_or_none(obj: Any) -> Any:
+    """Replace non-finite floats by None, recursively (strict JSON)."""
+    if isinstance(obj, dict):
+        return {k: _finite_or_none(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_finite_or_none(v) for v in obj]
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
+
+
+def _dumps(obj: Any) -> str:
+    """Strict JSON text (no NaN / Infinity)."""
+    return json.dumps(_finite_or_none(obj), allow_nan=False, ensure_ascii=False)
+
+
+def _write_json(path: Path, obj: Any) -> None:
+    path.write_text(_dumps(obj) + "\n", encoding="utf-8")
+
+
+def _nan_profiles(profiles: dict) -> dict:
+    """Turn null levels / chainages of a profiles dict back into NaN."""
+    return {
+        pid: {
+            kind: [[_NAN if v is None else v for v in pt] for pt in pts]
+            for kind, pts in prof.items()
+        }
+        for pid, prof in profiles.items()
+    }
+
+
+def _decimals_for(columns: Iterable[str]) -> dict:
+    """
+    Per-column rounding digits from ``export.round_decimals`` (``{}`` = off).
+
+    ``invert_slope`` and ``ground_slope`` use the ``slope`` setting when they
+    have none of their own.
+    """
+    rd = manager.get_config().export.round_decimals
+    if not rd:
+        return {}
+    default = rd.get("default")
+    out = {"default": default}
+    for col in columns:
+        alias = _DECIMAL_ALIAS.get(col)
+        out[col] = rd.get(col, rd.get(alias, default) if alias else default)
+    return out
+
+
+def _field_types(dtypes: dict[str, str]) -> dict[str, str]:
+    return {c: _FIONA_TYPES[d] for c, d in dtypes.items()}
+
+
+def _round_profiles(profiles: dict, digits: int | None) -> dict:
+    if digits is None:
+        return profiles
+    return {
+        pid: {
+            kind: [[round(v, digits) for v in pt] for pt in pts]
+            for kind, pts in prof.items()
+        }
+        for pid, prof in profiles.items()
+    }
+
+
+def _check_schema_version(meta: dict) -> None:
+    version = meta.get("schema_version")
+    match = re.fullmatch(r"(\d+)\.(\d+)", version) if isinstance(version, str) else None
+    if match is None:
+        raise ValueError(
+            f"Bundle has a missing or invalid schema_version: {version!r}."
+        )
+    major, minor = int(match[1]), int(match[2])
+    cur_major, cur_minor = (int(x) for x in SCHEMA_VERSION.split("."))
+    if major != cur_major:
+        raise ValueError(
+            f"Unsupported bundle schema_version {version} "
+            f"(this pysewer reads {cur_major}.x)."
+        )
+    if minor > cur_minor:
+        logger.warning(
+            "Bundle schema_version %s is newer than %s; unknown columns are kept.",
+            version,
+            SCHEMA_VERSION,
+        )
+
+
+def _conform(
+    gdf: gpd.GeoDataFrame, columns: tuple[str, ...], dtypes: dict[str, str], what: str
+) -> gpd.GeoDataFrame:
+    """Order columns (known, extras in file order, geometry), set dtypes."""
+    if len(gdf) == 0 and not set(columns) <= set(gdf.columns):
+        df = pd.DataFrame(columns=[*columns, "geometry"])
+        df = coerce_dtypes(df, dtypes)
+        return gpd.GeoDataFrame(df, geometry="geometry", crs=gdf.crs)
+    missing = [c for c in columns if c not in gdf.columns]
+    if missing:
+        raise ValueError(f"The {what} table lacks columns: {missing}.")
+    if gdf.geometry.name != "geometry":
+        gdf = gdf.rename_geometry("geometry")
+    extras = [c for c in gdf.columns if c not in columns and c != "geometry"]
+    gdf = gdf[[*columns, *extras, "geometry"]].reset_index(drop=True)
+    return coerce_dtypes(gdf, dtypes)
+
+
+def _resolve_format(path: Path, format: str | None) -> str:
+    if format is None:
+        if path.suffix.lower() == ".gpkg":
+            return "gpkg"
+        raise ValueError("pass format= ('gpkg', 'geojson' or 'parquet').")
+    if format not in FORMATS:
+        raise ValueError(f"Unknown format {format!r}; use one of {FORMATS}.")
+    return format
+
+
 @dataclass(frozen=True, eq=False)
 class NetworkBundle:
     """
@@ -623,3 +753,335 @@ class NetworkBundle:
             metadata=meta,
             profiles=copy.deepcopy(self.profiles),
         )
+
+    # ------------------------------------------------------------------ I/O
+
+    def _table_decimals(self) -> tuple[dict, dict, int | None]:
+        """Rounding for pipes, nodes and the profile digits (export rounding)."""
+        pipes = _decimals_for(self.pipes.columns)
+        nodes = _decimals_for(self.nodes.columns)
+        return pipes, nodes, pipes.get("default")
+
+    def _metadata_for_write(self) -> dict:
+        """Copy of the metadata with ``counts`` taken from the actual tables."""
+        meta = copy.deepcopy(self.metadata)
+        meta["counts"] = {"pipes": len(self.pipes), "nodes": len(self.nodes)}
+        return meta
+
+    def to_gpkg(self, path: str | Path) -> Path:
+        """
+        Write the bundle to a GeoPackage; an existing file is replaced.
+
+        Layers: ``pipes``, ``nodes`` (projected CRS) and the attribute table
+        ``pysewer_metadata`` (rows ``metadata`` and ``profiles``, JSON text;
+        the metadata is in the projected CRS, ``counts`` are refreshed from
+        the tables on a copy).
+        Floats and profiles are rounded as in
+        :func:`pysewer.export.write_gdf_to_gpkg` (``export.round_decimals``).
+
+        Returns
+        -------
+        pathlib.Path
+        """
+        import fiona
+
+        from pysewer.export import write_gdf_to_gpkg
+
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.unlink(missing_ok=True)
+        pipe_dec, node_dec, digits = self._table_decimals()
+        write_gdf_to_gpkg(
+            self.pipes,
+            str(path),
+            layer="pipes",
+            decimals=pipe_dec,
+            field_types=_field_types(PIPE_DTYPES),
+            geometry_type="LineString",
+        )
+        write_gdf_to_gpkg(
+            self.nodes,
+            str(path),
+            layer="nodes",
+            decimals=node_dec,
+            field_types=_field_types(NODE_DTYPES),
+            geometry_type="Point",
+        )
+        schema = {"geometry": "None", "properties": {"key": "str", "value": "str"}}
+        rows = (
+            ("metadata", _dumps(self._metadata_for_write())),
+            ("profiles", _dumps(_round_profiles(self.profiles, digits))),
+        )
+        with fiona.open(
+            str(path), mode="w", driver="GPKG", layer=_METADATA_LAYER, schema=schema
+        ) as dst:
+            for key, value in rows:
+                dst.write(
+                    {"geometry": None, "properties": {"key": key, "value": value}}
+                )
+        logger.info("Wrote bundle %s to %s", self.name, path)
+        return path
+
+    def to_geojson_dict(self) -> dict:
+        """
+        Return the GeoJSON content as plain, strict-JSON Python objects.
+
+        Same content as :meth:`to_geojson` (EPSG:4326, lon/lat, RFC 7946,
+        7 coordinate decimals, same rounding and column types).
+
+        Returns
+        -------
+        dict
+            ``pipes`` and ``nodes`` (FeatureCollections), ``metadata`` (of
+            :meth:`to_wgs84`: ``crs_epsg`` 4326 plus ``source_crs_wkt``;
+            ``counts`` refreshed) and ``profiles`` (rounded, NaN as ``None``).
+            ``json.dumps(..., allow_nan=False)`` always succeeds.
+
+        Raises
+        ------
+        ValueError
+            If the bundle has no CRS.
+
+        Notes
+        -----
+        GDAL writes string values that parse as a JSON array as native
+        arrays in GeoJSON. Bundle text columns do not hold such strings.
+        """
+        import fiona
+
+        from pysewer.export import (
+            GEOJSON_OPEN_OPTIONS,
+            _profile_decimals,
+            _properties,
+            _write_features,
+            round_float_columns,
+        )
+
+        wgs = self.to_wgs84()
+        pipe_dec, node_dec, digits = self._table_decimals()
+
+        def collection(gdf, decimals, dtypes, geometry_type):
+            gdf = round_float_columns(gdf, decimals)
+            values, types = _properties(
+                gdf, _profile_decimals(decimals), _field_types(dtypes)
+            )
+            schema = {"geometry": geometry_type, "properties": types}
+            with fiona.MemoryFile() as mem:
+                with mem.open(
+                    mode="w",
+                    schema=schema,
+                    **GEOJSON_OPEN_OPTIONS,
+                ) as dst:
+                    _write_features(dst, gdf, values)
+                return json.loads(mem.read().decode("utf-8"))
+
+        meta = wgs.metadata
+        meta["counts"] = {"pipes": len(self.pipes), "nodes": len(self.nodes)}
+        return _finite_or_none(
+            {
+                "pipes": collection(wgs.pipes, pipe_dec, PIPE_DTYPES, "LineString"),
+                "nodes": collection(wgs.nodes, node_dec, NODE_DTYPES, "Point"),
+                "metadata": meta,
+                "profiles": _round_profiles(self.profiles, digits),
+            }
+        )
+
+    def to_geojson(self, directory: str | Path) -> Path:
+        """
+        Write RFC 7946 GeoJSON (EPSG:4326, lon/lat) to a directory.
+
+        Files: ``pipes.geojson``, ``nodes.geojson``, ``metadata.json`` and
+        ``profiles.json``; the content is that of :meth:`to_geojson_dict`.
+        ``metadata.json`` is the :meth:`to_wgs84` metadata (``crs_epsg`` 4326
+        plus ``source_crs_wkt``, ``counts`` refreshed from the tables).
+        Other files in the directory are left alone. Floats and profiles are
+        rounded as for GeoPackage; coordinates have 7 decimals. GDAL writes
+        list-like JSON strings as native arrays.
+
+        Raises
+        ------
+        ValueError
+            If the bundle has no CRS.
+
+        Returns
+        -------
+        pathlib.Path
+            The directory.
+        """
+        content = self.to_geojson_dict()
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        for key, name in (
+            ("pipes", "pipes.geojson"),
+            ("nodes", "nodes.geojson"),
+            ("metadata", "metadata.json"),
+            ("profiles", "profiles.json"),
+        ):
+            _write_json(directory / name, content[key])
+        logger.info("Wrote bundle %s to %s", self.name, directory)
+        return directory
+
+    def to_parquet(self, directory: str | Path) -> Path:
+        """
+        Write GeoParquet (projected CRS, no rounding) to a directory.
+
+        Files: ``pipes.parquet``, ``nodes.parquet``, ``metadata.json``
+        (projected CRS; ``counts`` refreshed from the tables) and
+        ``profiles.json``. Other files in the directory are left alone.
+
+        Returns
+        -------
+        pathlib.Path
+            The directory.
+        """
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        self.pipes.to_parquet(directory / "pipes.parquet", index=False)
+        self.nodes.to_parquet(directory / "nodes.parquet", index=False)
+        _write_json(directory / "metadata.json", self._metadata_for_write())
+        _write_json(directory / "profiles.json", self.profiles)
+        logger.info("Wrote bundle %s to %s", self.name, directory)
+        return directory
+
+    def write(self, path: str | Path, format: str | None = None) -> Path:
+        """
+        Write the bundle as ``gpkg``, ``geojson`` or ``parquet``.
+
+        ``format=None`` writes a GeoPackage when ``path`` ends in ``.gpkg``.
+        ``geojson`` and ``parquet`` write a directory.
+
+        Raises
+        ------
+        ValueError
+            If the format is unknown or cannot be inferred.
+        """
+        path = Path(path)
+        fmt = _resolve_format(path, format)
+        if fmt == "gpkg":
+            return self.to_gpkg(path)
+        if fmt == "geojson":
+            return self.to_geojson(path)
+        return self.to_parquet(path)
+
+    @classmethod
+    def read(cls, path: str | Path, format: str | None = None) -> NetworkBundle:
+        """
+        Read a bundle written by :meth:`write`.
+
+        Without ``format``, a ``.gpkg`` file is read as GeoPackage and a
+        directory with ``pipes.parquet`` or ``pipes.geojson`` as GeoParquet or
+        GeoJSON. GeoJSON is reprojected back to the source CRS.
+
+        Raises
+        ------
+        ValueError
+            If the format is ambiguous, ``schema_version`` is missing or has
+            another major version, columns are missing or the metadata counts
+            differ from the row counts.
+        FileNotFoundError
+            If the path or a required file does not exist.
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(path)
+        if format is None:
+            if path.is_file() and path.suffix.lower() == ".gpkg":
+                format = "gpkg"
+            elif path.is_dir():
+                found = [
+                    f
+                    for f, name in (
+                        ("parquet", "pipes.parquet"),
+                        ("geojson", "pipes.geojson"),
+                    )
+                    if (path / name).exists()
+                ]
+                if len(found) != 1:
+                    raise ValueError(
+                        f"Cannot infer the format of {path} "
+                        f"({'both' if found else 'no'} pipes.parquet / pipes.geojson); "
+                        "pass format=."
+                    )
+                format = found[0]
+            else:
+                raise ValueError(f"Cannot infer the format of {path}; pass format=.")
+        elif format not in FORMATS:
+            raise ValueError(f"Unknown format {format!r}; use one of {FORMATS}.")
+        reader = {
+            "gpkg": cls._read_gpkg,
+            "geojson": cls._read_geojson,
+            "parquet": cls._read_parquet,
+        }[format]
+        return reader(path)
+
+    @classmethod
+    def _assemble(
+        cls,
+        pipes: gpd.GeoDataFrame,
+        nodes: gpd.GeoDataFrame,
+        meta: dict,
+        profiles: dict,
+    ) -> NetworkBundle:
+        pipes = _conform(pipes, PIPE_COLUMNS, PIPE_DTYPES, "pipes")
+        nodes = _conform(nodes, NODE_COLUMNS, NODE_DTYPES, "nodes")
+        counts = meta.get("counts")
+        if counts is not None and (
+            counts.get("pipes") != len(pipes) or counts.get("nodes") != len(nodes)
+        ):
+            raise ValueError(
+                f"Metadata counts {counts} do not match the tables "
+                f"({len(pipes)} pipes, {len(nodes)} nodes)."
+            )
+        return cls(pipes=pipes, nodes=nodes, metadata=meta, profiles=profiles)
+
+    @classmethod
+    def _read_gpkg(cls, path: Path) -> NetworkBundle:
+        import fiona
+
+        layers = fiona.listlayers(str(path))
+        absent = [n for n in ("pipes", "nodes", _METADATA_LAYER) if n not in layers]
+        if absent:
+            raise ValueError(f"{path} lacks the layers {absent}.")
+        with fiona.open(str(path), layer=_METADATA_LAYER) as src:
+            rows = {f["properties"]["key"]: f["properties"]["value"] for f in src}
+        if "metadata" not in rows:
+            raise ValueError(f"{path} has no 'metadata' row in {_METADATA_LAYER}.")
+        meta = json.loads(rows["metadata"])
+        _check_schema_version(meta)
+        profiles = _nan_profiles(json.loads(rows.get("profiles") or "{}"))
+        pipes = gpd.read_file(path, layer="pipes")
+        nodes = gpd.read_file(path, layer="nodes")
+        return cls._assemble(pipes, nodes, meta, profiles)
+
+    @staticmethod
+    def _read_json_files(directory: Path) -> tuple[dict, dict]:
+        meta_file, prof_file = directory / "metadata.json", directory / "profiles.json"
+        if not meta_file.exists():
+            raise FileNotFoundError(meta_file)
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        _check_schema_version(meta)
+        profiles = {}
+        if prof_file.exists():
+            profiles = _nan_profiles(json.loads(prof_file.read_text(encoding="utf-8")))
+        return meta, profiles
+
+    @classmethod
+    def _read_parquet(cls, directory: Path) -> NetworkBundle:
+        meta, profiles = cls._read_json_files(directory)
+        pipes = gpd.read_parquet(directory / "pipes.parquet")
+        nodes = gpd.read_parquet(directory / "nodes.parquet")
+        return cls._assemble(pipes, nodes, meta, profiles)
+
+    @classmethod
+    def _read_geojson(cls, directory: Path) -> NetworkBundle:
+        meta, profiles = cls._read_json_files(directory)
+        pipes = gpd.read_file(directory / "pipes.geojson")
+        nodes = gpd.read_file(directory / "nodes.geojson")
+        source = meta.get("source_crs_wkt")
+        if source:
+            crs = CRS.from_wkt(source)
+            pipes, nodes = pipes.to_crs(crs), nodes.to_crs(crs)
+            meta = {k: v for k, v in meta.items() if k != "source_crs_wkt"}
+            meta["crs_wkt"] = crs.to_wkt()
+            meta["crs_epsg"] = crs.to_epsg()
+        return cls._assemble(pipes, nodes, meta, profiles)
