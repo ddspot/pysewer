@@ -21,6 +21,7 @@ Paths are relative to the case file, or else to the repository root.
 import argparse
 import json
 import math
+import subprocess
 import time
 import warnings
 from datetime import date
@@ -49,6 +50,20 @@ def read_layer(path: Path, crs: str | None) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(path)
     # Some inputs carry a compound CRS (UTM + unknown vertical datum).
     return gdf.set_crs(crs, allow_override=True) if crs else gdf
+
+
+def pysewer_commit() -> str:
+    """``git describe`` of the pysewer source, or "" outside a git checkout."""
+    try:
+        return subprocess.run(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            cwd=Path(pysewer.__file__).parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
 
 
 def build_case(case_path: Path):
@@ -125,6 +140,7 @@ def export_case(case_path: Path, out_dir: Path) -> dict:
         "crs": str(G.graph.get("crs") or crs or ""),
         "created": date.today().isoformat(),
         "pysewer_version": version("pysewer"),
+        "pysewer_commit": pysewer_commit(),
         "settings": {
             "dx": config.preprocessing.dx,
             "pump_penalty": config.preprocessing.pump_penalty,
