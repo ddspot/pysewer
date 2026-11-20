@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.viz.mpl` draws a network and a longitudinal profile with
+  matplotlib (`plot` extra). `plot_network` colours the pipes by
+  diameter, pipe type, depth or another column, and can mark the pipes
+  with findings. `plot_profile` draws the ground, the pipe, the water
+  level, the manholes, the drops, the stations and a band with the
+  diameter and the fall of each pipe.
+
 - `pysewer.viz.report.build_report` writes one HTML file for a network.
   The file shows the network on a web map, the key numbers, the
   findings of the quality check and a longitudinal profile. Click a
