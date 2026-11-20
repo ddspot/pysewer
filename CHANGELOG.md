@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.compare.compare` compares two or more variants of a network.
+  It gives the metrics of each variant and the difference to a base
+  variant, the configuration values that are different, the pipe length
+  for each diameter, the number of stations, and a spatial difference.
+  The spatial difference finds the same pipe in two variants when both
+  ends are within `tolerance` (default 0.01 m), also if the flow
+  direction changed. It gives the shared, added, removed and changed
+  length.
+
 - `pysewer.viz.longitudinal_profile` makes the longitudinal profile
   from a node to the sink. The profile gives the ground, the invert, the
   crown and the water level along the flow path. It also gives the
