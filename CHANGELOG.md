@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.bundle.NetworkBundle` holds a designed network as a pipe
+  table, a node table, metadata and profiles. Use
+  `NetworkBundle.from_graph(G)` to make it. The pipe table gives the
+  ground, invert, crown and depth at each end of each pipe. The invert
+  comes from `trench_depth_profile`. The crown is the invert plus the
+  diameter. The node table gives a role for each node: `sink`,
+  `building`, `pumping_station`, `lifting_station` or `junction`. The
+  metadata holds the schema version, the pysewer version, the
+  configuration, the CRS and the input sources. Use `to_wgs84()` to get
+  a copy in EPSG:4326 for web maps.
+
 - `pysewer.route_and_design` routes and designs the network, and routes
   it again to avoid stations. It is optional. The results of
   `rsph_tree` and `calculate_hydraulic_parameters` do not change.
