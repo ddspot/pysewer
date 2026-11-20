@@ -223,6 +223,25 @@ The open items above stay open. These items are new.
       2. Send the instances by email. (Done 2026-11-19.)
       3. Compare RSPH with SteinerPy on all seven cases. Compare the cost
          and the design result (stations, pressurized length).
+         Results on `main` (f4af672), SteinerPy 1.1, time limit 300 s
+         (2026-11-20). `benchmarks/scripts/design_from_arcs.py` runs the
+         design step on the SteinerPy arcs:
+
+         | case | cost, SteinerPy vs RSPH | stations, RSPH → SteinerPy |
+         |---|---|---|
+         | small_test | 0 % | 3 → 3 |
+         | example_case | 0.00 % | 24 → 26 |
+         | london | 0 % | 5 → 5 |
+         | wasweta_ii | −0.03 % | 81 → 77 |
+         | arima | −0.40 % | 23 → 22 |
+         | chaguanas | −0.43 % | 35 → 34 |
+         | couva | no solution in 300 s | – |
+
+         On 0.4.0, Arima gives 22 → 19 stations (cost −0.80 %). On `main`,
+         the gain is 1 station. A lower routing cost does not always give
+         fewer stations (example_case: 24 → 26). `route_and_design`
+         (station cost 200 m) gives more: Arima 23 → 20, Wasweta II
+         81 → 60.
       4. If the difference is large, add SteinerPy as an optional backend
          (`pysewer[steiner]`).
       5. Share the Amman case when the stormwater repository is public.
