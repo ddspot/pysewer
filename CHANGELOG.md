@@ -80,6 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   include the trench depth that causes most lifting stations. To reroute
   the network around the stations, use `route_and_design`.
 
+### Fixed
+
+- `plot_model_domain` with `plot_junction_graph=True` no longer fails.
+  The junction graph does not exist. The function now plots the
+  connection graph and shows a `DeprecationWarning`.
+
 ## [0.4.0] - 2026-11-14
 
 Networks change: buildings connect to the street instead of chaining

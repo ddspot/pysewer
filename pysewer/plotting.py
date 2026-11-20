@@ -3,6 +3,7 @@
 
 
 import logging
+import warnings
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -63,7 +64,10 @@ def plot_model_domain(
     plot_connection_graph : bool, optional
         Whether to plot the connection graph, by default False.
     plot_junction_graph : bool, optional
-        Whether to plot the junction graph, by default False.
+        Deprecated. The junction graph no longer exists. If true, a
+        ``DeprecationWarning`` is emitted and the connection graph is plotted
+        instead (once, even if ``plot_connection_graph`` is also true).
+        By default False.
     plot_sink : bool, optional
         Whether to plot the sink, by default True.
     plot_sewer : bool, optional
@@ -141,13 +145,16 @@ def plot_model_domain(
         )
         ax.set_title("Hillshade made from DTM")
 
-    if plot_connection_graph:
+    if plot_junction_graph:
+        warnings.warn(
+            "The junction graph no longer exists; "
+            "the connection graph is plotted instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if plot_connection_graph or plot_junction_graph:
         get_edge_gdf(modelDomain.connection_graph).plot(
             ax=ax, color="g", zorder=5, label="Connection Graph"
-        )
-    if plot_junction_graph:
-        get_edge_gdf(modelDomain.junction_graph).plot(
-            ax=ax, color="g", zorder=5, label="Junction Graph"
         )
     if plot_sink:
         get_node_gdf(
