@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.viz.longitudinal_profile` makes the longitudinal profile
+  from a node to the sink. The profile gives the ground, the invert, the
+  crown and the water level along the flow path. It also gives the
+  manholes, the drops, the lifting stations and the pumping stations.
+  A drop is an invert step of 0.05 m or more (`drop_threshold`). A
+  `pump_relay` is a pumping station that the path reaches through a
+  pressure main, so the path has no lift there. `Profile.to_dict()`
+  gives the profile as JSON for the report and other clients.
+
 - `pysewer.metrics` gives key numbers and a quality check for a
   network. `network_metrics` returns lengths by pipe type, station
   counts, diameters, trench depths, an excavation proxy, hydraulic
