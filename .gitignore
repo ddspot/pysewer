@@ -218,3 +218,6 @@ Makefile.local
 
 # scratch symlink (work convention)
 work
+
+# osmnx download cache
+cache/
