@@ -21,6 +21,7 @@ Paths are relative to the case file, or else to the repository root.
 import argparse
 import json
 import math
+import subprocess
 import time
 import warnings
 from datetime import date
@@ -51,14 +52,29 @@ def read_layer(path: Path, crs: str | None) -> gpd.GeoDataFrame:
     return gdf.set_crs(crs, allow_override=True) if crs else gdf
 
 
-def export_case(case_path: Path, out_dir: Path) -> dict:
+def pysewer_commit() -> str:
+    """``git describe`` of the pysewer source, or "" outside a git checkout."""
+    try:
+        return subprocess.run(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            cwd=Path(pysewer.__file__).parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+
+
+def build_case(case_path: Path):
+    """``(case, connection_graph, sinks)`` for a case file. The case has
+    exactly one sink."""
     case = yaml.safe_load(case_path.read_text())
     crs = case.get("crs")
     roads = read_layer(resolve(case_path, case["roads"]), crs)
     buildings = read_layer(resolve(case_path, case["buildings"]), crs)
     dem = resolve(case_path, case["dem"])
 
-    t0 = time.perf_counter()
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore", message="Geometry column does not contain geometry"
@@ -71,12 +87,23 @@ def export_case(case_path: Path, out_dir: Path) -> dict:
     sinks = md.get_sinks()
     if len(sinks) != 1:
         raise ValueError(f"{case['name']}: expected one sink, got {len(sinks)}")
-    G = md.generate_connection_graph()
+    return case, md.generate_connection_graph(), sinks
+
+
+def node_ids(G) -> dict:
+    """Instance id of each node. Nodes are coordinate tuples in pysewer; the
+    ids number them in sorted order."""
+    return {n: i for i, n in enumerate(sorted(G.nodes))}
+
+
+def export_case(case_path: Path, out_dir: Path) -> dict:
+    t0 = time.perf_counter()
+    case, G, sinks = build_case(case_path)
+    crs = case.get("crs")
     tree = pysewer.rsph_tree(G, sinks)
     seconds = time.perf_counter() - t0
 
-    # Nodes are coordinate tuples in pysewer; number them for the file.
-    ids = {n: i for i, n in enumerate(sorted(G.nodes))}
+    ids = node_ids(G)
     nodes = [
         {
             "id": ids[n],
@@ -113,6 +140,7 @@ def export_case(case_path: Path, out_dir: Path) -> dict:
         "crs": str(G.graph.get("crs") or crs or ""),
         "created": date.today().isoformat(),
         "pysewer_version": version("pysewer"),
+        "pysewer_commit": pysewer_commit(),
         "settings": {
             "dx": config.preprocessing.dx,
             "pump_penalty": config.preprocessing.pump_penalty,
