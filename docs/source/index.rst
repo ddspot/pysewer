@@ -16,6 +16,7 @@ Welcome to pysewer's documentation!
 
    about/index
    install
+   cli
    api_reference/index
    examples/index
 

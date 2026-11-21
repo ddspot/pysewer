@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `pysewer` command runs pysewer from a terminal. `pysewer run`
+  designs a network from files or from a bounding box (`--bbox`) and
+  writes a bundle and an HTML report. `pysewer fetch`, `pysewer report`,
+  `pysewer compare` and `pysewer profile` do one task each. The exit
+  code tells the type of error: 3 for bad input, 4 for an area that is
+  too large, 5 for no data in the cache when offline, 6 when a server
+  cannot be reached. `--progress jsonl` writes one JSON object for each
+  progress step (version 1).
+- CI tests pysewer on Python 3.12 from wheels only, as the RustGIS
+  plugin installs it.
+
 - `pysewer.sources.fetch_inputs` gets the input data for a bounding box
   anywhere in the world: roads and buildings from OpenStreetMap and the
   Copernicus GLO-30 DEM (30 m). It reprojects the data to a UTM CRS and
