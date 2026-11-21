@@ -17,6 +17,7 @@ cache:
 
 stages:
   - test
+  - downstream
   - deploy
   - mirror
 
@@ -43,6 +44,22 @@ test-py312-wheels:
     - uv venv --python 3.12 .venv312
     - "uv pip install --python .venv312/bin/python --only-binary :all: -e '.[dev,plot,fetch]'"
     - .venv312/bin/python -m pytest tests/ -q -m "not network"
+
+# Run the RustGIS plugin pipeline against this commit (pysewer main only). The plugin installs
+# pysewer from git at PYSEWER_REF. Requirements: the downstream project wasp/rustgis-pysewer must
+# exist on this GitLab instance and allow pipeline triggers from this project (its CI/CD job token
+# allowlist must include wasp/pysewer). allow_failure: a plugin problem never blocks pysewer.
+plugin-compat:
+  stage: downstream
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
+  trigger:
+    project: wasp/rustgis-pysewer
+    branch: main
+    strategy: depend
+  variables:
+    PYSEWER_REF: $CI_COMMIT_SHA
 
 lint:
   stage: test
