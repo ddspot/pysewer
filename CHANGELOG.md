@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The HTML report compares design variants. Give `build_report` two or
+  more bundles. A selector changes the variant on the map, in the key
+  numbers, in the findings and in the profile. A map layer shows the
+  pipes that were added, removed or changed against the first variant.
+  Bar charts show the key numbers of each variant and the difference to
+  the first variant. A table shows the settings that are different.
+
 - `pysewer.pipeline.generate` designs a network from a DEM, roads and
   buildings in one call and returns a `NetworkBundle`. You can give the
   sink, a sink in another CRS and configuration overrides. The

@@ -264,7 +264,21 @@
     drop_threshold: 0.05,
     lift_tol: 1e-6,
   };
-  let current = VARIANTS[0];
+  const COMPARISON = DATA.comparison || null;
+  const MULTI = VARIANTS.length >= 2 && !!COMPARISON;
+  const EMPTY_FC = { type: "FeatureCollection", features: [] };
+  let diffOn = false;
+  let compareName = null;
+
+  function variantFromHash() {
+    const m = /(?:^|[#&])variant=([^&]*)/.exec(window.location.hash || "");
+    if (!m) return null;
+    let name = m[1];
+    try { name = decodeURIComponent(name.replace(/\+/g, " ")); } catch (err) { return null; }
+    return VARIANTS.find((v) => v.name === name) || null;
+  }
+
+  let current = (MULTI && variantFromHash()) || VARIANTS[0];
 
   // ------------------------------------------------------------ helpers
   const $ = (id) => document.getElementById(id);
@@ -341,6 +355,8 @@
     }
     const known = prov.dem_source ? String(prov.dem_source) : "";
     const note = $("dem-note");
+    note.hidden = true;
+    note.textContent = "";
     if (/copernicus|nasadem/i.test(known)) {
       note.hidden = false;
       note.textContent =
@@ -557,6 +573,7 @@
     map.addSource("nodes", { type: "geojson", data: gj.nodes });
     map.addSource("path", { type: "geojson", data: pathFC });
     map.addSource("sel", { type: "geojson", data: selFC });
+    map.addSource("diff", { type: "geojson", data: diffData() });
 
     const isType = (t) => ["==", ["get", "pipe_type"], t];
     const dnColor = ["step", ["to-number", ["get", "diameter"], 0.2], pal.dn[0]];
@@ -593,6 +610,30 @@
         "icon-rotation-alignment": "map",
       },
     });
+
+    const zw = (w) => ["interpolate", ["linear"], ["zoom"], 13, w * 0.6, 19, w * 1.8];
+    const st = (v) => ["==", ["get", "status"], v];
+    const diffLayers = [
+      { id: "diff-reversed", type: "line", source: "diff", filter: ["==", ["get", "flow_reversed"], true],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-reversed"), "line-width": zw(10), "line-opacity": 0.55 } },
+      { id: "diff-shared", type: "line", source: "diff", filter: st("shared"),
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-shared"), "line-width": zw(3), "line-opacity": 0.55 } },
+      { id: "diff-changed-casing", type: "line", source: "diff", filter: st("changed"),
+        layout: { "line-cap": "butt", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-casing"), "line-width": zw(8), "line-opacity": 0.9 } },
+      { id: "diff-changed", type: "line", source: "diff", filter: st("changed"),
+        layout: { "line-cap": "butt", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-changed"), "line-width": zw(5) } },
+      { id: "diff-added", type: "line", source: "diff", filter: st("added"),
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-added"), "line-width": zw(5.5) } },
+      { id: "diff-removed", type: "line", source: "diff", filter: st("removed"),
+        layout: { "line-cap": "butt", "line-join": "round" },
+        paint: { "line-color": cssVar("--diff-removed"), "line-width": zw(5), "line-dasharray": [1.6, 1.6] } },
+    ];
+    for (const l of diffLayers) map.addLayer(l, "arrows");
 
     const nodeFilter = (role) => ["==", ["get", "role"], role];
     map.addLayer({
@@ -767,6 +808,7 @@
         if (effectiveTheme() === "dark" && styleLoaded && !fallbackShown) lightenDarkBasemap();
         mapReady = true;
         updateMapData();
+        updateDiff();
       } catch (err) {
         mapMessage("Map layers failed: " + err.message);
       }
@@ -849,8 +891,24 @@
     add(dot(pal.building, cssVar("--pressure"), 5, 3), "Private pump (building)");
     add(dot(pal.building, pal.stroke, 3.5, 1), "Building");
     add(dot(pal.manhole, pal.manholeStroke, 3.5, 1.2), "Manhole (zoom in)");
-    add(line(cssVar("--highlight"), 7, ""), "Path of the shown profile");
+    add(
+      diffOn && MULTI ? line(cssVar("--muted"), 4, "") : line(cssVar("--highlight"), 7, ""),
+      diffOn && MULTI ? "Profile path (grey while differences are shown)" : "Profile path"
+    );
     add(line(cssVar("--finding"), 7, ""), "Selected finding");
+    if (diffOn && MULTI) {
+      add(line(cssVar("--diff-added"), 5, ""), "Difference: added pipe (green)");
+      add(line(cssVar("--diff-removed"), 5, "3 3"), "Difference: removed pipe (red dashes)");
+      add(
+        svg(30, 14, [
+          ["line", { x1: 1, y1: 7, x2: 29, y2: 7, stroke: cssVar("--diff-casing"), "stroke-width": 9 }],
+          ["line", { x1: 1, y1: 7, x2: 29, y2: 7, stroke: cssVar("--diff-changed"), "stroke-width": 5 }],
+        ]),
+        "Difference: changed diameter, type or flow direction (blue with dark outline)"
+      );
+      add(line(cssVar("--diff-reversed"), 9, ""), "Difference: flow direction reversed (gold halo)");
+      add(line(cssVar("--diff-shared"), 3, ""), "Difference: same pipe (faint grey)");
+    }
   }
 
   // ------------------------------------------------------------ profile
@@ -1207,10 +1265,18 @@
     }
   }
 
-  function initFindings() {
+  function populateChecks() {
     const checks = Array.from(new Set(current.findings.map((f) => f.check))).sort();
     const sel = $("check-filter");
+    sel.textContent = "";
+    sel.append(el("option", { value: "all", text: "All" }));
     for (const c of checks) sel.append(el("option", { value: c, text: checkLabel(c) }));
+    sel.value = "all";
+  }
+
+  function initFindings() {
+    populateChecks();
+    const sel = $("check-filter");
     $("sev-filter").addEventListener("change", renderFindings);
     sel.addEventListener("change", renderFindings);
     document.querySelectorAll("#findings .sort").forEach((b) => {
@@ -1245,16 +1311,51 @@
   }
 
   // ------------------------------------------------------------ node picker, theme
-  function initPicker() {
+  function refreshPicker() {
     const idx = buildIndex(current);
-    if (current.metrics.n_pipes === 0) {
-      for (const id of ["node-input", "node-go", "node-longest"]) $(id).disabled = true;
-      $("node-input").placeholder = "no pipes";
-    }
+    const none = current.metrics.n_pipes === 0;
+    for (const id of ["node-input", "node-go", "node-longest"]) $(id).disabled = none;
+    $("node-input").placeholder = none ? "no pipes" : "e.g. N000115";
     const list = $("node-list");
+    list.textContent = "";
     if (idx.nodeById.size <= 600) {
       for (const id of idx.nodeById.keys()) list.append(el("option", { value: id }));
     }
+  }
+
+  // Start node of the default profile: the longest pipe-length path to a sink
+  // (same rule as pysewer.viz.report._longest_path_start). The first variant
+  // uses the start node chosen by the Python side.
+  function longestStart(variant) {
+    if (variant === VARIANTS[0] && DEFAULT_PROFILE) return DEFAULT_PROFILE.start;
+    const out = new Map();
+    for (const f of variant.geojson.pipes.features) {
+      const p = f.properties;
+      if (!out.has(String(p.from_node))) {
+        const ln = fnum(p.length);
+        out.set(String(p.from_node), [String(p.to_node), Number.isFinite(ln) ? ln : 0]);
+      }
+    }
+    let best = null;
+    let bestD = 0;
+    for (const n of Array.from(out.keys()).sort()) {
+      let total = 0;
+      let cur = n;
+      const seen = new Set([n]);
+      while (out.has(cur)) {
+        const [nxt, ln] = out.get(cur);
+        if (seen.has(nxt)) break;
+        total += ln;
+        seen.add(nxt);
+        cur = nxt;
+      }
+      if (total > bestD) { best = n; bestD = total; }
+    }
+    return best;
+  }
+
+  function initPicker() {
+    refreshPicker();
     const go = () => {
       const id = $("node-input").value.trim();
       if (!id) return;
@@ -1263,7 +1364,8 @@
     $("node-go").addEventListener("click", go);
     $("node-input").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
     $("node-longest").addEventListener("click", () => {
-      if (DEFAULT_PROFILE) showProfile(DEFAULT_PROFILE.start);
+      const start = longestStart(current);
+      if (start) showProfile(start);
       else profileMessage("No profile: the network has no pipes.");
     });
   }
@@ -1300,13 +1402,393 @@
       map.setStyle(emptyStyle(), { diff: false });
     }
     if (currentTrace && currentTrace.segments.length) renderProfile(currentTrace);
+    if (MULTI) renderBars();
   }
 
+
+  // ------------------------------------------------------------ variants and comparison
+  const VARIANT_COLORS = ["#b3b3b3", "#cc79a7", "#a6761d", "#66c2a5", "#e7ba52", "#8c6bb1", "#c49c94", "#ccebc5"];
+
+  function diffData() {
+    if (!diffOn || !MULTI || !compareName) return EMPTY_FC;
+    return COMPARISON.pipe_diff[compareName] || EMPTY_FC;
+  }
+
+  function renderDiffCaption() {
+    if (!MULTI) return;
+    $("diff-toggle-text").textContent = `Show differences to base (${COMPARISON.base})`;
+    $("diff-caption").textContent = diffOn && compareName
+      ? `Coloured lines: ${compareName} compared with base ${COMPARISON.base}. The network colours are dimmed.`
+      : "";
+  }
+
+  function updateDiff() {
+    renderDiffCaption();
+    if (!map || !mapReady) return;
+    const src = map.getSource("diff");
+    if (src) src.setData(diffData());
+    const dim = diffOn && MULTI && !!compareName;
+    for (const l of PIPE_LAYERS) {
+      if (map.getLayer(l)) map.setPaintProperty(l, "line-opacity", dim ? 0.18 : 1);
+    }
+    if (map.getLayer("arrows")) map.setPaintProperty("arrows", "icon-opacity", dim ? 0.2 : 1);
+    if (map.getLayer("path-glow")) {
+      map.setPaintProperty("path-glow", "line-color", dim ? cssVar("--muted") : cssVar("--highlight"));
+      map.setPaintProperty("path-glow", "line-opacity", dim ? 0.35 : 0.7);
+    }
+  }
+
+  function updateNetworkData() {
+    if (!map || !mapReady) return;
+    const p = map.getSource("pipes");
+    const n = map.getSource("nodes");
+    if (p) p.setData(current.geojson.pipes);
+    if (n) n.setData(current.geojson.nodes);
+    updateMapData();
+    const b = allBounds();
+    if (b) {
+      const v = map.getBounds();
+      const apart = b[0][0] > v.getEast() || b[1][0] < v.getWest() || b[0][1] > v.getNorth() || b[1][1] < v.getSouth();
+      if (apart) map.fitBounds(b, { padding: 20, maxZoom: 18, duration: 0 });
+    }
+  }
+
+  function setDiff(on) {
+    diffOn = !!on;
+    $("diff-toggle").checked = diffOn;
+    updateDiff();
+    renderLegend();
+  }
+
+  // ---- numbers
+  function tget(t, row, col) {
+    if (!t) return null;
+    const i = t.index.indexOf(row);
+    const j = t.columns.indexOf(col);
+    return i < 0 || j < 0 ? null : t.data[i][j];
+  }
+
+  function fmtDelta(d, digits, unit) {
+    const x = fnum(d);
+    if (!Number.isFinite(x)) return "–";
+    if (Math.abs(x) < 0.5 * Math.pow(10, -digits)) return "no change";
+    const sign = x > 0 ? "+" : "−";
+    return `${sign}${Math.abs(x).toFixed(digits)}${unit ? " " + unit : ""}`;
+  }
+
+  const BAR_METRICS = [
+    ["total_length_m", "Total pipe length", "m", 0],
+    ["gravity_length_m", "Gravity length", "m", 0],
+    ["pressurized_length_m", "Pressure main length", "m", 0],
+    ["n_pumping_stations", "Pumping stations", "", 0],
+    ["n_lifting_stations", "Lifting stations", "", 0],
+    ["max_depth_m", "Max trench depth (gravity)", "m", 2],
+    ["excavation_proxy_m3_per_m_width", "Excavation proxy", "m³ per m trench width", 0,
+      "Trench volume per metre of trench width: sum of pipe length \u00d7 mean depth. Use it to compare variants, not as a cost."],
+    ["buildings_connected", "Buildings connected", "", 0],
+  ];
+
+  function plural(n, w) {
+    return `${n} ${w}${n === 1 ? "" : "s"}`;
+  }
+
+  function renderCompareSentence() {
+    const box = $("compare-sentence");
+    box.textContent = "";
+    if (!compareName) return;
+    const sp = COMPARISON.spatial;
+    const get = (k) => fnum(tget(sp, compareName, k));
+    const m = (k) => Math.round(get(k));
+    const nChanged = get("n_changed");
+    const nAdded = get("n_added");
+    const nRemoved = get("n_removed");
+    const reversed = ((COMPARISON.pipe_diff[compareName] || EMPTY_FC).features || [])
+      .filter((f) => f.properties.flow_reversed).length;
+    const sentences = [];
+    if (nChanged === 0) {
+      sentences.push("No pipe changed.");
+    } else {
+      let t = `${plural(nChanged, "pipe")} changed`;
+      const det = [];
+      if (m("changed_diameter_length_m") > 0) det.push(`${m("changed_diameter_length_m")} m with another diameter`);
+      if (m("changed_type_length_m") > 0) det.push(`${m("changed_type_length_m")} m with another pipe type`);
+      if (det.length) t += " \u2014 " + det.join(", ");
+      if (reversed > 0) {
+        t += (det.length ? "; " : " \u2014 ") +
+          `${plural(reversed, "pipe")} ${reversed === 1 ? "flows" : "flow"} the other way`;
+      }
+      sentences.push(t + ".");
+    }
+    if (nAdded === 0 && nRemoved === 0) {
+      sentences.push("No pipe added or removed.");
+    } else {
+      const ar = [];
+      if (nAdded > 0) ar.push(`${plural(nAdded, "pipe")} added (${m("added_length_m")} m)`);
+      if (nRemoved > 0) ar.push(`${plural(nRemoved, "pipe")} removed (${m("removed_length_m")} m)`);
+      sentences.push(ar.join(", ") + ".");
+    }
+    const same = get("n_shared") - nChanged;
+    sentences.push(`${plural(same, "pipe")} ${same === 1 ? "is" : "are"} the same.`);
+    box.append(el("b", { text: `${compareName} vs base ${COMPARISON.base}: ` }), sentences.join(" "));
+  }
+
+  function barText(name, key, digits) {
+    const v = fnum(tget(COMPARISON.metrics, key, name));
+    if (!Number.isFinite(v)) return "–";
+    const val = v.toFixed(digits);
+    if (name === COMPARISON.base) return val;
+    return `${val}<br>${fmtDelta(tget(COMPARISON.metrics_delta, key, name), digits, "")}`;
+  }
+
+  function renderBars() {
+    const box = $("compare-bars");
+    const names = COMPARISON.names;
+    if (typeof Plotly === "undefined") {
+      box.textContent = "The plot library could not be loaded. The table below holds the same numbers.";
+      return;
+    }
+    if (!box.children.length) {
+      for (const [key, label, unit, , hint] of BAR_METRICS) {
+        const plot = el("div", { class: "bar-plot", id: "bar-" + key, role: "img" });
+        const h4 = el("h4", { text: unit ? `${label} (${unit})` : label });
+        if (hint) h4.setAttribute("title", hint);
+        box.append(el("div", { class: "bar-card", title: hint || "" },
+          h4, hint ? el("p", { class: "bar-hint", text: hint }) : null, plot));
+      }
+    }
+    const fg = cssVar("--fg");
+    const grid = cssVar("--plot-grid");
+    const short = (n) => (n.length > 14 ? n.slice(0, 13) + "…" : n);
+    for (const [key, label, unit, digits] of BAR_METRICS) {
+      const vals = names.map((n) => { const v = fnum(tget(COMPARISON.metrics, key, n)); return Number.isFinite(v) ? v : null; });
+      const top = Math.max(0, ...vals.filter((v) => v !== null));
+      const gd = $("bar-" + key);
+      gd.setAttribute("aria-label", `${label}${unit ? " in " + unit : ""}: ` +
+        names.map((n) => `${n} ${vals[names.indexOf(n)] === null ? "not defined" : vals[names.indexOf(n)].toFixed(digits)}` +
+          (n === COMPARISON.base ? " (base)" : `, ${fmtDelta(tget(COMPARISON.metrics_delta, key, n), digits, unit)}`)).join("; ") + ".");
+      Plotly.react(gd, [{
+        type: "bar",
+        x: names.map(short),
+        y: vals,
+        customdata: names,
+        // a blank line under the label lifts it off the axis for near-zero bars
+        text: names.map((n, i) => barText(n, key, digits) + (vals[i] === null || vals[i] < 0.06 * top ? "<br>\u00a0" : "")),
+        textposition: "outside",
+        cliponaxis: false,
+        textfont: { color: fg, size: 11 },
+        marker: {
+          color: names.map((n, i) => VARIANT_COLORS[i % VARIANT_COLORS.length]),
+          line: { color: fg, width: names.map((n) => (n === current.name ? 3 : 0.5)) },
+        },
+        hovertemplate: `<b>%{customdata}</b><br>${label}: %{y:.${digits}f}${unit ? " " + unit : ""}<extra></extra>`,
+      }], {
+        margin: { l: 44, r: 6, t: 26, b: 34 },
+        paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+        font: { color: fg, size: 11 },
+        xaxis: { automargin: true, fixedrange: true },
+        yaxis: { gridcolor: grid, zeroline: false, rangemode: "tozero", range: [0, top > 0 ? top * 1.4 : 1], fixedrange: true, automargin: true,
+          tickformat: !unit && digits === 0 ? "d" : "", dtick: !unit && digits === 0 && top <= 6 ? 1 : undefined },
+        showlegend: false,
+        bargap: 0.35,
+      }, { responsive: true, displaylogo: false, displayModeBar: false });
+    }
+  }
+
+  function renderCompareTable() {
+    const t = $("compare-table");
+    t.textContent = "";
+    const names = COMPARISON.names;
+    const head = el("tr", null, el("th", { scope: "col", text: "Key number" }));
+    names.forEach((n) => head.append(el("th", { scope: "col", class: "num", text: n === COMPARISON.base ? `${n} (base)` : n })));
+    t.append(el("thead", null, head));
+    const body = el("tbody");
+    for (const [key, label, unit, digits] of BAR_METRICS) {
+      const tr = el("tr", null, el("th", { scope: "row", text: unit ? `${label} (${unit})` : label }));
+      for (const n of names) {
+        const v = fnum(tget(COMPARISON.metrics, key, n));
+        let text = Number.isFinite(v) ? v.toFixed(digits) : "–";
+        if (n !== COMPARISON.base && Number.isFinite(v)) text += ` (${fmtDelta(tget(COMPARISON.metrics_delta, key, n), digits, "")})`;
+        tr.append(el("td", { class: "num", text: text }));
+      }
+      body.append(tr);
+    }
+    t.append(body);
+  }
+
+  const CONFIG_LABEL = {
+    "optimization.tmax": "Max trench depth (m)",
+    "optimization.tmin": "Min trench depth (m)",
+    "optimization.min_trench_depth": "Min trench depth (m)",
+    "optimization.inflow_trench_depth": "Trench depth at the inflow (m)",
+    "optimization.min_cover": "Min cover over the pipe crown (m)",
+    "optimization.velocity_min": "Min flow velocity (m/s)",
+    "optimization.velocity_max": "Max flow velocity (m/s)",
+    "optimization.max_depth_ratio": "Max filling ratio d/D (-)",
+    "optimization.min_slope": "Min slope (m/m)",
+    "optimization.max_slope": "Max slope (m/m)",
+    "optimization.min_slope_abs": "Min slope, absolute (m/m)",
+    "optimization.min_slope_model": "Min slope model",
+    "optimization.dts_min_gradient": "Min gradient for self-cleansing (m/m)",
+    "optimization.min_pipe_length": "Min pipe length (m)",
+    "optimization.diameters": "Available diameters (m)",
+    "optimization.pressurized_diameter": "Pressure main diameter (m)",
+    "optimization.roughness": "Pipe roughness (Manning n)",
+    "optimization.peak_factor": "Peak factor (-)",
+    "optimization.peak_factor_max": "Max peak factor (-)",
+    "optimization.peak_factor_method": "Peak factor method",
+    "optimization.infiltration_fraction": "Infiltration share of the flow (-)",
+    "optimization.inhabitants_dwelling": "Inhabitants per dwelling (persons)",
+    "optimization.daily_wastewater_person": "Wastewater per person (m³/day)",
+    "optimization.station_cost": "Station cost (cost units)",
+    "optimization.station_max_iterations": "Max station iterations",
+    "preprocessing.pump_penalty": "Pump penalty (cost units)",
+    "preprocessing.max_connection_length": "Max building connection length (m)",
+    "preprocessing.dx": "Sampling distance along roads (m)",
+    "preprocessing.clustering": "Building clustering",
+    "preprocessing.add_private_sewer": "Add private sewers",
+    "preprocessing.connect_buildings": "Connect buildings",
+    "preprocessing.combined_sewer_factor": "Combined sewer factor (-)",
+  };
+
+  function humanKey(key) {
+    if (CONFIG_LABEL[key]) return CONFIG_LABEL[key];
+    const last = key.split(".").pop().replace(/_/g, " ");
+    return last.charAt(0).toUpperCase() + last.slice(1);
+  }
+
+  function showConfigValue(v) {
+    if (v === null || v === undefined) return "not set";
+    if (typeof v === "boolean") return v ? "yes" : "no";
+    return String(v);
+  }
+
+  function renderConfig() {
+    const t = $("config-table");
+    t.textContent = "";
+    const cd = COMPARISON.config_diff;
+    const base = COMPARISON.base;
+    const head = el("tr", null,
+      el("th", { scope: "col", text: "Setting" }),
+      el("th", { scope: "col", class: "num", text: `Base: ${base}` }),
+      el("th", { scope: "col", class: "num", text: `Variant: ${compareName || ""}` }));
+    t.append(el("thead", null, head));
+    const body = el("tbody");
+    const rows = [];
+    if (compareName) {
+      cd.index.forEach((key, i) => {
+        const b = tget(cd, key, base);
+        const v = tget(cd, key, compareName);
+        if (JSON.stringify(b) !== JSON.stringify(v)) rows.push([key, b, v]);
+      });
+    }
+    if (!rows.length) {
+      body.append(el("tr", null, el("td", { colspan: "3", text: compareName ? `No setting differs between ${compareName} and the base. The difference comes from the inputs, for example the sink.` : "" })));
+    }
+    for (const [key, b, v] of rows) {
+      body.append(el("tr", null,
+        el("td", { "data-label": "Setting", title: key }, humanKey(key), el("span", { class: "raw", text: key })),
+        el("td", { class: "num", "data-label": `Base: ${base}`, text: showConfigValue(b) }),
+        el("td", { class: "num changed", "data-label": `Variant: ${compareName}`, text: showConfigValue(v) })));
+    }
+    t.append(body);
+  }
+
+  function renderCompare() {
+    if (!MULTI) return;
+    $("compare-base").textContent = `Base: ${COMPARISON.base}`;
+    renderCompareSentence();
+    renderCompareTable();
+    renderBars();
+    renderConfig();
+    renderDiffCaption();
+  }
+
+  function syncCompareToVariant() {
+    const others = COMPARISON.names.filter((n) => n !== COMPARISON.base);
+    if (current.name !== COMPARISON.base) compareName = current.name;
+    else if (!compareName || !others.includes(compareName)) compareName = others[0] || null;
+    $("compare-select").value = compareName || "";
+  }
+
+  function writeHash() {
+    if (!MULTI) return;
+    const h = "#variant=" + encodeURIComponent(current.name);
+    if (window.location.hash !== h && window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", h);
+    }
+  }
+
+  function setVariant(name) {
+    const v = VARIANTS.find((x) => x.name === name);
+    if (!MULTI || !v) return false;
+    $("variant-select").value = v.name;
+    if (v === current) return true;
+    const keep = selectedStart;
+    current = v;
+    writeHash();
+    renderHeader();
+    renderBanner();
+    renderMetrics();
+    populateChecks();
+    renderFindings();
+    refreshPicker();
+    selFC = { type: "FeatureCollection", features: [] };
+    pathFC = { type: "FeatureCollection", features: [] };
+    updateNetworkData();
+    syncCompareToVariant();
+    updateDiff();
+    renderCompare();
+    const start = keep && buildIndex(v).nodeById.has(keep) ? keep : longestStart(v);
+    if (start) {
+      showProfile(start);
+    } else {
+      currentTrace = null;
+      if (typeof Plotly !== "undefined") Plotly.purge("profile");
+      $("profile-sub").textContent = "";
+      $("profile-table").textContent = "";
+      profileMessage("No profile: the network has no pipes.");
+    }
+    return true;
+  }
+
+  function initVariants() {
+    if (!MULTI) return;
+    const vs = $("variant-select");
+    for (const v of VARIANTS) vs.append(el("option", { value: v.name, text: v.name }));
+    vs.value = current.name;
+    $("variant-switch").hidden = false;
+    vs.addEventListener("change", () => setVariant(vs.value));
+    window.addEventListener("hashchange", () => {
+      const v = variantFromHash();
+      if (v && v !== current) setVariant(v.name);
+    });
+
+    const cs = $("compare-select");
+    for (const n of COMPARISON.names.filter((x) => x !== COMPARISON.base)) {
+      cs.append(el("option", { value: n, text: n }));
+    }
+    cs.addEventListener("change", () => {
+      compareName = cs.value;
+      renderCompare();
+      updateDiff();
+    });
+    syncCompareToVariant();
+    $("diff-toggle").addEventListener("change", (e) => setDiff(e.target.checked));
+    $("diff-bar").hidden = false;
+    $("compare-section").hidden = false;
+    renderCompare();
+    writeHash();
+  }
 
   // ------------------------------------------------------------ start
   window.pysewerReport = {
     traceProfile: (variant, nodeId) => traceProfile(DATA, variant, nodeId),
     showProfile: showProfile,
+    setVariant: setVariant,
+    setDiff: setDiff,
+    longestStart: (name) => longestStart(VARIANTS.find((v) => v.name === name) || current),
+    get current() { return current; },
+    get compareName() { return compareName; },
     data: DATA,
     params: PARAMS,
     get currentTrace() { return currentTrace; },
@@ -1324,9 +1806,11 @@
     renderLegend();
     initFindings();
     initPicker();
+    initVariants();
     initMap();
-    if (DEFAULT_PROFILE) {
-      showProfile(DEFAULT_PROFILE.start);
+    const start0 = longestStart(current);
+    if (start0) {
+      showProfile(start0);
     } else {
       $("profile").style.display = "none";
       profileMessage("No profile: the network has no pipes.");

@@ -22,6 +22,10 @@ $css
     <p class="subtitle" id="subtitle"></p>
   </div>
   <dl class="meta" id="meta" aria-label="Report details"></dl>
+  <div class="variant-switch" id="variant-switch" hidden>
+    <label for="variant-select">Variant</label>
+    <select id="variant-select"></select>
+  </div>
   <button type="button" id="theme-toggle" class="btn" aria-label="Colour theme">Theme: auto</button>
 </header>
 
@@ -41,6 +45,10 @@ $css
           <button type="button" class="btn" id="node-longest">Longest path</button>
         </div>
       </div>
+      <div class="diff-bar" id="diff-bar" hidden>
+        <label class="check"><input type="checkbox" id="diff-toggle"> <span id="diff-toggle-text">Show differences to base</span></label>
+        <span class="diff-caption" id="diff-caption" aria-live="polite"></span>
+      </div>
       <div class="map-wrap">
         <div id="map" role="application" aria-label="Map of the sewer network. Click a node or a pipe to see its profile."></div>
         <div id="map-msg" class="overlay-msg" hidden></div>
@@ -57,6 +65,27 @@ $css
       <dl id="metrics" class="metrics"></dl>
     </aside>
   </div>
+
+  <section class="card" id="compare-section" aria-labelledby="compare-h" hidden>
+    <div class="card-head">
+      <h2 id="compare-h">Compare variants</h2>
+      <div class="filters">
+        <label for="compare-select">Compare variant</label>
+        <select id="compare-select"></select>
+        <span class="muted" id="compare-base"></span>
+      </div>
+    </div>
+    <p class="compare-sentence" id="compare-sentence" aria-live="polite"></p>
+    <h3>Key numbers by variant</h3>
+    <p class="hint">Bars show each variant. The line below a value is the change against the base variant (variant minus base).</p>
+    <div id="compare-bars" class="bars"></div>
+    <details class="profile-table">
+      <summary>Key numbers as a table</summary>
+      <div class="table-scroll"><table id="compare-table"></table></div>
+    </details>
+    <h3>Settings that differ</h3>
+    <div id="config-wrap" class="table-scroll"><table id="config-table" class="config-table"></table></div>
+  </section>
 
   <section class="card" id="profile-section" aria-labelledby="profile-h">
     <div class="card-head">

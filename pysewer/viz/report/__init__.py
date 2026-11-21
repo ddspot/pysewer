@@ -5,7 +5,8 @@
 Self-contained HTML report of a designed sewer network.
 
 :func:`build_report` writes one HTML file. The data (GeoJSON in WGS84, metrics,
-quality findings, one default profile) is inlined as JSON. MapLibre GL JS and
+quality findings, one default profile, and for two or more variants the
+comparison with the first variant) is inlined as JSON. MapLibre GL JS and
 Plotly.js load from a CDN with SRI hashes; the basemap is OpenFreeMap. The
 Python side uses the standard library only (``string.Template``, ``json``,
 ``importlib.resources``).
@@ -27,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from pysewer.bundle import NetworkBundle
+from pysewer.compare import compare
 from pysewer.metrics import network_metrics, quality_checks, summarize_findings
 from pysewer.viz.profile import longitudinal_profile
 
@@ -133,9 +135,11 @@ def report_data(
 
     Keys: ``schema``, ``title``, ``variants`` (list, one dict per variant with
     ``name``, ``geojson``, ``crs_area``, ``metrics``, ``findings``,
-    ``summary``) and
+    ``summary``),
     ``default_profile`` (``Profile.to_dict()`` for the first variant, or None
-    if it has no pipes).
+    if it has no pipes) and ``comparison``
+    (:meth:`pysewer.compare.Comparison.to_dict`, base = first variant; None
+    for a single variant).
     """
     named = _normalise(bundles)
     variants = [_variant(n, b, findings_config) for n, b in named.items()]
@@ -144,11 +148,15 @@ def report_data(
     profile = None
     if start is not None:
         profile = longitudinal_profile(first, start).to_dict()
+    comparison = None
+    if len(named) >= 2:
+        comparison = compare(named, base=first_name).to_dict()
     return {
         "schema": "report/1",
         "title": title or first_name,
         "variants": variants,
         "default_profile": profile,
+        "comparison": comparison,
     }
 
 
@@ -174,7 +182,8 @@ def build_report(
     ----------
     bundles : NetworkBundle, networkx.DiGraph or Mapping
         One network or ``{variant name: network}``. The first variant is
-        shown.
+        shown first and is the base of the comparison panel (two or more
+        variants).
     out_html : str or Path
         Output file.
     title : str, optional
