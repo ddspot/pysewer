@@ -24,7 +24,8 @@ stages:
 .setup_env: &setup_env
   - mamba create -y -n pysewer --file conda-linux-64.lock
   - source activate pysewer
-  - uv pip install --python "$CONDA_PREFIX/bin/python" -e '.[dev,docs]'
+  # fetch: osmnx + overturemaps are pure Python and not yet in the lockfile
+  - uv pip install --python "$CONDA_PREFIX/bin/python" -e '.[dev,docs,fetch]'
 
 test:
   stage: test
@@ -41,6 +42,8 @@ test-py312-wheels:
   allow_failure: true
   image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
   script:
+    # the GDAL in the fiona/rasterio wheels needs libexpat from the system
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends libexpat1 >/dev/null
     - uv venv --python 3.12 .venv312
     - "uv pip install --python .venv312/bin/python --only-binary :all: -e '.[dev,plot,fetch]'"
     - .venv312/bin/python -m pytest tests/ -q -m "not network"
