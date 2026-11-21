@@ -8,6 +8,9 @@ can share overrides (e.g. set via `set_custom_config`). The public helpers
 mirror the functions used elsewhere in the codebase.
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from .settings import Config, load_config
 
 # Store a single config instance that can be shared package-wide
@@ -33,3 +36,30 @@ def reset_config() -> Config:
     Reset the global config back to the defaults from settings.yaml.
     """
     return set_config()
+
+
+@contextmanager
+def use_config(config: Config) -> Iterator[Config]:
+    """
+    Make ``config`` the active config inside a ``with`` block.
+
+    The previous config returns on exit, also if the block raises.
+
+    Parameters
+    ----------
+    config : Config
+        The config to activate.
+
+    Notes
+    -----
+    Not thread-safe: there is one active config per process.
+    ``pysewer.DEFAULT_CONFIG`` is a snapshot and does not follow ``use_config``.
+    Read the active config with :func:`get_config`.
+    """
+    global _CONFIG
+    previous = _CONFIG
+    _CONFIG = config
+    try:
+        yield config
+    finally:
+        _CONFIG = previous

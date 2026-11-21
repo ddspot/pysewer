@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.pipeline.generate` designs a network from a DEM, roads and
+  buildings in one call and returns a `NetworkBundle`. You can give the
+  sink, a sink in another CRS and configuration overrides. The
+  overrides apply only during the call. `progress` receives the stage,
+  a fraction and a message, also during the routing. An exception from
+  `progress` stops the run. Roads and buildings in another CRS are
+  reprojected to the CRS of the DEM.
+- `pysewer.config.manager.use_config` sets the active configuration in
+  a `with` block and sets the old configuration again at the end.
+
 - `pysewer.viz.mpl` draws a network and a longitudinal profile with
   matplotlib (`plot` extra). `plot_network` colours the pipes by
   diameter, pipe type, depth or another column, and can mark the pipes
