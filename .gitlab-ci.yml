@@ -17,13 +17,15 @@ cache:
 
 stages:
   - test
+  - downstream
   - deploy
   - mirror
 
 .setup_env: &setup_env
   - mamba create -y -n pysewer --file conda-linux-64.lock
   - source activate pysewer
-  - uv pip install --python "$CONDA_PREFIX/bin/python" -e '.[dev,docs]'
+  # fetch: osmnx + overturemaps are pure Python and not yet in the lockfile
+  - uv pip install --python "$CONDA_PREFIX/bin/python" -e '.[dev,docs,fetch]'
 
 test:
   stage: test
@@ -31,6 +33,36 @@ test:
     - *setup_env
   script:
     - python -m pytest tests/ -q
+
+# Python 3.12 from PyPI wheels only, as the RustGIS plugin installs pysewer
+# (uv-built environment, no conda). Live network tests stay off.
+test-py312-wheels:
+  stage: test
+  # new job: may fail until the wheels-only stack is proven on the runner
+  allow_failure: true
+  image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+  script:
+    # the GDAL in the fiona/rasterio wheels needs libexpat from the system
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends libexpat1 >/dev/null
+    - uv venv --python 3.12 .venv312
+    - "uv pip install --python .venv312/bin/python --only-binary :all: -e '.[dev,plot,fetch]'"
+    - .venv312/bin/python -m pytest tests/ -q -m "not network"
+
+# Run the RustGIS plugin pipeline against this commit (pysewer main only). The plugin installs
+# pysewer from git at PYSEWER_REF. Requirements: the downstream project wasp/rustgis-pysewer must
+# exist on this GitLab instance and allow pipeline triggers from this project (its CI/CD job token
+# allowlist must include wasp/pysewer). allow_failure: a plugin problem never blocks pysewer.
+plugin-compat:
+  stage: downstream
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  allow_failure: true
+  trigger:
+    project: wasp/rustgis-pysewer
+    branch: main
+    strategy: depend
+  variables:
+    PYSEWER_REF: $CI_COMMIT_SHA
 
 lint:
   stage: test

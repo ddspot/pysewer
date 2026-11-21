@@ -3,13 +3,16 @@
 
 
 import logging
+import warnings
 
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import rasterio.plot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from rasterio.plot import plotting_extent
+from shapely.geometry import Point
 
 from .config.manager import get_config
 from .helper import get_edge_gdf, get_node_gdf
@@ -63,7 +66,10 @@ def plot_model_domain(
     plot_connection_graph : bool, optional
         Whether to plot the connection graph, by default False.
     plot_junction_graph : bool, optional
-        Whether to plot the junction graph, by default False.
+        Deprecated. The junction graph no longer exists. If true, a
+        ``DeprecationWarning`` is emitted and the connection graph is plotted
+        instead (once, even if ``plot_connection_graph`` is also true).
+        By default False.
     plot_sink : bool, optional
         Whether to plot the sink, by default True.
     plot_sewer : bool, optional
@@ -141,13 +147,16 @@ def plot_model_domain(
         )
         ax.set_title("Hillshade made from DTM")
 
-    if plot_connection_graph:
+    if plot_junction_graph:
+        warnings.warn(
+            "The junction graph no longer exists; "
+            "the connection graph is plotted instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if plot_connection_graph or plot_junction_graph:
         get_edge_gdf(modelDomain.connection_graph).plot(
             ax=ax, color="g", zorder=5, label="Connection Graph"
-        )
-    if plot_junction_graph:
-        get_edge_gdf(modelDomain.junction_graph).plot(
-            ax=ax, color="g", zorder=5, label="Junction Graph"
         )
     if plot_sink:
         get_node_gdf(
@@ -342,14 +351,21 @@ def plot_connection_graph(model_domain, fig_size=(10, 10)):
     node_gdf = get_node_gdf(model_domain.connection_graph)
     node_gdf.plot(ax=ax, color="red", markersize=20, zorder=4, label="Nodes")
 
-    # Highlight nodes that need pumps
-    pump_nodes = [
-        node
-        for node, data in model_domain.connection_graph.nodes(data=True)
-        if data.get("needs_pump", False)
-    ]
+    # Highlight nodes that need pumps (needs_pump is an edge attribute;
+    # the upstream node of the edge hosts the pump)
+    graph = model_domain.connection_graph
+    pump_nodes = list(
+        dict.fromkeys(
+            u
+            for u, _, data in graph.edges(data=True)
+            if data.get("needs_pump", False)
+        )
+    )
     if pump_nodes:
-        pump_gdf = get_node_gdf(model_domain.connection_graph, value=pump_nodes)
+        pump_gdf = gpd.GeoDataFrame(
+            geometry=[Point(n[0], n[1]) for n in pump_nodes],
+            crs=graph.graph.get("crs"),
+        )
         pump_gdf.plot(
             ax=ax, color="yellow", markersize=30, zorder=5, label="Pump Needed"
         )

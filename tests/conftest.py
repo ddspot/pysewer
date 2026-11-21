@@ -36,6 +36,20 @@ def configure_logging():
 # pytest hook to configure logging before running tests
 def pytest_configure(config):
     configure_logging()
+    config.addinivalue_line(
+        "markers", "network: live network test, skipped unless run with -m network"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    import pytest
+
+    if "network" in (config.getoption("-m") or ""):
+        return
+    skip = pytest.mark.skip(reason="live network test; run with -m network")
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(skip)
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

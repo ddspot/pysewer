@@ -20,6 +20,7 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
 # Pure-Python / PyPI layer. The geospatial C-library stack (gdal, proj, geos,
@@ -47,6 +48,12 @@ dependencies = [
 plot = [
     "matplotlib",
 ]
+# osmnx downloads OSM roads and buildings (Overpass) and overturemaps reads
+# Overture Maps GeoParquet from S3, both for pysewer.sources.fetch_inputs.
+fetch = [
+    "osmnx>=2.0",
+    "overturemaps>=2.0",
+]
 dev = [
     "pytest",
     "ruff",
@@ -64,6 +71,9 @@ docs = [
     "sphinx-codeautolink",
     "sphinx-copybutton",
 ]
+
+[project.scripts]
+pysewer = "pysewer.cli:main"
 
 [project.urls]
 Repository = "https://codebase.helmholtz.cloud/wasp/pysewer"
@@ -83,6 +93,7 @@ include = ["pysewer*"]
 
 [tool.setuptools.package-data]
 "pysewer.config" = ["*.yaml"]
+"pysewer.viz.report" = ["*.html", "*.js", "*.css"]
 
 [tool.pytest.ini_options]
 # keep collection out of work/ scratch (e.g. the benchmark baseline

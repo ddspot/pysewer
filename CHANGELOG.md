@@ -9,6 +9,130 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `fetch_inputs` can get roads and buildings from Overture Maps
+  (`source="overture"`) as well as from OpenStreetMap. Overture data
+  comes from GeoParquet files on S3, so it works on networks that block
+  the Overpass servers. Buildings that are underground or smaller than
+  20 m2 are not used. The CLI option is `--source overture`.
+- You can set the Overpass server: the `overpass_url` argument, the
+  environment variable `PYSEWER_OVERPASS_URL`, or `--overpass-url`.
+- `pysewer.sources.fetch_dem` gets only the DEM for a bounding box.
+
+- The `pysewer` command runs pysewer from a terminal. `pysewer run`
+  designs a network from files or from a bounding box (`--bbox`) and
+  writes a bundle and an HTML report. `pysewer fetch`, `pysewer report`,
+  `pysewer compare` and `pysewer profile` do one task each. The exit
+  code tells the type of error: 3 for bad input, 4 for an area that is
+  too large, 5 for no data in the cache when offline, 6 when a server
+  cannot be reached. `--progress jsonl` writes one JSON object for each
+  progress step (version 1).
+- CI tests pysewer on Python 3.12 from wheels only, as the RustGIS
+  plugin installs it.
+
+- `pysewer.sources.fetch_inputs` gets the input data for a bounding box
+  anywhere in the world: roads and buildings from OpenStreetMap and the
+  Copernicus GLO-30 DEM (30 m). It reprojects the data to a UTM CRS and
+  keeps it in a cache. Use `offline=True` to use only the cache.
+  Install the `fetch` extra (osmnx 2.0 or later). The Copernicus DEM is
+  a surface model: buildings and trees can make the ground too high.
+  `preflight_building_count` counts the buildings in a box before you
+  get the data.
+
+- The HTML report compares design variants. Give `build_report` two or
+  more bundles. A selector changes the variant on the map, in the key
+  numbers, in the findings and in the profile. A map layer shows the
+  pipes that were added, removed or changed against the first variant.
+  Bar charts show the key numbers of each variant and the difference to
+  the first variant. A table shows the settings that are different.
+
+- `pysewer.pipeline.generate` designs a network from a DEM, roads and
+  buildings in one call and returns a `NetworkBundle`. You can give the
+  sink, a sink in another CRS and configuration overrides. The
+  overrides apply only during the call. `progress` receives the stage,
+  a fraction and a message, also during the routing. An exception from
+  `progress` stops the run. Roads and buildings in another CRS are
+  reprojected to the CRS of the DEM.
+- `pysewer.config.manager.use_config` sets the active configuration in
+  a `with` block and sets the old configuration again at the end.
+
+- `pysewer.viz.mpl` draws a network and a longitudinal profile with
+  matplotlib (`plot` extra). `plot_network` colours the pipes by
+  diameter, pipe type, depth or another column, and can mark the pipes
+  with findings. `plot_profile` draws the ground, the pipe, the water
+  level, the manholes, the drops, the stations and a band with the
+  diameter and the fall of each pipe.
+
+- `pysewer.viz.report.build_report` writes one HTML file for a network.
+  The file shows the network on a web map, the key numbers, the
+  findings of the quality check and a longitudinal profile. Click a
+  node on the map to show its profile to the sink. The file loads
+  MapLibre GL and Plotly.js from a CDN (with integrity hashes) and the
+  basemap from OpenFreeMap. All network data is in the file. It has a
+  light and a dark theme and works on a phone.
+- `NetworkBundle.to_geojson_dict(rounding=False)` gives the GeoJSON
+  without rounding.
+
+- `quality_checks` and `summarize_findings` give the design engine
+  findings in plain words, for example "the slope is steeper than the
+  maximum slope". The check names do not change.
+
+- In the longitudinal profile, a pressure main follows the terrain.
+  pysewer keeps only the invert at the two ends of a pressure main. The
+  profile now calculates the depth at the two ends, interpolates it
+  along the pipe and subtracts it from the ground. Before, the profile
+  drew a straight line between the two ends. That line can go above the
+  ground where the terrain goes down. The levels at the two ends do not
+  change. `Profile.params` gives the rule (`pressurized_invert`) and
+  `tmin`.
+
+- `pysewer.compare.compare` compares two or more variants of a network.
+  It gives the metrics of each variant and the difference to a base
+  variant, the configuration values that are different, the pipe length
+  for each diameter, the number of stations, and a spatial difference.
+  The spatial difference finds the same pipe in two variants when both
+  ends are within `tolerance` (default 0.01 m), also if the flow
+  direction changed. It gives the shared, added, removed and changed
+  length.
+
+- `pysewer.viz.longitudinal_profile` makes the longitudinal profile
+  from a node to the sink. The profile gives the ground, the invert, the
+  crown and the water level along the flow path. It also gives the
+  manholes, the drops, the lifting stations and the pumping stations.
+  A drop is an invert step of 0.05 m or more (`drop_threshold`). A
+  `pump_relay` is a pumping station that the path reaches through a
+  pressure main, so the path has no lift there. `Profile.to_dict()`
+  gives the profile as JSON for the report and other clients.
+
+- `pysewer.metrics` gives key numbers and a quality check for a
+  network. `network_metrics` returns lengths by pipe type, station
+  counts, diameters, trench depths, an excavation proxy, hydraulic
+  values and graph values. `quality_checks` returns one row for each
+  problem on a pipe or node, with a severity. `summarize_findings`
+  returns one line for each type of problem.
+- `quality_checks` measures the cover over the pipe crown. pysewer
+  measures `tmin` to the pipe invert. Thus with the default `tmin` of
+  0.25 m, a pipe with a diameter of 0.2 m has 0.05 m of cover. The check
+  shows this as a warning.
+
+- `NetworkBundle` can write and read a network as a GeoPackage
+  (`to_gpkg`), a GeoJSON directory (`to_geojson`) or a GeoParquet
+  directory (`to_parquet`). Use `NetworkBundle.read(path)` to read it
+  again. The GeoJSON files are in EPSG:4326 (RFC 7946). GeoParquet keeps
+  all values without rounding. Use `to_geojson_dict()` to get the
+  GeoJSON content without files.
+- `export_sewer_network` can write GeoJSON (`file_format="geojson"`).
+
+- `pysewer.bundle.NetworkBundle` holds a designed network as a pipe
+  table, a node table, metadata and profiles. Use
+  `NetworkBundle.from_graph(G)` to make it. The pipe table gives the
+  ground, invert, crown and depth at each end of each pipe. The invert
+  comes from `trench_depth_profile`. The crown is the invert plus the
+  diameter. The node table gives a role for each node: `sink`,
+  `building`, `pumping_station`, `lifting_station` or `junction`. The
+  metadata holds the schema version, the pysewer version, the
+  configuration, the CRS and the input sources. Use `to_wgs84()` to get
+  a copy in EPSG:4326 for web maps.
+
 - `pysewer.route_and_design` routes and designs the network, and routes
   it again to avoid stations. It is optional. The results of
   `rsph_tree` and `calculate_hydraulic_parameters` do not change.
@@ -56,6 +180,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `import pysewer` loads the submodules `viz`, `bundle`, `metrics`,
+  `compare`, `sources`, `pipeline`, `cli` and `plotting` only when you
+  use them. Thus `import pysewer` does not load matplotlib or other
+  optional dependencies. If an optional dependency is missing, the error
+  message tells which extra to install.
+
 - `needs_pump` on the connection graph uses the minimum slope of the
   design step. With `min_slope_model: "self_cleansing"` (the default),
   the design step uses the self-cleansing slope of the pipe diameter
@@ -79,6 +209,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The number of stations does not decrease. The routing weight does not
   include the trench depth that causes most lifting stations. To reroute
   the network around the stations, use `route_and_design`.
+
+### Fixed
+
+- `plot_model_domain` with `plot_junction_graph=True` no longer fails.
+  The junction graph does not exist. The function now plots the
+  connection graph and shows a `DeprecationWarning`.
+
+- `plot_connection_graph` now marks the nodes that need a pump.
+  `needs_pump` is an edge attribute. The function now marks the
+  upstream node of each edge with `needs_pump`. Before, it read
+  `needs_pump` from the nodes and marked no node.
 
 ## [0.4.0] - 2026-11-14
 

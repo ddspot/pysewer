@@ -1,0 +1,158 @@
+<!doctype html>
+<!--
+SPDX-FileCopyrightText: 2025 Helmholtz Centre for Environmental Research (UFZ)
+SPDX-License-Identifier: GPL-3.0-only
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>$title - pysewer report</title>
+<link rel="stylesheet" href="$maplibre_css_url" integrity="$maplibre_css_sri" crossorigin="anonymous">
+<style>
+$css
+</style>
+</head>
+<body>
+<a class="skip" href="#profile-section">Skip to the profile</a>
+<header class="top">
+  <div class="top-main">
+    <h1 id="title">Sewer network report</h1>
+    <p class="subtitle" id="subtitle"></p>
+  </div>
+  <dl class="meta" id="meta" aria-label="Report details"></dl>
+  <div class="variant-switch" id="variant-switch" hidden>
+    <label for="variant-select">Variant</label>
+    <select id="variant-select"></select>
+  </div>
+  <button type="button" id="theme-toggle" class="btn" aria-label="Colour theme">Theme: auto</button>
+</header>
+
+<main id="app">
+  <div id="banner" class="banner" role="region" aria-label="Summary of design findings"></div>
+  <div id="dem-note" class="note" hidden></div>
+
+  <div class="grid-top">
+    <section class="card map-card" aria-labelledby="map-h">
+      <div class="card-head">
+        <h2 id="map-h">Network map</h2>
+        <div class="start-picker">
+          <label for="node-input">Show profile from node</label>
+          <input id="node-input" type="text" list="node-list" autocomplete="off" spellcheck="false" placeholder="e.g. N000115">
+          <datalist id="node-list"></datalist>
+          <button type="button" class="btn" id="node-go">Show</button>
+          <button type="button" class="btn" id="node-longest">Longest path</button>
+        </div>
+      </div>
+      <div class="diff-bar" id="diff-bar" hidden>
+        <label class="check"><input type="checkbox" id="diff-toggle"> <span id="diff-toggle-text">Show differences to base</span></label>
+        <span class="diff-caption" id="diff-caption" aria-live="polite"></span>
+      </div>
+      <div class="map-wrap">
+        <div id="map" role="application" aria-label="Map of the sewer network. Click a node or a pipe to see its profile."></div>
+        <div id="map-msg" class="overlay-msg" hidden></div>
+      </div>
+      <p class="hint">Click a node or a pipe on the map to see the profile from there to the sink. Use the node field above with the keyboard.</p>
+      <details class="legend" open>
+        <summary>Legend</summary>
+        <div id="legend"></div>
+      </details>
+    </section>
+
+    <aside class="card metrics-card" aria-labelledby="metrics-h">
+      <h2 id="metrics-h">Key numbers</h2>
+      <dl id="metrics" class="metrics"></dl>
+    </aside>
+  </div>
+
+  <section class="card" id="compare-section" aria-labelledby="compare-h" hidden>
+    <div class="card-head">
+      <h2 id="compare-h">Compare variants</h2>
+      <div class="filters">
+        <label for="compare-select">Compare variant</label>
+        <select id="compare-select"></select>
+        <span class="muted" id="compare-base"></span>
+      </div>
+    </div>
+    <p class="compare-sentence" id="compare-sentence" aria-live="polite"></p>
+    <h3>Key numbers by variant</h3>
+    <p class="hint">Bars show each variant. The line below a value is the change against the base variant (variant minus base).</p>
+    <div id="compare-bars" class="bars"></div>
+    <details class="profile-table">
+      <summary>Key numbers as a table</summary>
+      <div class="table-scroll"><table id="compare-table"></table></div>
+    </details>
+    <h3>Settings that differ</h3>
+    <div id="config-wrap" class="table-scroll"><table id="config-table" class="config-table"></table></div>
+  </section>
+
+  <section class="card" id="profile-section" aria-labelledby="profile-h">
+    <div class="card-head">
+      <h2 id="profile-h">Longitudinal profile</h2>
+      <p class="profile-sub" id="profile-sub" aria-live="polite"></p>
+    </div>
+    <div id="profile" role="img" aria-label="Longitudinal profile along the selected flow path"></div>
+    <div id="profile-msg" class="overlay-msg static" hidden></div>
+    <p class="hint">Elevations in m a.s.l., chainage in m from the start node. <span id="vexag"></span></p>
+    <p class="hint" id="profile-note" hidden>Pressure mains are drawn along the terrain at the stored end depths (display rule; pysewer stores only the end levels).</p>
+    <details class="profile-table">
+      <summary>Profile as a table</summary>
+      <div class="table-scroll"><table id="profile-table"></table></div>
+    </details>
+  </section>
+
+  <section class="card" aria-labelledby="findings-h">
+    <div class="card-head">
+      <h2 id="findings-h">Quality findings</h2>
+      <div class="filters">
+        <label for="sev-filter">Severity</label>
+        <select id="sev-filter">
+          <option value="all">All</option>
+          <option value="error">Error</option>
+          <option value="warning">Warning</option>
+          <option value="info">Info</option>
+        </select>
+        <label for="check-filter">Check</label>
+        <select id="check-filter"><option value="all">All</option></select>
+        <label for="sort-select" class="sort-label">Sort by</label>
+        <select id="sort-select" class="sort-label">
+          <option value="severity">Severity</option>
+          <option value="check">Check</option>
+          <option value="element_id">Element</option>
+          <option value="value">Value</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint" id="findings-count" aria-live="polite"></p>
+    <div class="table-scroll">
+      <table id="findings" class="findings">
+        <caption class="sr-only">Quality findings. Select a row to show the element on the map.</caption>
+        <thead>
+          <tr>
+            <th scope="col"><button type="button" class="sort" data-key="severity">Severity <span aria-hidden="true" class="arrow"></span></button></th>
+            <th scope="col"><button type="button" class="sort" data-key="check">Check <span aria-hidden="true" class="arrow"></span></button></th>
+            <th scope="col"><button type="button" class="sort" data-key="element_id">Element <span aria-hidden="true" class="arrow"></span></button></th>
+            <th scope="col" class="num"><button type="button" class="sort" data-key="value">Value <span aria-hidden="true" class="arrow"></span></button></th>
+            <th scope="col" class="num">Limit</th>
+            <th scope="col">Message</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<footer class="foot">
+  Made with pysewer. Basemap: OpenFreeMap, data from OpenStreetMap contributors.
+</footer>
+
+<noscript><p class="fatal">This report needs JavaScript.</p></noscript>
+<script type="application/json" id="pysewer-data">$data</script>
+<script src="$maplibre_js_url" integrity="$maplibre_js_sri" crossorigin="anonymous"></script>
+<script src="$plotly_js_url" integrity="$plotly_js_sri" crossorigin="anonymous"></script>
+<script>
+$js
+</script>
+</body>
+</html>
