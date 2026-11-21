@@ -74,7 +74,7 @@ def test_plot_function_fallback_resolves():
 
 def test_unknown_public_name_raises():
     with pytest.raises(AttributeError, match="no_such_name_xyz"):
-        pysewer.no_such_name_xyz
+        _ = pysewer.no_such_name_xyz
     assert not hasattr(pysewer, "no_such_name_xyz")
 
 

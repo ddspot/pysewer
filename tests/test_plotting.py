@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("matplotlib")
-import matplotlib  # noqa: E402
+import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 
-import pysewer  # noqa: E402
-from pysewer.plotting import plot_connection_graph, plot_model_domain  # noqa: E402
+import pysewer
+from pysewer.plotting import plot_connection_graph, plot_model_domain
 
 TEST_DATA = Path("tests") / "test_data"
 SINK = (691350, 2553250)
