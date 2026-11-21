@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pysewer.sources.fetch_inputs` gets the input data for a bounding box
+  anywhere in the world: roads and buildings from OpenStreetMap and the
+  Copernicus GLO-30 DEM (30 m). It reprojects the data to a UTM CRS and
+  keeps it in a cache. Use `offline=True` to use only the cache.
+  Install the `fetch` extra (osmnx 2.0 or later). The Copernicus DEM is
+  a surface model: buildings and trees can make the ground too high.
+  `preflight_building_count` counts the buildings in a box before you
+  get the data.
+
 - The HTML report compares design variants. Give `build_report` two or
   more bundles. A selector changes the variant on the map, in the key
   numbers, in the findings and in the profile. A map layer shows the

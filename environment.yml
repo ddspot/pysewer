@@ -31,6 +31,7 @@ dependencies:
   - networkx
   - pyarrow
   - matplotlib
+  - osmnx>=2.0
   - pyyaml
   - setuptools<81
   - jupyter

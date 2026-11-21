@@ -47,6 +47,10 @@ dependencies = [
 plot = [
     "matplotlib",
 ]
+# osmnx downloads OSM roads and buildings for pysewer.sources.fetch_inputs.
+fetch = [
+    "osmnx>=2.0",
+]
 dev = [
     "pytest",
     "ruff",
