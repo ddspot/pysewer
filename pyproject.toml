@@ -48,9 +48,11 @@ dependencies = [
 plot = [
     "matplotlib",
 ]
-# osmnx downloads OSM roads and buildings for pysewer.sources.fetch_inputs.
+# osmnx downloads OSM roads and buildings (Overpass) and overturemaps reads
+# Overture Maps GeoParquet from S3, both for pysewer.sources.fetch_inputs.
 fetch = [
     "osmnx>=2.0",
+    "overturemaps>=2.0",
 ]
 dev = [
     "pytest",

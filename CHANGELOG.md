@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `fetch_inputs` can get roads and buildings from Overture Maps
+  (`source="overture"`) as well as from OpenStreetMap. Overture data
+  comes from GeoParquet files on S3, so it works on networks that block
+  the Overpass servers. Buildings that are underground or smaller than
+  20 m2 are not used. The CLI option is `--source overture`.
+- You can set the Overpass server: the `overpass_url` argument, the
+  environment variable `PYSEWER_OVERPASS_URL`, or `--overpass-url`.
+- `pysewer.sources.fetch_dem` gets only the DEM for a bounding box.
+
 - The `pysewer` command runs pysewer from a terminal. `pysewer run`
   designs a network from files or from a bounding box (`--bbox`) and
   writes a bundle and an HTML report. `pysewer fetch`, `pysewer report`,

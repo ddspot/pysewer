@@ -317,10 +317,13 @@ def _check_bbox(bbox: Sequence[float], max_area_km2: float | None) -> None:
         )
 
 
+_OVERTURE_S3_PROBE = "https://overturemaps-us-west-2.s3.amazonaws.com/"
+
+
 def _unreachable(host: str | None) -> str:
     where = f" {host}" if host else ""
     return (
-        f"cannot reach{where} (OpenStreetMap Overpass or Copernicus DEM). "
+        f"cannot reach{where} (Overpass, Overture Maps or Copernicus DEM). "
         "Check the internet connection or use --offline with a filled cache."
     )
 
@@ -340,17 +343,39 @@ def _probe(url: str, method: str, timeout: float = 5.0) -> None:
         raise CliError(_unreachable(urlparse(url).hostname), EXIT_NETWORK) from exc
 
 
-def _preflight(dem_source: str) -> None:
-    """Fail fast (exit 6) when Overpass or the Copernicus bucket is unreachable."""
-    try:
-        import osmnx
+def _preflight(
+    dem_source: str, *, source: str = "osm", overpass_url: str | None = None
+) -> None:
+    """
+    Fail fast (exit 6) when a server is unreachable.
 
-        base = str(osmnx.settings.overpass_url).rstrip("/")
-    except Exception:  # osmnx missing: let fetch_inputs report it
-        return
-    if base.endswith("/interpreter"):
-        base = base.rsplit("/", 1)[0]
-    _probe(base + "/status", "GET")
+    Probes the Overpass ``/status`` (the ``--overpass-url`` server, else
+    ``PYSEWER_OVERPASS_URL``, else the osmnx default) for ``source="osm"`` or
+    the Overture S3 bucket for ``source="overture"``, and the Copernicus
+    bucket when the DEM comes from there.
+    """
+    if source == "overture":
+        _probe(_OVERTURE_S3_PROBE, "HEAD")
+    else:
+        base = None
+        try:
+            from .sources import resolve_overpass_url
+
+            base = resolve_overpass_url(overpass_url)
+        except ValueError as exc:
+            raise CliError(str(exc), EXIT_USAGE) from exc
+        except ImportError:
+            pass
+        if base is None:
+            try:
+                import osmnx
+
+                base = str(osmnx.settings.overpass_url).rstrip("/")
+            except Exception:  # osmnx missing: let fetch_inputs report it
+                return
+        if base.endswith("/interpreter"):
+            base = base.rsplit("/", 1)[0]
+        _probe(base + "/status", "GET")
     if str(dem_source) == "copernicus":
         _probe("https://copernicus-dem-30m.s3.amazonaws.com/", "HEAD")
 
@@ -366,9 +391,13 @@ def _import_sources():
 def _fetch(args: argparse.Namespace, progress):
     sources = _import_sources()
     _check_bbox(args.bbox, args.max_area)
+    if args.source == "overture" and args.overpass_url:
+        raise CliError("--overpass-url applies to --source osm only", EXIT_USAGE)
     if not args.offline:
-        _preflight(args.dem_source)
+        _preflight(args.dem_source, source=args.source, overpass_url=args.overpass_url)
     kwargs: dict[str, Any] = {
+        "source": args.source,
+        "overpass_url": args.overpass_url,
         "cache_dir": args.cache_dir,
         "dem_source": args.dem_source,
         "crs": args.crs,
@@ -429,6 +458,7 @@ def _network_failure(exc: BaseException) -> tuple[bool, str | None]:
             "urllib3",
             "osmnx",
             "socket",
+            "builtins",
         }:
             found = True
         if found and host is None:
@@ -497,7 +527,12 @@ def _cmd_fetch(args: argparse.Namespace) -> int:
     cache = dem.parent
     files = sorted(
         p
-        for pat in ("dem_*.tif", "roads_*.gpkg", "buildings_*.gpkg")
+        for pat in (
+            "dem_*.tif",
+            "roads_*.gpkg",
+            "buildings_*.gpkg",
+            "overture_*.gpkg",
+        )
         for p in cache.glob(pat)
     )
     if args.json:
@@ -674,7 +709,21 @@ def _add_fetch_options(p: argparse.ArgumentParser, *, required_bbox: bool) -> No
         type=parse_bbox,
         metavar="W,S,E,N",
         required=required_bbox,
-        help="bounding box in WGS84 degrees (lon,lat); fetches OSM data and a DEM",
+        help="bounding box in WGS84 degrees (lon,lat); fetches roads, buildings "
+        "and a DEM",
+    )
+    g.add_argument(
+        "--source",
+        choices=("osm", "overture"),
+        default="osm",
+        help="roads and buildings: OpenStreetMap via Overpass, or Overture Maps "
+        "from AWS S3 (default: osm)",
+    )
+    g.add_argument(
+        "--overpass-url",
+        metavar="URL",
+        help="Overpass server for --source osm (default: $PYSEWER_OVERPASS_URL, "
+        "then https://overpass-api.de/api); .../api or .../api/interpreter",
     )
     g.add_argument(
         "--dem-source",
@@ -881,8 +930,18 @@ def _check_run_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -
             parser.error("use either --bbox or --dem/--roads/--buildings, not both")
     elif not all(files):
         parser.error("give --dem, --roads and --buildings, or give --bbox")
-    elif args.offline or args.cache_dir or args.crs or args.max_area is not None:
-        parser.error("--offline, --cache-dir, --crs and --max-area need --bbox")
+    elif (
+        args.offline
+        or args.cache_dir
+        or args.crs
+        or args.max_area is not None
+        or args.source != "osm"
+        or args.overpass_url
+    ):
+        parser.error(
+            "--offline, --cache-dir, --crs, --max-area, --source and "
+            "--overpass-url need --bbox"
+        )
 
 
 def _report_network(exc: BaseException) -> int:

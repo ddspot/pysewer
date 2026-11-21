@@ -511,7 +511,7 @@ def fake_sources(monkeypatch, tmp_path):
     mod.fetch_inputs = fetch_inputs
     monkeypatch.setitem(sys.modules, "pysewer.sources", mod)
     monkeypatch.setattr(pysewer, "sources", mod, raising=False)
-    monkeypatch.setattr(cli, "_preflight", lambda dem_source: None)
+    monkeypatch.setattr(cli, "_preflight", lambda dem_source, **kw: None)
     return mod
 
 
@@ -570,7 +570,7 @@ def test_exit_4_area_from_fetch(fake_sources, capsys):
 
 
 def test_exit_4_area_checked_before_preflight(fake_sources, monkeypatch, capsys):
-    def boom(dem_source):
+    def boom(dem_source, **kw):
         raise cli.CliError("unreachable", 6)
 
     monkeypatch.setattr(cli, "_preflight", boom)
@@ -594,7 +594,7 @@ def test_exit_5_offline_cache_miss(fake_sources, capsys):
 
 
 def test_offline_skips_preflight(fake_sources, monkeypatch):
-    def boom(dem_source):
+    def boom(dem_source, **kw):
         raise AssertionError("preflight must not run offline")
 
     monkeypatch.setattr(cli, "_preflight", boom)
@@ -626,7 +626,7 @@ def test_exit_6_preflight_message(fake_sources, monkeypatch, capsys):
     rc = _run_cli("fetch", "--bbox", BBOX)
     assert rc == 6
     assert capsys.readouterr().err == (
-        "error: cannot reach overpass.example.org (OpenStreetMap Overpass or "
+        "error: cannot reach overpass.example.org (Overpass, Overture Maps or "
         "Copernicus DEM). Check the internet connection or use --offline with a "
         "filled cache.\n"
     )
@@ -693,3 +693,169 @@ def test_exit_130_keyboard_interrupt(fake_sources, capsys):
 def test_bad_bbox_values_exit_3(fake_sources, bbox):
     assert _run_cli("fetch", "--bbox", bbox) == 3
     assert fake_sources.calls == []
+
+
+# ------------------------------------------------- source and Overpass URL
+def test_fetch_passes_source_and_overpass_url(fake_sources):
+    assert _run_cli("fetch", "--bbox", BBOX, "--progress", "none") == 0
+    ((_, kw),) = fake_sources.calls
+    assert kw["source"] == "osm" and kw["overpass_url"] is None
+    fake_sources.calls.clear()
+    rc = _run_cli(
+        "fetch", "--bbox", BBOX, "--progress", "none",
+        "--overpass-url", "https://overpass.example.org/api/interpreter",
+    )  # fmt: skip
+    assert rc == 0
+    ((_, kw),) = fake_sources.calls
+    assert kw["overpass_url"] == "https://overpass.example.org/api/interpreter"
+
+
+def test_fetch_source_overture(fake_sources):
+    assert _run_cli("fetch", "--bbox", BBOX, "--source", "overture") == 0
+    ((_, kw),) = fake_sources.calls
+    assert kw["source"] == "overture"
+
+
+def test_source_must_be_known(fake_sources, capsys):
+    with pytest.raises(SystemExit) as exc:
+        _run_cli("fetch", "--bbox", BBOX, "--source", "here")
+    assert exc.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_overpass_url_with_overture_is_usage_error(fake_sources, capsys):
+    rc = _run_cli(
+        "fetch", "--bbox", BBOX, "--source", "overture",
+        "--overpass-url", "https://overpass.example.org/api",
+    )  # fmt: skip
+    assert rc == 2
+    assert "--overpass-url applies to --source osm only" in capsys.readouterr().err
+    assert fake_sources.calls == []
+
+
+def test_run_with_bbox_passes_source(fake_sources, tmp_path):
+    rc = _run_cli(
+        "run", "--bbox", BBOX, "--source", "overture", "--sink", "lowest",
+        "--progress", "none", "--out", tmp_path / "n.gpkg",
+    )  # fmt: skip
+    # the fake Inputs point at the test data, so the run itself may succeed
+    assert fake_sources.calls[0][1]["source"] == "overture"
+    assert rc in (0, 1, 3)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--source", "overture"],
+        ["--overpass-url", "https://overpass.example.org/api"],
+    ],
+)
+def test_run_with_files_rejects_fetch_only_options(extra, capsys):
+    with pytest.raises(SystemExit) as exc:
+        _run_cli(
+            "run", "--dem", DEM, "--roads", ROADS, "--buildings", BUILDINGS,
+            "--sink", "lowest", *extra,
+        )  # fmt: skip
+    assert exc.value.code == 2
+    assert "need --bbox" in capsys.readouterr().err
+
+
+def _record_probes(monkeypatch, status=200):
+    seen = []
+
+    def answer(req, timeout=None):
+        seen.append((req.full_url, req.get_method()))
+        if status != 200:
+            raise urllib.error.HTTPError(req.full_url, status, "x", {}, None)
+
+        class R:
+            def close(self):
+                pass
+
+        return R()
+
+    monkeypatch.setattr("urllib.request.urlopen", answer)
+    return seen
+
+
+def test_preflight_probes_the_given_overpass_server(monkeypatch):
+    seen = _record_probes(monkeypatch)
+    monkeypatch.delenv("PYSEWER_OVERPASS_URL", raising=False)
+    cli._preflight(
+        "copernicus", overpass_url="https://overpass.example.org/api/interpreter"
+    )
+    assert seen == [
+        ("https://overpass.example.org/api/status", "GET"),
+        ("https://copernicus-dem-30m.s3.amazonaws.com/", "HEAD"),
+    ]
+
+
+def test_preflight_probes_the_environment_server(monkeypatch):
+    seen = _record_probes(monkeypatch)
+    monkeypatch.setenv("PYSEWER_OVERPASS_URL", "https://env.example.org/api")
+    cli._preflight("/some/local/dem.tif")
+    assert seen == [("https://env.example.org/api/status", "GET")]
+
+
+def test_preflight_overture_probes_s3_not_overpass(monkeypatch):
+    seen = _record_probes(monkeypatch, status=403)  # S3 answers 403 on the root
+    cli._preflight("copernicus", source="overture")
+    assert seen == [
+        ("https://overturemaps-us-west-2.s3.amazonaws.com/", "HEAD"),
+        ("https://copernicus-dem-30m.s3.amazonaws.com/", "HEAD"),
+    ]
+
+
+def test_preflight_overture_unreachable_is_exit_6(monkeypatch):
+    def refuse(*a, **k):
+        raise urllib.error.URLError("refused")
+
+    monkeypatch.setattr("urllib.request.urlopen", refuse)
+    with pytest.raises(cli.CliError) as exc:
+        cli._preflight("copernicus", source="overture")
+    assert exc.value.code == 6
+    assert "overturemaps-us-west-2.s3.amazonaws.com" in str(exc.value)
+
+
+def test_preflight_bad_overpass_url_is_usage_error(monkeypatch):
+    _record_probes(monkeypatch)
+    with pytest.raises(cli.CliError) as exc:
+        cli._preflight("copernicus", overpass_url="nonsense")
+    assert exc.value.code == 2
+
+
+def test_fetch_preflight_receives_source_and_url(fake_sources, monkeypatch):
+    got = {}
+
+    def spy(dem_source, **kw):
+        got.update(kw)
+
+    monkeypatch.setattr(cli, "_preflight", spy)
+    _run_cli(
+        "fetch", "--bbox", BBOX, "--source", "osm",
+        "--overpass-url", "https://overpass.example.org/api",
+    )  # fmt: skip
+    assert got == {"source": "osm", "overpass_url": "https://overpass.example.org/api"}
+    got.clear()
+    _run_cli("fetch", "--bbox", BBOX, "--source", "overture")
+    assert got == {"source": "overture", "overpass_url": None}
+
+
+def test_fetch_json_lists_overture_cache_files(fake_sources, tmp_path, capsys):
+    fake_sources_dem = tmp_path / "dem_x.tif"
+    fake_sources_dem.write_bytes(b"x")
+    (tmp_path / "overture_roads_r_k.gpkg").write_bytes(b"x")
+
+    def fetch_inputs(bbox, **kw):
+        return Inputs(fake_sources_dem, ROADS, BUILDINGS, provenance={"crs": "EPSG:1"})
+
+    fake_sources.fetch_inputs = fetch_inputs
+    assert _run_cli("fetch", "--bbox", BBOX, "--source", "overture", "--json") == 0
+    out = json.loads(capsys.readouterr().out)
+    assert "overture_roads_r_k.gpkg" in {f["name"] for f in out["cache_files"]}
+
+
+def test_overture_s3_error_is_reported_as_network_failure(fake_sources, capsys):
+    fake_sources.behaviour = ConnectionError("Could not read Overture Maps from S3")
+    assert _run_cli("fetch", "--bbox", BBOX, "--source", "overture") == 6
+    assert "cannot reach" in capsys.readouterr().err

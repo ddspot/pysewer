@@ -9,8 +9,14 @@ results on disk. It returns :class:`~pysewer.pipeline.Inputs` that
 plugin) can fetch in one command and later call :func:`fetch_inputs` with
 ``offline=True`` to read from the cache only.
 
-The module needs the optional ``fetch`` extra (``osmnx``). Heavy imports happen
-inside the functions, so ``import pysewer.sources`` stays light.
+Two vector sources exist. ``source="osm"`` (default) queries an Overpass
+server through ``osmnx``; the server is configurable with ``overpass_url``.
+``source="overture"`` reads the public Overture Maps GeoParquet on AWS S3
+through the ``overturemaps`` package and needs no Overpass server.
+
+The module needs the optional ``fetch`` extra (``osmnx``, ``overturemaps``).
+Heavy imports happen inside the functions, so ``import pysewer.sources``
+stays light.
 
 Data notes
 ----------
@@ -18,7 +24,9 @@ Data notes
   buildings and trees raise the ground in towns. Its resolution is 30 m, so
   slopes of short pipes are noisy. Use a local bare-earth DEM (for example a
   1 m LiDAR DGM) with ``dem_source=<path>`` where one exists.
-* Roads and buildings are (c) OpenStreetMap contributors, ODbL.
+* Roads and buildings are (c) OpenStreetMap contributors, ODbL. Overture
+  buildings and roads are ODbL too and carry extra attributions of their
+  upstream sources (see :data:`OVERTURE_ATTRIBUTION`).
 """
 
 from __future__ import annotations
@@ -48,9 +56,12 @@ __all__ = [
     "DEFAULT_HIGHWAY",
     "DEM_SOURCES",
     "OSM_ATTRIBUTION",
+    "OVERTURE_ATTRIBUTION",
+    "SOURCES",
     "AreaTooLargeError",
     "FetchError",
     "OfflineCacheMissError",
+    "fetch_dem",
     "fetch_inputs",
     "preflight_building_count",
 ]
@@ -108,6 +119,28 @@ COPERNICUS_DERIVED_ATTRIBUTION = (
 OSM_ATTRIBUTION = (
     "© OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright)"
 )
+
+#: Overture attribution. The Overture docs (docs.overturemaps.org/attribution)
+#: say: "Some of the data sources we use in Overture datasets require their own
+#: attribution, according to their licenses [...] we added the following line
+#: of attribution to adhere to the requirements of the Open Database License:
+#: (c) OpenStreetMap contributors, Overture Maps Foundation." The licence of
+#: both the buildings and the transportation theme is ODbL. The upstream
+#: sources add notes: Microsoft Global ML Building Footprints (ODbL), the City
+#: of Vancouver (Open Government Licence - Vancouver) and TomTom.
+OVERTURE_ATTRIBUTION = (
+    "© OpenStreetMap contributors, Overture Maps Foundation (ODbL, "
+    "https://docs.overturemaps.org/attribution/)"
+)
+#: Vector sources of :func:`fetch_inputs`.
+SOURCES: tuple[str, ...] = ("osm", "overture")
+#: Environment variable that sets the Overpass server when no argument is given.
+OVERPASS_URL_ENV = "PYSEWER_OVERPASS_URL"
+#: Overture buildings with a smaller footprint (m2, in the target CRS) are dropped.
+OVERTURE_MIN_BUILDING_AREA_M2 = 20.0
+_OVERTURE_S3_URL = "https://overturemaps-us-west-2.s3.amazonaws.com/"
+_OVERTURE_TIMEOUT_S = 60
+_OVERTURE_RELEASE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(\.\d+)?(-[A-Za-z0-9.]+)?$")
 
 _DEM_RES_M = 30.0
 _DEM_MARGIN_M = 200.0
@@ -232,16 +265,72 @@ def _with_retry(call, retries: int, retry_wait: float):
             slept += delay
 
 
+def normalise_overpass_url(url: str) -> str:
+    """
+    Return the Overpass base URL in the form ``osmnx.settings.overpass_url`` has.
+
+    osmnx 2.x appends ``/interpreter`` itself, so ``.../api/interpreter`` and
+    ``.../api/`` both become ``.../api``.
+
+    Raises
+    ------
+    ValueError
+        If the value is not an ``http://`` or ``https://`` URL.
+    """
+    text = str(url).strip().rstrip("/")
+    if not re.match(r"^https?://[^/\s]+", text):
+        raise ValueError(
+            f"overpass_url must be an http(s) URL such as "
+            f"https://overpass-api.de/api, got {url!r}."
+        )
+    if text.endswith("/interpreter"):
+        text = text[: -len("/interpreter")]
+    return text
+
+
+def resolve_overpass_url(overpass_url: str | None = None) -> str | None:
+    """
+    Pick the Overpass server: argument, then ``PYSEWER_OVERPASS_URL``, then None.
+
+    ``None`` means: keep the osmnx default. A set value is normalised with
+    :func:`normalise_overpass_url`. An empty string counts as not set.
+    """
+    value = overpass_url or os.environ.get(OVERPASS_URL_ENV) or None
+    return normalise_overpass_url(value) if value else None
+
+
+def _effective_overpass_url(overpass_url: str | None) -> str | None:
+    """The resolved URL, or the osmnx default (None if osmnx is missing)."""
+    resolved = resolve_overpass_url(overpass_url)
+    if resolved is not None:
+        return resolved
+    try:
+        import osmnx as ox
+
+        return normalise_overpass_url(ox.settings.overpass_url)
+    except Exception:
+        return None
+
+
 @contextlib.contextmanager
-def _osmnx_cache(ox, cache_dir: Path):
-    """Point osmnx's HTTP cache into ``cache_dir`` and restore it afterwards."""
-    old = (ox.settings.cache_folder, ox.settings.use_cache)
+def _osmnx_cache(ox, cache_dir: Path, overpass_url: str | None = None):
+    """
+    Point osmnx's HTTP cache into ``cache_dir`` (and optionally its Overpass
+    server to ``overpass_url``) and restore both afterwards.
+    """
+    old = (ox.settings.cache_folder, ox.settings.use_cache, ox.settings.overpass_url)
     ox.settings.cache_folder = str(cache_dir / "osmnx")
     ox.settings.use_cache = True
+    if overpass_url:
+        ox.settings.overpass_url = overpass_url
     try:
         yield
     finally:
-        ox.settings.cache_folder, ox.settings.use_cache = old
+        (
+            ox.settings.cache_folder,
+            ox.settings.use_cache,
+            ox.settings.overpass_url,
+        ) = old
 
 
 def _is_empty_error(exc: Exception) -> bool:
@@ -310,7 +399,9 @@ def _buildings_cache_path(cache_dir: Path, bbox) -> Path:
     return cache_dir / f"buildings_{_key(_round_bbox(bbox))}.gpkg"
 
 
-def _fetch_roads(bbox, highway, cache_dir, offline, retries, retry_wait):
+def _fetch_roads(
+    bbox, highway, cache_dir, offline, retries, retry_wait, overpass_url=None
+):
     path = _roads_cache_path(cache_dir, bbox, highway)
     cached = _cached_gpkg(path, offline, "roads")
     if cached is not None:
@@ -318,7 +409,7 @@ def _fetch_roads(bbox, highway, cache_dir, offline, retries, retry_wait):
     import osmnx as ox
 
     try:
-        with _osmnx_cache(ox, cache_dir):
+        with _osmnx_cache(ox, cache_dir, overpass_url):
             graph = _with_retry(
                 lambda: ox.graph_from_bbox(
                     tuple(bbox),
@@ -351,7 +442,7 @@ def _fetch_roads(bbox, highway, cache_dir, offline, retries, retry_wait):
     return out, False
 
 
-def _fetch_buildings(bbox, cache_dir, offline, retries, retry_wait):
+def _fetch_buildings(bbox, cache_dir, offline, retries, retry_wait, overpass_url=None):
     path = _buildings_cache_path(cache_dir, bbox)
     cached = _cached_gpkg(path, offline, "buildings")
     if cached is not None:
@@ -359,7 +450,7 @@ def _fetch_buildings(bbox, cache_dir, offline, retries, retry_wait):
     import osmnx as ox
 
     try:
-        with _osmnx_cache(ox, cache_dir):
+        with _osmnx_cache(ox, cache_dir, overpass_url):
             feats = _with_retry(
                 lambda: ox.features_from_bbox(tuple(bbox), tags={"building": True}),
                 retries,
@@ -416,11 +507,21 @@ def preflight_building_count(
     timeout: float = 60.0,
     retries: int = 3,
     retry_wait: float = 5.0,
-) -> int:
+    overpass_url: str | None = None,
+    source: str = "osm",
+    overture_release: str | None = None,
+) -> int | None:
     """
-    Count the OSM buildings in a box with one cheap Overpass ``out count`` query.
+    Count the buildings in a box before a download.
 
-    Use it before :func:`fetch_inputs` to warn about very large downloads.
+    For ``source="osm"`` this is one cheap Overpass ``out count`` query. Use it
+    before :func:`fetch_inputs` to warn about very large downloads.
+
+    For ``source="overture"`` the count comes from the building footprints'
+    ``bbox`` columns on S3. It counts rows that touch the box, before the
+    underground and area filters. It returns ``None`` when the count fails (for
+    example when the package ``overturemaps`` is missing or S3 is slow), so the
+    caller can skip the warning.
 
     Parameters
     ----------
@@ -430,18 +531,29 @@ def preflight_building_count(
         Request timeout in seconds (also the Overpass server timeout).
     retries, retry_wait : int, float
         Retry settings, see :func:`fetch_inputs`.
+    overpass_url : str, optional
+        Overpass server, see :func:`fetch_inputs`. Ignored for Overture.
+    source : {"osm", "overture"}, default "osm"
+        Data source.
+    overture_release : str, optional
+        Overture release. Default: the latest.
 
     Returns
     -------
-    int
-        Number of building ways and relations in the box.
+    int or None
+        Number of buildings in the box; ``None`` if an Overture count fails.
     """
     import requests
 
     w, s, e, n = _validate_bbox(bbox_wgs84, float("inf"))
-    import osmnx as ox
-
-    url = ox.settings.overpass_url.rstrip("/") + "/interpreter"
+    _check_source(source)
+    if source == "overture":
+        try:
+            return _overture_count((w, s, e, n), overture_release, timeout)
+        except Exception as exc:
+            logger.warning("Overture building count failed: %s", exc)
+            return None
+    url = (_effective_overpass_url(overpass_url) or "").rstrip("/") + "/interpreter"
     box_ = f"({s},{w},{n},{e})"
     query = (
         f"[out:json][timeout:{int(timeout)}];"
@@ -460,6 +572,266 @@ def preflight_building_count(
         return int(elements[0]["tags"]["total"]) if elements else 0
 
     return _with_retry(call, retries, retry_wait)
+
+
+# --------------------------------------------------------------------------
+# Overture Maps
+# --------------------------------------------------------------------------
+
+#: Overture ``transportation`` classes that map 1:1 to an OSM ``highway`` value.
+_OVERTURE_ROAD_CLASSES = frozenset(
+    {
+        "primary",
+        "secondary",
+        "tertiary",
+        "unclassified",
+        "residential",
+        "living_street",
+    }
+)
+_OVERTURE_LINK_CLASSES = frozenset({"primary", "secondary", "tertiary"})
+_OVERTURE_SERVICE_EXCLUDE = frozenset(_SERVICE_EXCLUDE)
+
+
+def _check_source(source: str) -> None:
+    if source not in SOURCES:
+        raise ValueError(f"unknown source {source!r}; known: {', '.join(SOURCES)}")
+
+
+def _overture_highway(road_class, subclass) -> str | None:
+    """
+    Map an Overture road ``class``/``subclass`` to a pysewer ``highway`` value.
+
+    Returns ``None`` for roads that are no sewer corridors (motorways, trunks,
+    footways, paths, steps, cycleways, pedestrian streets, tracks, driveways
+    and parking aisles).
+    """
+
+    def clean(v):
+        return None if v is None or (isinstance(v, float) and math.isnan(v)) else v
+
+    road_class, subclass = clean(road_class), clean(subclass)
+    if road_class in _OVERTURE_ROAD_CLASSES:
+        if subclass == "link" and road_class in _OVERTURE_LINK_CLASSES:
+            return f"{road_class}_link"
+        return str(road_class)
+    if road_class == "service":
+        return None if subclass in _OVERTURE_SERVICE_EXCLUDE else "service"
+    if road_class in (None, "unknown"):
+        return "road"
+    return None
+
+
+def _overture_name(names) -> str:
+    """``names.primary`` of an Overture ``names`` struct, or an empty string."""
+    if isinstance(names, dict):
+        return _join(names.get("primary"))
+    return ""
+
+
+def _overture_import():
+    try:
+        from overturemaps import core
+    except ImportError as exc:
+        raise ImportError(
+            "source='overture' needs the 'overturemaps' package. "
+            "Install it with: uv pip install 'pysewer[fetch]'"
+        ) from exc
+    return core
+
+
+def _overture_latest_release() -> str:
+    """The latest Overture release, from the public STAC catalog."""
+    core = _overture_import()
+    try:
+        return str(core.get_latest_release())
+    except Exception as exc:
+        raise ConnectionError(
+            f"Could not read the Overture release catalog (stac.overturemaps.org): {exc}"
+        ) from exc
+
+
+def _overture_count(bbox, release, timeout: float) -> int:
+    core = _overture_import()
+    release = release or _overture_latest_release()
+    return int(
+        core.count_rows(
+            "building",
+            bbox,
+            release,
+            connect_timeout=int(timeout),
+            request_timeout=int(timeout),
+        )
+    )
+
+
+def _read_overture(overture_type: str, bbox, release: str) -> gpd.GeoDataFrame:
+    """
+    Read one Overture type for a box from S3 (a WGS84 GeoDataFrame).
+
+    The reader filters the ``bbox`` struct columns, so only the files and row
+    groups that touch the box are read. This is the one function that touches
+    the network, so tests replace it.
+    """
+    core = _overture_import()
+    try:
+        reader = core.record_batch_reader(
+            overture_type,
+            tuple(bbox),
+            release,
+            connect_timeout=_OVERTURE_TIMEOUT_S,
+            request_timeout=_OVERTURE_TIMEOUT_S,
+        )
+        if reader is None:
+            raise ConnectionError("the Overture reader returned no data (see log)")
+        gdf = gpd.GeoDataFrame.from_arrow(reader)
+    except OSError as exc:  # pyarrow's S3 errors are OSError (ArrowIOError)
+        raise ConnectionError(
+            f"Could not read Overture Maps from S3 ({_OVERTURE_S3_URL}): {exc}"
+        ) from exc
+    if gdf.crs is None:
+        gdf = gdf.set_crs(4326)
+    return gdf
+
+
+def _within_box(gdf: gpd.GeoDataFrame, bbox) -> gpd.GeoDataFrame:
+    from shapely.geometry import box
+
+    return gdf[gdf.intersects(box(*bbox))]
+
+
+def _clip_lines(gdf: gpd.GeoDataFrame, bbox) -> gpd.GeoDataFrame:
+    """
+    Cut lines at the box and keep the parts inside (one LineString per row).
+
+    Overture segments can be kilometres long. Uncut, they would run beyond the
+    DEM, which only covers the box plus a margin.
+    """
+    from shapely.geometry import box
+
+    clipped = gdf.geometry.intersection(box(*bbox))
+    out = gdf.assign(geometry=clipped).explode(index_parts=False)
+    out = out[out.geom_type == "LineString"]
+    return out[~out.is_empty].reset_index(drop=True)
+
+
+def _overture_roads_path(cache_dir: Path, bbox, release: str, highway) -> Path:
+    key = _key(_round_bbox(bbox), sorted(highway), "overture-roads-v1")
+    return cache_dir / f"overture_roads_{release}_{key}.gpkg"
+
+
+def _overture_buildings_path(cache_dir: Path, bbox, release: str) -> Path:
+    key = _key(_round_bbox(bbox), "overture-buildings-v1")
+    return cache_dir / f"overture_buildings_{release}_{key}.gpkg"
+
+
+def _resolve_overture_release(release, bbox, cache_dir, offline) -> str:
+    """
+    Return the release to use.
+
+    An explicit ``release`` wins. Online, the latest release is used. Offline,
+    the newest release that has cached buildings for this box is used.
+    """
+    if release:
+        if not _OVERTURE_RELEASE_RE.match(str(release)):
+            raise ValueError(
+                f"overture_release must look like '2026-11-18.0', got {release!r}."
+            )
+        return str(release)
+    if not offline:
+        return _overture_latest_release()
+    key = _key(_round_bbox(bbox), "overture-buildings-v1")
+    prefix, suffix = "overture_buildings_", f"_{key}.gpkg"
+
+    def _release_key(path: Path) -> tuple:
+        # "2026-11-18.10" must sort after "2026-11-18.9"
+        release = path.name[len(prefix) : -len(suffix)]
+        return tuple(int(part) for part in re.split(r"[-.]", release) if part.isdigit())
+
+    found = sorted(cache_dir.glob(f"{prefix}*{suffix}"), key=_release_key)
+    if not found:
+        raise OfflineCacheMissError(
+            "offline=True but no cached Overture buildings for this area "
+            f"in {cache_dir}."
+        )
+    return found[-1].name[len(prefix) : -len(suffix)]
+
+
+def _fetch_overture_roads(bbox, highway, cache_dir, offline, release):
+    path = _overture_roads_path(cache_dir, bbox, release, highway)
+    cached = _cached_gpkg(path, offline, "Overture roads")
+    if cached is not None:
+        return cached, True
+    raw = _read_overture("segment", bbox, release)
+    if "subtype" in raw:
+        raw = raw[raw["subtype"] == "road"]
+    raw = _within_box(raw, bbox)
+    n = len(raw)
+    mapped = [
+        _overture_highway(c, sc)
+        for c, sc in zip(
+            raw["class"] if "class" in raw else [None] * n,
+            raw["subclass"] if "subclass" in raw else [None] * n,
+            strict=True,
+        )
+    ]
+    keep = np.array([m is not None and m in highway for m in mapped], dtype=bool)
+    names = raw["names"] if "names" in raw else [None] * n
+    out = gpd.GeoDataFrame(
+        {
+            "id": raw["id"].astype(str).to_numpy() if "id" in raw else [""] * n,
+            "highway": mapped,
+            "name": [_overture_name(v) for v in names],
+        },
+        geometry=raw.geometry.values,
+        crs=4326,
+    )[keep]
+    out = _clip_lines(out, bbox)
+    out = out.reset_index(drop=True)
+    if out.empty:
+        raise FetchError("Overture has no roads in this area")
+    _write_gpkg_atomic(out, path)
+    return out, False
+
+
+def _fetch_overture_buildings(bbox, cache_dir, offline, release):
+    path = _overture_buildings_path(cache_dir, bbox, release)
+    cached = _cached_gpkg(path, offline, "Overture buildings")
+    if cached is not None:
+        return cached, True
+    raw = _read_overture("building", bbox, release)
+    raw = _within_box(raw, bbox)
+    raw = raw[raw.geom_type.isin(["Polygon", "MultiPolygon"])]
+    if "is_underground" in raw:
+        raw = raw[~(raw["is_underground"].fillna(False).astype(bool))]
+    n = len(raw)
+    height = raw["height"] if "height" in raw else [None] * n
+    classes = raw["class"] if "class" in raw else [None] * n
+    out = gpd.GeoDataFrame(
+        {
+            "id": raw["id"].astype(str).to_numpy() if "id" in raw else [""] * n,
+            "building": [_join(v) for v in classes],
+            "height": [None if _join(v) == "" else float(v) for v in height],
+        },
+        geometry=raw.geometry.values,
+        crs=4326,
+    ).reset_index(drop=True)
+    if out.empty:
+        raise FetchError("Overture has no buildings in this area")
+    _write_gpkg_atomic(out, path)
+    return out, False
+
+
+def _filter_small_buildings(
+    buildings: gpd.GeoDataFrame, min_area_m2: float = OVERTURE_MIN_BUILDING_AREA_M2
+) -> gpd.GeoDataFrame:
+    """Drop footprints smaller than ``min_area_m2`` (``buildings`` is projected)."""
+    out = buildings[buildings.geometry.area >= min_area_m2].reset_index(drop=True)
+    if out.empty:
+        raise FetchError(
+            f"Overture has no buildings of {min_area_m2:g} m2 or more in this area"
+        )
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -707,6 +1079,122 @@ def _resolve_dem_source(dem_source) -> tuple[str, Callable | Path]:
 # --------------------------------------------------------------------------
 
 
+def _dem_layer(bbox, kind, dem_obj, dem_source, target, cache, offline):
+    """
+    Get the DEM of ``bbox``: ``(path, crs, cache_hit, layer, top_level, cached)``.
+
+    ``layer`` is the provenance of the DEM, ``top_level`` the ``dem_*`` keys of
+    the provenance of :func:`fetch_inputs`, ``cached`` the files whose age
+    gives ``fetched_at``.
+    """
+    cached_files = []
+    if kind == "file":
+        dem_path, target, dem_cached = _prepare_local_dem(bbox, dem_obj, target, cache)
+        dem_hit = dem_cached
+        dem_prov = {"source": "file", "path": str(dem_source)}
+        prov_dem = {"dem_source": "file", "dem_path": str(dem_source)}
+        if dem_cached:
+            cached_files.append(dem_path)
+    else:
+        name = dem_source
+        if target is None:
+            target = _utm_crs(bbox)
+        key = _key(_round_bbox(bbox), target.to_string(), name)
+        dem_path = cache / f"dem_{name}_{key}.tif"
+        dem_hit = dem_path.exists()
+        if not dem_hit:
+            if offline:
+                raise OfflineCacheMissError(
+                    f"offline=True but no cached DEM for this area (expected {dem_path})."
+                )
+            tmp = dem_path.with_suffix(f".part{os.getpid()}")
+            try:
+                dem_obj(bbox, target, tmp)
+                os.replace(tmp, dem_path)
+            finally:
+                tmp.unlink(missing_ok=True)
+        dem_prov = dict(_DEM_PROVENANCE[name])
+        prov_dem = {"dem_source": name, "dem_url_template": dem_prov["url"]}
+        cached_files.append(dem_path)
+    return dem_path, target, dem_hit, dem_prov, prov_dem, cached_files
+
+
+def fetch_dem(
+    bbox_wgs84: tuple[float, float, float, float],
+    *,
+    cache_dir: str | os.PathLike | None = None,
+    dem_source: str | os.PathLike = "copernicus",
+    crs: str | int | None = None,
+    offline: bool = False,
+    retries: int = 3,
+    retry_wait: float = 5.0,
+    progress: Progress | None = None,
+) -> tuple[Path, dict]:
+    """
+    Fetch only the DEM of a bounding box (the DEM part of :func:`fetch_inputs`).
+
+    It uses the same cache files and keys as :func:`fetch_inputs`, so a later
+    :func:`fetch_inputs` call for the same box reuses the file. There is no
+    area limit here.
+
+    Parameters
+    ----------
+    bbox_wgs84 : tuple of float
+        ``(west, south, east, north)`` in decimal degrees (EPSG:4326).
+    cache_dir, dem_source, crs, offline
+        As in :func:`fetch_inputs`.
+    retries, retry_wait : int, float
+        Accepted for symmetry with :func:`fetch_inputs`; the DEM download
+        retries through GDAL and does not use them.
+    progress : callable, optional
+        ``progress(stage, fraction, message)`` with the stage ``fetch:dem``.
+
+    Returns
+    -------
+    tuple of (pathlib.Path, dict)
+        The projected GeoTIFF and its provenance: ``source``, ``url``,
+        ``attribution`` (the derived Copernicus string), ``cache_hit``,
+        ``crs``, ``bbox_wgs84`` and ``fetched_at`` (UTC ISO time of the cached
+        file; ``None`` when a local DEM is passed through uncached).
+
+    Raises
+    ------
+    OfflineCacheMissError
+        ``offline=True`` and the DEM is not cached.
+    ValueError
+        Invalid box, CRS or ``dem_source``.
+    """
+    from pyproj import CRS
+
+    bbox = _validate_bbox(bbox_wgs84, float("inf"))
+    cache = Path(cache_dir) if cache_dir is not None else _default_cache_dir()
+    kind, dem_obj = _resolve_dem_source(dem_source)
+    target = CRS.from_user_input(crs) if crs is not None else None
+    if target is not None and not target.is_projected:
+        raise ValueError(f"crs must be projected (metres), got {target.to_string()}.")
+    if not offline:
+        cache.mkdir(parents=True, exist_ok=True)
+    _report(progress, "fetch:dem", 0.0, "Preparing the DEM")
+    path, target, hit, layer, _, cached = _dem_layer(
+        bbox, kind, dem_obj, dem_source, target, cache, offline
+    )
+    fetched_at = None
+    if cached:
+        fetched_at = datetime.fromtimestamp(
+            min(p.stat().st_mtime for p in cached), timezone.utc
+        ).isoformat(timespec="seconds")
+    epsg = target.to_epsg()
+    prov = {
+        **layer,
+        "cache_hit": hit,
+        "crs": f"EPSG:{epsg}" if epsg else target.to_string(),
+        "bbox_wgs84": list(bbox),
+        "fetched_at": fetched_at,
+    }
+    _report(progress, "fetch:dem", 1.0, "DEM ready")
+    return path, prov
+
+
 def fetch_inputs(
     bbox_wgs84: tuple[float, float, float, float],
     *,
@@ -719,6 +1207,9 @@ def fetch_inputs(
     offline: bool = False,
     retries: int = 3,
     retry_wait: float = 5.0,
+    overpass_url: str | None = None,
+    source: str = "osm",
+    overture_release: str | None = None,
 ) -> Inputs:
     """
     Fetch roads, buildings and a DEM for a bounding box.
@@ -769,6 +1260,25 @@ def fetch_inputs(
     retry_wait : float, default 5.0
         First wait between retries in seconds; it doubles each time, and the
         total wait never exceeds ``retries * retry_wait``.
+    overpass_url : str, optional
+        Overpass server for ``source="osm"``. Order: this argument, the
+        environment variable ``PYSEWER_OVERPASS_URL``, the osmnx default
+        (``https://overpass-api.de/api``). ``.../api`` and
+        ``.../api/interpreter`` are both accepted. The URL is set only while
+        the download runs and does not change the cache key; it is recorded in
+        ``provenance["overpass_url"]``.
+    source : {"osm", "overture"}, default "osm"
+        Source of roads and buildings. ``"osm"`` queries Overpass.
+        ``"overture"`` reads the Overture Maps GeoParquet on AWS S3 (needs the
+        ``overturemaps`` package). Overture roads keep ``subtype == "road"``
+        and are mapped to OSM ``highway`` values (motorways, trunks and
+        footpaths are dropped). Overture buildings drop underground buildings
+        and footprints under 20 m2 (computed in the target CRS). Both layers
+        are ODbL; see :data:`OVERTURE_ATTRIBUTION`.
+    overture_release : str, optional
+        Overture release such as ``"2026-11-18.0"``. Default: the latest
+        release online, and the newest cached release for the box offline.
+        Cache files are keyed by bbox, source and release.
 
     Returns
     -------
@@ -803,69 +1313,106 @@ def fetch_inputs(
     if not offline:
         cache.mkdir(parents=True, exist_ok=True)
 
-    _report(progress, "fetch:roads", 0.0, "Fetching OSM roads")
-    roads_wgs, roads_hit = _fetch_roads(
-        bbox, highway, cache, offline, retries, retry_wait
-    )
+    _check_source(source)
+    overpass = resolve_overpass_url(overpass_url) if source == "osm" else None
+    label = "OSM" if source == "osm" else "Overture"
+    release = None
+    if source == "overture":
+        release = _resolve_overture_release(overture_release, bbox, cache, offline)
+
+    _report(progress, "fetch:roads", 0.0, f"Fetching {label} roads")
+    if source == "osm":
+        roads_wgs, roads_hit = _fetch_roads(
+            bbox, highway, cache, offline, retries, retry_wait, overpass
+        )
+    else:
+        roads_wgs, roads_hit = _fetch_overture_roads(
+            bbox, highway, cache, offline, release
+        )
     _report(progress, "fetch:roads", 0.3, f"{len(roads_wgs)} road segments")
-    _report(progress, "fetch:buildings", 0.3, "Fetching OSM buildings")
-    buildings_wgs, bld_hit = _fetch_buildings(bbox, cache, offline, retries, retry_wait)
+    _report(progress, "fetch:buildings", 0.3, f"Fetching {label} buildings")
+    if source == "osm":
+        buildings_wgs, bld_hit = _fetch_buildings(
+            bbox, cache, offline, retries, retry_wait, overpass
+        )
+    else:
+        buildings_wgs, bld_hit = _fetch_overture_buildings(
+            bbox, cache, offline, release
+        )
     _report(progress, "fetch:buildings", 0.6, f"{len(buildings_wgs)} buildings")
 
     _report(progress, "fetch:dem", 0.6, "Preparing the DEM")
-    cached_files = []
-    if kind == "file":
-        dem_path, target, dem_cached = _prepare_local_dem(bbox, dem_obj, target, cache)
-        dem_hit = dem_cached
-        dem_prov = {"source": "file", "path": str(dem_source)}
-        prov_dem = {"dem_source": "file", "dem_path": str(dem_source)}
-        if dem_cached:
-            cached_files.append(dem_path)
-    else:
-        name = dem_source
-        if target is None:
-            target = _utm_crs(bbox)
-        key = _key(_round_bbox(bbox), target.to_string(), name)
-        dem_path = cache / f"dem_{name}_{key}.tif"
-        dem_hit = dem_path.exists()
-        if not dem_hit:
-            if offline:
-                raise OfflineCacheMissError(
-                    f"offline=True but no cached DEM for this area (expected {dem_path})."
-                )
-            tmp = dem_path.with_suffix(f".part{os.getpid()}")
-            try:
-                dem_obj(bbox, target, tmp)
-                os.replace(tmp, dem_path)
-            finally:
-                tmp.unlink(missing_ok=True)
-        dem_prov = dict(_DEM_PROVENANCE[name])
-        prov_dem = {"dem_source": name, "dem_url_template": dem_prov["url"]}
-        cached_files.append(dem_path)
+    dem_path, target, dem_hit, dem_prov, prov_dem, cached_files = _dem_layer(
+        bbox, kind, dem_obj, dem_source, target, cache, offline
+    )
 
     roads = roads_wgs.to_crs(target)
     buildings = buildings_wgs.to_crs(target)
     epsg = target.to_epsg()
-    osm_layer = {
-        "source": "OpenStreetMap",
-        "url": "https://www.openstreetmap.org",
-        "attribution": OSM_ATTRIBUTION,
-    }
-    cached_files += [
-        _roads_cache_path(cache, bbox, highway),
-        _buildings_cache_path(cache, bbox),
-    ]
+    if source == "osm":
+        layer = {
+            "source": "OpenStreetMap",
+            "url": "https://www.openstreetmap.org",
+            "attribution": OSM_ATTRIBUTION,
+        }
+        bld_layer = dict(layer)
+        cached_files += [
+            _roads_cache_path(cache, bbox, highway),
+            _buildings_cache_path(cache, bbox),
+        ]
+        extra = {
+            "source": "osm",
+            "osm": {"highway": list(highway), "source": OSM_ATTRIBUTION},
+            "overpass_url": _effective_overpass_url(overpass),
+        }
+    else:
+        n_raw = len(buildings)
+        buildings = _filter_small_buildings(buildings)
+        bld_filter = {
+            "underground": "dropped (is_underground == true)",
+            "min_area_m2": OVERTURE_MIN_BUILDING_AREA_M2,
+            "geometry": ["Polygon", "MultiPolygon"],
+            "dropped_small": n_raw - len(buildings),
+        }
+        _report(
+            progress,
+            "fetch:buildings",
+            0.6,
+            f"{len(buildings)} buildings after the area filter",
+        )
+        layer = {
+            "source": "Overture Maps Foundation",
+            "url": "https://overturemaps.org",
+            "release": release,
+            "license": "ODbL",
+            "attribution": OVERTURE_ATTRIBUTION,
+        }
+        bld_layer = {**layer, "buildings_filter": bld_filter}
+        cached_files += [
+            _overture_roads_path(cache, bbox, release, highway),
+            _overture_buildings_path(cache, bbox, release),
+        ]
+        extra = {
+            "source": "overture",
+            "overture": {
+                "release": release,
+                "highway": list(highway),
+                "source": OVERTURE_ATTRIBUTION,
+            },
+            "buildings_filter": bld_filter,
+            "overpass_url": None,
+        }
     oldest = min(p.stat().st_mtime for p in cached_files if p.exists())
     fetched_at = datetime.fromtimestamp(oldest, timezone.utc)
     provenance = {
         "bbox_wgs84": list(bbox),
         "fetched_at": fetched_at.isoformat(timespec="seconds"),
         **prov_dem,
-        "osm": {"highway": list(highway), "source": OSM_ATTRIBUTION},
+        **extra,
         "crs": f"EPSG:{epsg}" if epsg else target.to_string(),
         "dem": {**dem_prov, "cache_hit": dem_hit},
-        "roads": {**osm_layer, "cache_hit": roads_hit},
-        "buildings": {**osm_layer, "cache_hit": bld_hit},
+        "roads": {**layer, "cache_hit": roads_hit},
+        "buildings": {**bld_layer, "cache_hit": bld_hit},
     }
     _report(progress, "fetch:done", 1.0, "Inputs ready")
     return Inputs(dem=dem_path, roads=roads, buildings=buildings, provenance=provenance)

@@ -40,6 +40,29 @@ Inputs
     Copernicus GLO-30 DEM is a surface model: buildings and trees raise the
     ground. Use a local bare-earth DEM with ``--dem-source PATH`` when you can.
 
+Roads and buildings source
+    ``--source osm`` (default) queries an Overpass server. ``--source overture``
+    reads the Overture Maps GeoParquet from AWS S3 and needs no Overpass
+    server. Overture roads keep ``subtype road`` and the classes primary,
+    secondary, tertiary, unclassified, residential, living_street, the
+    ``*_link`` classes and service roads (not driveways or parking aisles);
+    motorways, trunks and paths are dropped. Overture buildings drop
+    underground buildings and footprints under 20 m2. Both sources are ODbL.
+    The Overture attribution is "© OpenStreetMap contributors, Overture Maps
+    Foundation"; some buildings need an extra note (see
+    https://docs.overturemaps.org/attribution/).
+
+Overpass server
+    ``--overpass-url URL`` sets the server for ``--source osm``. Without it,
+    the command uses the environment variable ``PYSEWER_OVERPASS_URL``, then
+    the osmnx default ``https://overpass-api.de/api``. ``.../api`` and
+    ``.../api/interpreter`` both work. The network check before the fetch
+    probes ``URL/status``. With ``--source overture`` it probes the Overture S3
+    bucket instead. The URL does not change the cache key; the provenance
+    records it as ``overpass_url``. The cache files of Overture are named
+    ``overture_*_<release>_*.gpkg`` and are keyed by box, release and road
+    filter; ``--offline`` uses the newest cached release.
+
 Sink
     ``--sink lowest`` (default) uses the lowest road node. ``--sink X,Y`` is a
     location in the DEM CRS. With ``--sink-crs 4326`` it is lon,lat.

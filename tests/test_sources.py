@@ -1183,3 +1183,629 @@ def test_offline_file_dem_passthrough_does_not_touch_cache(osm, tmp_path):
     )
     assert Path(again.dem) == tmp_path / "dgm.tif"
     assert sorted(p.name for p in cache.iterdir()) == before
+
+
+# ============================================================ Overpass URL
+OVERPASS_ALT = "https://overpass.example.org/api"
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        "https://overpass.example.org/api",
+        "https://overpass.example.org/api/",
+        "https://overpass.example.org/api/interpreter",
+        "  https://overpass.example.org/api/interpreter/ ",
+    ],
+)
+def test_normalise_overpass_url_gives_osmnx_base(given):
+    assert sources.normalise_overpass_url(given) == OVERPASS_ALT
+
+
+@pytest.mark.parametrize("bad", ["", "overpass.example.org/api", "ftp://x/api", "/api"])
+def test_normalise_overpass_url_rejects_non_http(bad):
+    with pytest.raises(ValueError, match="overpass_url"):
+        sources.normalise_overpass_url(bad)
+
+
+def test_resolve_overpass_url_order(monkeypatch):
+    monkeypatch.delenv("PYSEWER_OVERPASS_URL", raising=False)
+    assert sources.resolve_overpass_url() is None  # osmnx default stays
+    monkeypatch.setenv(
+        "PYSEWER_OVERPASS_URL", "https://env.example.org/api/interpreter"
+    )
+    assert sources.resolve_overpass_url() == "https://env.example.org/api"
+    assert sources.resolve_overpass_url(OVERPASS_ALT) == OVERPASS_ALT  # arg wins
+    monkeypatch.setenv("PYSEWER_OVERPASS_URL", "")
+    assert sources.resolve_overpass_url() is None  # empty = not set
+
+
+def _watch_overpass_url(monkeypatch):
+    import osmnx as ox
+
+    seen = []
+    inner = ox.graph_from_bbox  # the FakeOSM replacement
+
+    def spy(*a, **k):
+        seen.append(ox.settings.overpass_url)
+        return inner(*a, **k)
+
+    monkeypatch.setattr(ox, "graph_from_bbox", spy)
+    return seen
+
+
+def test_overpass_url_is_set_during_download_and_restored(
+    osm, tiles, tmp_path, monkeypatch
+):
+    import osmnx as ox
+
+    monkeypatch.delenv("PYSEWER_OVERPASS_URL", raising=False)
+    before = ox.settings.overpass_url
+    seen = _watch_overpass_url(monkeypatch)
+    inp = fetch_inputs(
+        LEIPZIG, cache_dir=tmp_path / "c", overpass_url=OVERPASS_ALT + "/interpreter"
+    )
+    assert seen == [OVERPASS_ALT]
+    assert ox.settings.overpass_url == before
+    assert inp.provenance["overpass_url"] == OVERPASS_ALT
+    json.dumps(inp.provenance)
+
+
+def test_overpass_url_from_environment(osm, tiles, tmp_path, monkeypatch):
+    monkeypatch.setenv("PYSEWER_OVERPASS_URL", OVERPASS_ALT)
+    seen = _watch_overpass_url(monkeypatch)
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c")
+    assert seen == [OVERPASS_ALT]
+    assert inp.provenance["overpass_url"] == OVERPASS_ALT
+
+
+def test_overpass_url_default_is_recorded(osm, tiles, tmp_path, monkeypatch):
+    import osmnx as ox
+
+    monkeypatch.delenv("PYSEWER_OVERPASS_URL", raising=False)
+    seen = _watch_overpass_url(monkeypatch)
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c")
+    assert seen == [ox.settings.overpass_url]
+    assert inp.provenance["overpass_url"] == sources.normalise_overpass_url(
+        ox.settings.overpass_url
+    )
+
+
+def test_overpass_url_restored_after_failure(osm, tiles, tmp_path, monkeypatch):
+    import osmnx as ox
+
+    before = ox.settings.overpass_url
+
+    def boom(*a, **k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(ox, "graph_from_bbox", boom)
+    with pytest.raises(RuntimeError):
+        fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", overpass_url=OVERPASS_ALT)
+    assert ox.settings.overpass_url == before
+
+
+def test_cache_key_is_independent_of_overpass_url(osm, tiles, tmp_path):
+    cache = tmp_path / "c"
+    fetch_inputs(LEIPZIG, cache_dir=cache, overpass_url=OVERPASS_ALT)
+    assert osm.calls == {"graph": 1, "gdfs": 1, "features": 1}
+    second = fetch_inputs(
+        LEIPZIG, cache_dir=cache, overpass_url="https://other.example.org/api"
+    )
+    assert osm.calls == {"graph": 1, "gdfs": 1, "features": 1}  # cache hit
+    assert second.provenance["roads"]["cache_hit"] is True
+
+
+def test_bad_overpass_url_is_value_error(osm, tiles, tmp_path):
+    with pytest.raises(ValueError, match="overpass_url"):
+        fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", overpass_url="nonsense")
+
+
+def test_preflight_building_count_uses_given_overpass_url(monkeypatch):
+    import requests
+
+    posted = []
+
+    class Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"elements": [{"tags": {"total": "42"}}]}
+
+    def post(url, **kw):
+        posted.append(url)
+        return Resp()
+
+    monkeypatch.setattr(requests, "post", post)
+    monkeypatch.delenv("PYSEWER_OVERPASS_URL", raising=False)
+    n = sources.preflight_building_count(LEIPZIG, overpass_url=OVERPASS_ALT + "/")
+    assert n == 42
+    assert posted == [OVERPASS_ALT + "/interpreter"]
+    monkeypatch.setenv(
+        "PYSEWER_OVERPASS_URL", "https://env.example.org/api/interpreter"
+    )
+    sources.preflight_building_count(LEIPZIG)
+    assert posted[-1] == "https://env.example.org/api/interpreter"
+
+
+# ================================================================ Overture
+RELEASE = "2026-11-18.0"
+CX, CY = (LEIPZIG[0] + LEIPZIG[2]) / 2, (LEIPZIG[1] + LEIPZIG[3]) / 2
+
+
+def _seg(x0, y0, x1, y1):
+    return LineString([(x0, y0), (x1, y1)])
+
+
+def _sq(x, y, d):
+    return Polygon([(x, y), (x + d, y), (x + d, y + d), (x, y + d)])
+
+
+def _overture_segments():
+    d = 0.001
+    rows = [
+        # subtype, class, subclass, names, geometry
+        (
+            "road",
+            "residential",
+            None,
+            {"primary": "Hauptstr."},
+            _seg(CX - d, CY, CX, CY),
+        ),
+        ("road", "primary", "link", None, _seg(CX, CY, CX, CY + d)),
+        ("road", "service", None, None, _seg(CX, CY, CX + d, CY)),
+        ("road", "service", "driveway", None, _seg(CX, CY, CX, CY - d)),
+        ("road", "service", "parking_aisle", None, _seg(CX, CY, CX - d, CY - d)),
+        ("road", "unknown", None, None, _seg(CX, CY, CX + d, CY + d)),
+        ("road", "motorway", None, None, _seg(CX, CY, CX + d, CY - d)),
+        ("road", "footway", "sidewalk", None, _seg(CX, CY, CX - d, CY + d)),
+        ("rail", "standard_gauge", None, None, _seg(CX - d, CY - d, CX + d, CY + d)),
+        # runs far outside the box: must be cut at the box edge
+        ("road", "tertiary", None, None, _seg(CX, CY, CX + 0.5, CY)),
+        # entirely outside the box
+        ("road", "residential", None, None, _seg(CX + 1, CY, CX + 1.001, CY)),
+    ]
+    return gpd.GeoDataFrame(
+        {
+            "id": [f"seg{i}" for i in range(len(rows))],
+            "subtype": [r[0] for r in rows],
+            "class": [r[1] for r in rows],
+            "subclass": [r[2] for r in rows],
+            "names": [r[3] for r in rows],
+        },
+        geometry=[r[4] for r in rows],
+        crs=4326,
+    )
+
+
+def _overture_buildings():
+    big, tiny = 1e-4, 1e-5  # about 77 m2 and 0.8 m2 at 51 N
+    geoms = [
+        _sq(CX, CY, big),  # kept
+        _sq(CX + 3e-4, CY, big),  # kept (is_underground missing)
+        _sq(CX - 3e-4, CY, big),  # underground
+        _sq(CX, CY + 3e-4, tiny),  # too small
+        Point(CX, CY),  # not a polygon
+        _sq(CX + 1, CY, big),  # outside the box
+    ]
+    return gpd.GeoDataFrame(
+        {
+            "id": [f"b{i}" for i in range(len(geoms))],
+            "class": ["house", None, "garage", "shed", None, "house"],
+            "height": [6.0, np.nan, 3.0, 2.0, np.nan, 5.0],
+            "is_underground": [False, None, True, False, False, False],
+        },
+        geometry=geoms,
+        crs=4326,
+    )
+
+
+class FakeOverture:
+    """Replace the S3 reader and the release lookup of pysewer.sources."""
+
+    def __init__(self, monkeypatch, release=RELEASE):
+        self.reads = []
+        self.release = release
+        self.segments = _overture_segments()
+        self.buildings = _overture_buildings()
+        monkeypatch.setattr(sources, "_read_overture", self._read)
+        monkeypatch.setattr(sources, "_overture_latest_release", lambda: self.release)
+
+    def _read(self, overture_type, bbox, release):
+        self.reads.append((overture_type, tuple(bbox), release))
+        frame = {"segment": self.segments, "building": self.buildings}[overture_type]
+        return frame.copy()
+
+
+@pytest.fixture
+def ovt(monkeypatch):
+    return FakeOverture(monkeypatch)
+
+
+@pytest.mark.parametrize(
+    ("road_class", "subclass", "expected"),
+    [
+        ("primary", None, "primary"),
+        ("secondary", None, "secondary"),
+        ("tertiary", None, "tertiary"),
+        ("unclassified", None, "unclassified"),
+        ("residential", None, "residential"),
+        ("living_street", None, "living_street"),
+        ("primary", "link", "primary_link"),
+        ("secondary", "link", "secondary_link"),
+        ("tertiary", "link", "tertiary_link"),
+        ("residential", "link", "residential"),
+        ("service", None, "service"),
+        ("service", float("nan"), "service"),
+        ("service", "alley", "service"),
+        ("service", "driveway", None),
+        ("service", "parking_aisle", None),
+        ("unknown", None, "road"),
+        (None, None, "road"),
+        ("motorway", None, None),
+        ("trunk", None, None),
+        ("footway", None, None),
+        ("path", None, None),
+        ("steps", None, None),
+        ("cycleway", None, None),
+        ("pedestrian", None, None),
+        ("track", None, None),
+    ],
+)
+def test_overture_highway_mapping(road_class, subclass, expected):
+    assert sources._overture_highway(road_class, subclass) == expected
+
+
+def test_overture_name_primary_or_empty():
+    assert sources._overture_name({"primary": "Hauptstr.", "common": None}) == (
+        "Hauptstr."
+    )
+    assert sources._overture_name({"primary": None}) == ""
+    assert sources._overture_name(None) == ""
+
+
+def test_overture_roads_filtered_mapped_and_clipped(ovt, tiles, tmp_path):
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+    roads = inp.roads
+    assert roads.crs.to_epsg() == 32633
+    assert list(roads.columns) == ["id", "highway", "name", "geometry"]
+    # kept: residential, primary_link, service, road (unknown), tertiary
+    assert sorted(roads["highway"]) == [
+        "primary_link",
+        "residential",
+        "road",
+        "service",
+        "tertiary",
+    ]
+    assert roads.set_index("id").loc["seg0", "name"] == "Hauptstr."
+    assert set(roads.geom_type) == {"LineString"}
+    # the 55 km long tertiary road is cut at the east edge of the box
+    tert = roads[roads["highway"] == "tertiary"].geometry.iloc[0]
+    assert tert.length < 600
+    w, s, e, n = LEIPZIG
+    box = (
+        gpd.GeoSeries([Polygon([(w, s), (e, s), (e, n), (w, n)])], crs=4326)
+        .to_crs(32633)
+        .iloc[0]
+        .buffer(0.5)
+    )
+    assert roads.geometry.within(box).all()
+
+
+def test_overture_custom_highway_filter(ovt, tiles, tmp_path):
+    inp = fetch_inputs(
+        LEIPZIG, cache_dir=tmp_path / "c", source="overture", highway=("residential",)
+    )
+    assert inp.roads["highway"].tolist() == ["residential"]
+    assert inp.provenance["overture"]["highway"] == ["residential"]
+
+
+def test_overture_buildings_filters_and_provenance(ovt, tiles, tmp_path):
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+    b = inp.buildings
+    assert b.crs.to_epsg() == 32633
+    assert sorted(b["id"]) == ["b0", "b1"]  # underground, tiny, point, outside gone
+    assert (b.geometry.area >= 20).all()
+    assert set(b.geom_type) <= {"Polygon", "MultiPolygon"}
+    f = inp.provenance["buildings_filter"]
+    assert f["min_area_m2"] == 20.0
+    assert f["dropped_small"] == 1
+    assert "underground" in f["underground"]
+    assert inp.provenance["buildings"]["buildings_filter"] == f
+
+
+def test_overture_area_filter_uses_projected_area(ovt, tiles, tmp_path):
+    # 1e-4 deg squares are about 77 m2 in UTM; a filter in degrees would
+    # treat them as 1e-8 and drop every building
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+    assert inp.buildings.geometry.area.min() > 50
+
+
+def test_overture_all_buildings_too_small_raises(ovt, tiles, tmp_path):
+    ovt.buildings = ovt.buildings.iloc[[3]]  # only the 0.8 m2 one
+    with pytest.raises(FetchError, match="20 m2"):
+        fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+
+
+def test_overture_empty_roads_raises(ovt, tiles, tmp_path):
+    ovt.segments = ovt.segments[ovt.segments["class"] == "motorway"]
+    with pytest.raises(FetchError, match="no roads"):
+        fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+
+
+def test_overture_provenance_and_attribution(ovt, tiles, tmp_path):
+    inp = fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="overture")
+    p = inp.provenance
+    json.dumps(p)
+    assert p["source"] == "overture"
+    assert p["overpass_url"] is None
+    assert "osm" not in p
+    assert p["overture"]["release"] == RELEASE
+    for layer in ("roads", "buildings"):
+        assert p[layer]["release"] == RELEASE
+        assert p[layer]["license"] == "ODbL"
+        assert p[layer]["attribution"] == sources.OVERTURE_ATTRIBUTION
+        assert p[layer]["cache_hit"] is False
+    assert "OpenStreetMap contributors" in sources.OVERTURE_ATTRIBUTION
+    assert "Overture Maps Foundation" in sources.OVERTURE_ATTRIBUTION
+    assert "ODbL" in sources.OVERTURE_ATTRIBUTION
+    assert p["dem"]["attribution"] == COPERNICUS_DERIVED_ATTRIBUTION
+
+
+def test_overture_reads_with_bbox_and_release_and_caches(ovt, tiles, tmp_path):
+    cache = tmp_path / "c"
+    first = fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    assert sorted(r[0] for r in ovt.reads) == ["building", "segment"]
+    assert all(r[1] == LEIPZIG and r[2] == RELEASE for r in ovt.reads)
+    second = fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    assert len(ovt.reads) == 2  # cache hit, no new reads
+    assert second.provenance["roads"]["cache_hit"] is True
+    assert second.provenance["buildings"]["cache_hit"] is True
+    assert len(second.roads) == len(first.roads)
+    assert len(second.buildings) == len(first.buildings)
+    files = sorted(p.name for p in cache.glob("overture_*.gpkg"))
+    assert len(files) == 2
+    assert all(RELEASE in f for f in files)
+
+
+def test_overture_cache_is_keyed_by_release_and_source(ovt, tiles, osm, tmp_path):
+    cache = tmp_path / "c"
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    ovt.release = "2026-12-17.0"
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    assert len(ovt.reads) == 4  # a new release is a cache miss
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture", overture_release=RELEASE)
+    assert len(ovt.reads) == 4  # an explicit old release hits its own files
+    assert len(list(cache.glob("overture_*.gpkg"))) == 4
+    fetch_inputs(LEIPZIG, cache_dir=cache)  # OSM files do not collide
+    assert osm.total == 3
+    assert len(list(cache.glob("roads_*.gpkg"))) == 1
+
+
+def test_overture_cache_key_depends_on_highway_filter_for_roads_only(
+    ovt, tiles, tmp_path
+):
+    cache = tmp_path / "c"
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture", highway=("residential",))
+    kinds = [r[0] for r in ovt.reads]
+    assert kinds.count("segment") == 2
+    assert kinds.count("building") == 1
+
+
+def test_overture_offline_uses_newest_cached_release(ovt, tiles, tmp_path, monkeypatch):
+    cache = tmp_path / "c"
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    ovt.release = "2026-12-17.0"
+    fetch_inputs(LEIPZIG, cache_dir=cache, source="overture")
+    n = len(ovt.reads)
+
+    def no_catalog():
+        raise AssertionError("offline must not read the release catalog")
+
+    monkeypatch.setattr(sources, "_overture_latest_release", no_catalog)
+    inp = fetch_inputs(LEIPZIG, cache_dir=cache, source="overture", offline=True)
+    assert len(ovt.reads) == n
+    assert inp.provenance["overture"]["release"] == "2026-12-17.0"
+    assert inp.provenance["roads"]["cache_hit"] is True
+
+
+def test_overture_offline_empty_cache_raises(ovt, tmp_path):
+    cache = tmp_path / "c"
+    with pytest.raises(OfflineCacheMissError):
+        fetch_inputs(LEIPZIG, cache_dir=cache, source="overture", offline=True)
+    assert not cache.exists()
+    assert ovt.reads == []
+
+
+def test_overture_progress_stage_names_unchanged(ovt, tiles, tmp_path):
+    seen = []
+    fetch_inputs(
+        LEIPZIG,
+        cache_dir=tmp_path / "c",
+        source="overture",
+        progress=lambda s, f, m: seen.append(s),
+    )
+    stages = list(dict.fromkeys(seen))
+    assert stages == ["fetch:roads", "fetch:buildings", "fetch:dem", "fetch:done"]
+
+
+def test_unknown_source_and_bad_release_are_value_errors(ovt, tmp_path):
+    with pytest.raises(ValueError, match="unknown source"):
+        fetch_inputs(LEIPZIG, cache_dir=tmp_path / "c", source="here")
+    with pytest.raises(ValueError, match="overture_release"):
+        fetch_inputs(
+            LEIPZIG,
+            cache_dir=tmp_path / "c",
+            source="overture",
+            overture_release="x/../y",
+        )
+
+
+def test_overture_does_not_use_overpass(ovt, tiles, tmp_path, monkeypatch):
+    import osmnx as ox
+
+    def boom(*a, **k):
+        raise AssertionError("Overpass must not be used for source='overture'")
+
+    monkeypatch.setattr(ox, "graph_from_bbox", boom)
+    monkeypatch.setattr(ox, "features_from_bbox", boom)
+    fetch_inputs(
+        LEIPZIG, cache_dir=tmp_path / "c", source="overture", overpass_url=OVERPASS_ALT
+    )
+
+
+def test_read_overture_wraps_s3_errors_as_connection_error(monkeypatch):
+    import types
+
+    def reader(*a, **k):
+        raise OSError("AWS Error NETWORK_CONNECTION")
+
+    core = types.SimpleNamespace(record_batch_reader=reader)
+    monkeypatch.setattr(sources, "_overture_import", lambda: core)
+    with pytest.raises(ConnectionError, match="Overture"):
+        sources._read_overture("building", LEIPZIG, RELEASE)
+
+
+def test_read_overture_none_reader_is_connection_error(monkeypatch):
+    import types
+
+    core = types.SimpleNamespace(record_batch_reader=lambda *a, **k: None)
+    monkeypatch.setattr(sources, "_overture_import", lambda: core)
+    with pytest.raises(ConnectionError):
+        sources._read_overture("segment", LEIPZIG, RELEASE)
+
+
+def test_overture_missing_package_message(monkeypatch):
+    import builtins
+
+    real = builtins.__import__
+
+    def fake(name, *a, **k):
+        if name == "overturemaps" or name.startswith("overturemaps."):
+            raise ImportError("no overturemaps")
+        return real(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", fake)
+    with pytest.raises(ImportError, match=r"pysewer\[fetch\]"):
+        sources._overture_import()
+
+
+def test_preflight_building_count_overture(monkeypatch):
+    seen = []
+
+    def count(bbox, release, timeout):
+        seen.append((tuple(bbox), release))
+        return 430
+
+    monkeypatch.setattr(sources, "_overture_count", count)
+    n = sources.preflight_building_count(
+        LEIPZIG, source="overture", overture_release=RELEASE
+    )
+    assert n == 430
+    assert seen == [(LEIPZIG, RELEASE)]
+
+
+def test_preflight_building_count_overture_failure_gives_none(monkeypatch):
+    def count(bbox, release, timeout):
+        raise ConnectionError("S3 down")
+
+    monkeypatch.setattr(sources, "_overture_count", count)
+    assert sources.preflight_building_count(LEIPZIG, source="overture") is None
+
+
+def test_preflight_building_count_unknown_source():
+    with pytest.raises(ValueError, match="unknown source"):
+        sources.preflight_building_count(LEIPZIG, source="here")
+
+
+def test_import_sources_stays_light():
+    code = (
+        "import sys, pysewer.sources; "
+        "bad = [m for m in ('osmnx', 'overturemaps', 'pyarrow.dataset') "
+        "if m in sys.modules]; "
+        "sys.exit(1 if bad else 0)"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True
+    )
+    assert r.returncode == 0, r.stderr
+
+
+# ================================================================ fetch_dem
+def test_fetch_dem_returns_projected_tif_and_provenance(tiles, tmp_path):
+    cache = tmp_path / "c"
+    path, prov = sources.fetch_dem(LEIPZIG, cache_dir=cache)
+    assert path.parent == cache and path.suffix == ".tif"
+    with rasterio.open(path) as ds:
+        assert ds.crs.to_epsg() == 32633
+    json.dumps(prov)
+    assert prov["attribution"] == COPERNICUS_DERIVED_ATTRIBUTION
+    assert prov["cache_hit"] is False
+    assert prov["crs"] == "EPSG:32633"
+    assert prov["bbox_wgs84"] == list(LEIPZIG)
+    assert prov["fetched_at"].endswith("+00:00")
+    assert "Copernicus" in prov["source"]
+    # no OSM access, no roads or buildings in the cache
+    assert not list(cache.glob("roads_*")) and not list(cache.glob("buildings_*"))
+
+
+def test_fetch_dem_second_call_is_cache_hit(tiles, tmp_path):
+    cache = tmp_path / "c"
+    p1, _ = sources.fetch_dem(LEIPZIG, cache_dir=cache)
+    n = len(tiles.opened)
+    p2, prov = sources.fetch_dem(LEIPZIG, cache_dir=cache)
+    assert p2 == p1 and prov["cache_hit"] is True
+    assert len(tiles.opened) == n
+
+
+def test_fetch_dem_shares_cache_with_fetch_inputs(osm, tiles, tmp_path):
+    cache = tmp_path / "c"
+    path, _ = sources.fetch_dem(LEIPZIG, cache_dir=cache, crs=25833)
+    n = len(tiles.opened)
+    inp = fetch_inputs(LEIPZIG, cache_dir=cache, crs=25833)
+    assert Path(inp.dem) == path
+    assert len(tiles.opened) == n
+    assert inp.provenance["dem"]["cache_hit"] is True
+
+
+def test_fetch_dem_offline(tiles, tmp_path):
+    cache = tmp_path / "c"
+    with pytest.raises(OfflineCacheMissError):
+        sources.fetch_dem(LEIPZIG, cache_dir=cache, offline=True)
+    assert not cache.exists()
+    path, _ = sources.fetch_dem(LEIPZIG, cache_dir=cache)
+    again, prov = sources.fetch_dem(LEIPZIG, cache_dir=cache, offline=True)
+    assert again == path and prov["cache_hit"] is True
+
+
+def test_fetch_dem_progress_and_validation(tiles, tmp_path):
+    seen = []
+    sources.fetch_dem(
+        LEIPZIG, cache_dir=tmp_path / "c", progress=lambda s, f, m: seen.append(s)
+    )
+    assert set(seen) == {"fetch:dem"}
+    with pytest.raises(ValueError):
+        sources.fetch_dem((1, 2, 3), cache_dir=tmp_path / "c")
+    with pytest.raises(ValueError, match="projected"):
+        sources.fetch_dem(LEIPZIG, cache_dir=tmp_path / "c", crs=4326)
+    with pytest.raises(ValueError, match="unknown dem_source"):
+        sources.fetch_dem(LEIPZIG, cache_dir=tmp_path / "c", dem_source="nope")
+
+
+def test_fetch_dem_no_area_limit(tiles, tmp_path):
+    # 0.02 x 0.01 degrees is about 1.4 km2; a large box must not hit the
+    # fetch_inputs limit (4 km2) - here just check the limit is not applied
+    big = (12.30, 51.30, 12.40, 51.40)  # about 77 km2
+    path, _ = sources.fetch_dem(big, cache_dir=tmp_path / "c")
+    assert path.exists()
+
+
+def test_fetch_dem_local_file_provenance(tmp_path):
+    dem = tmp_path / "dem.tif"
+    _local_dem(dem, 32633)
+    path, prov = sources.fetch_dem(LEIPZIG, cache_dir=tmp_path / "c", dem_source=dem)
+    assert prov["source"] == "file" and prov["path"] == str(dem)
+    assert path == dem and prov["cache_hit"] is False
+    assert prov["fetched_at"] is None

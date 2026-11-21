@@ -32,6 +32,7 @@ dependencies:
   - pyarrow
   - matplotlib
   - osmnx>=2.0
+  - overturemaps>=2.0
   - pyyaml
   - setuptools<81
   - jupyter
